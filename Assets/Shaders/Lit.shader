@@ -1,4 +1,4 @@
-Shader "Custom/LitToon"
+Shader "Custom/Lit"
 {
     Properties
     {

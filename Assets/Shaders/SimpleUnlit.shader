@@ -14,8 +14,6 @@ Shader "Unlit/SimpleUnlit"
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            // make fog work
-            #pragma multi_compile_fog
 
             #include "UnityCG.cginc"
             #include "UnityLightingCommon.cginc"
@@ -24,15 +22,15 @@ Shader "Unlit/SimpleUnlit"
             {
                 float4 vertex : POSITION;
                 float3 normal : NORMAL;
-                float2 uv : TEXCOORD2;
+                float2 uv : TEXCOORD0;
             };
 
             struct v2f
             {
                 float2 uv : TEXCOORD0;
-                UNITY_FOG_COORDS(1)
                 float4 vertex : SV_POSITION;
-                float3 normal : TEXCOORD2;
+                float3 worldNormal : TEXCOORD1;
+                float3 worldPos : TEXCOORD2;
             };
 
             float4 _Color;
@@ -41,27 +39,32 @@ Shader "Unlit/SimpleUnlit"
             v2f vert (appdata v)
             {
                 v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.normal =  UnityObjectToWorldNormal(v.normal);
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-                UNITY_TRANSFER_FOG(o,o.vertex);
+                o.vertex = UnityObjectToClipPos(v.vertex);
+                o.worldNormal =  UnityObjectToWorldNormal(v.normal);
+                o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
                 return o;
             }
 
             fixed4 frag (v2f i) : SV_Target
             {
+                half3 worldViewDir = normalize(UnityWorldSpaceViewDir(i.worldPos));
+                half3 worldRefl = reflect(-worldViewDir, i.worldNormal);
+                half4 skyData = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, worldRefl);
+                half3 skyColor = DecodeHDR (skyData, unity_SpecCube0_HDR);
+                fixed4 c = 0;
+                c.rgb = skyColor;
                 // sample the texture
                 fixed4 col = _Color; 
                 // col.rgb = i.normal*0.5+0.5;    
                 float4 indirect = unity_IndirectSpecColor;
-                float4 direct = dot(i.normal, _WorldSpaceLightPos0) * _LightColor0;
+                float4 direct = dot(i.worldNormal, _WorldSpaceLightPos0) * _LightColor0;
                 direct = clamp(direct, 0, 1);
-                float4 ambient =  (1 - direct) * indirect;
+                 float4 ambient =  (1 - direct) * indirect;
                 col = (direct + ambient) * col;
                 col = clamp(col, 0, 1);
                 //apply fog
-                UNITY_APPLY_FOG(i.fogCoord, col);
-                return col;
+                return skyData;// float4(skyColor, 1);
             }
             ENDCG
         }

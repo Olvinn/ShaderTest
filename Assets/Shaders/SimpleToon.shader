@@ -33,7 +33,7 @@ Shader "Unlit/SimpleToon"
                 float2 uv : TEXCOORD0;
                 UNITY_FOG_COORDS(1)
                 float4 vertex : SV_POSITION;
-                float3 normal : TEXCOORD2;
+                float3 worldNormal : TEXCOORD2;
             };
 
             float4 _Color;
@@ -44,7 +44,7 @@ Shader "Unlit/SimpleToon"
             {
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
-                o.normal = UnityObjectToWorldNormal(v.normal);
+                o.worldNormal = UnityObjectToWorldNormal(v.normal);
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 UNITY_TRANSFER_FOG(o,o.vertex);
                 return o;
@@ -64,7 +64,7 @@ Shader "Unlit/SimpleToon"
                 fixed4 col = _Color; 
                 // col.rgb = i.normal*0.5+0.5;    
                 float4 indirect = unity_IndirectSpecColor;
-                float4 direct = dot(i.normal, _WorldSpaceLightPos0) * _LightColor0;
+                float4 direct = dot(i.worldNormal, _WorldSpaceLightPos0) * _LightColor0;
                 direct = clamp(direct, 0, 1);
                 float4 ambient =  (1 - direct) * indirect;
                 col = (direct + ambient) * col;
