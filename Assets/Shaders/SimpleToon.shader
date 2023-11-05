@@ -76,9 +76,11 @@ Shader "Unlit/SimpleToon"
             {
                 float4 col = _Color;
                 float3 diffuse = LambertShading(_LightColor0.rgb, i.worldNormal, _WorldSpaceLightPos0.xyz);
-                float3 ambient = UNITY_LIGHTMODEL_AMBIENT;
                 float3 viewDir = normalize(_WorldSpaceCameraPos - i.vertexWorld);
                 float3 specular = PhongShading(_LightColor0.rgb, _SpecPow, i.worldNormal, _WorldSpaceLightPos0.xyz, viewDir);
+                half3 reflectWorld = reflect(-viewDir, i.worldNormal);
+                half3 ambientData = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, reflectWorld);
+                half3 ambient = DecodeHDR(half4(ambientData, 1), unity_SpecCube0_HDR);
                 col.rgb *= ambient + diffuse + specular;
                 return Toon(col);
             }

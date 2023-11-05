@@ -3,7 +3,8 @@ Shader "Unlit/SimpleLit"
     Properties
     {
         _Color ("Color", Color) = (1,1,1,1)
-        _SpecPow ("Specular Power", float) = 1
+        _SpecPow ("Specular Power", Range(1, 256)) = 1
+        _SpecInt ("Specular Intensity", Range(0,1)) = .5
     }
     SubShader
     {
@@ -38,6 +39,7 @@ Shader "Unlit/SimpleLit"
             float4 _Color;
             float4 _MainTex_ST;
             float _SpecPow;
+            float _SpecInt;
 
             v2f vert (appdata v)
             {
@@ -65,10 +67,12 @@ Shader "Unlit/SimpleLit"
             {
                 float4 col = _Color;
                 float3 diffuse = LambertShading(_LightColor0.rgb, i.worldNormal, _WorldSpaceLightPos0.xyz);
-                float3 ambient = UNITY_LIGHTMODEL_AMBIENT;
                 float3 viewDir = normalize(_WorldSpaceCameraPos - i.vertexWorld);
                 float3 specular = PhongShading(_LightColor0.rgb, _SpecPow, i.worldNormal, _WorldSpaceLightPos0.xyz, viewDir);
-                col.rgb *= ambient + diffuse + specular;
+                half3 reflectWorld = reflect(-viewDir, i.worldNormal);
+                half3 ambientData = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, reflectWorld);
+                half3 ambient = DecodeHDR(half4(ambientData, 1), unity_SpecCube0_HDR);
+                col.rgb *= lerp(unity_IndirectSpecColor, ambient, _SpecInt) + diffuse + specular * _SpecInt;
                 return col;
             }
             ENDCG
