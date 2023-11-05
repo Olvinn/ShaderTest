@@ -1,10 +1,9 @@
-Shader "Unlit/SimpleToon"
+Shader "Unlit/SimpleLit"
 {
     Properties
     {
         _Color ("Color", Color) = (1,1,1,1)
         _SpecPow ("Specular Power", float) = 1
-        _Res ("Resolution", Float) = 3
     }
     SubShader
     {
@@ -13,11 +12,10 @@ Shader "Unlit/SimpleToon"
 
         Pass
         {
+            Tags { "LightMode"="ForwardBase"} 
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            // make fog work
-            #pragma multi_compile_fog
 
             #include "UnityCG.cginc"
             #include "UnityLightingCommon.cginc"
@@ -40,7 +38,6 @@ Shader "Unlit/SimpleToon"
             float4 _Color;
             float4 _MainTex_ST;
             float _SpecPow;
-            float _Res;
 
             v2f vert (appdata v)
             {
@@ -64,14 +61,6 @@ Shader "Unlit/SimpleToon"
                 return colorRefl * pow(max(0, dot(normal, h)), power);
             }
 
-            float4 Toon(float4 c)
-            {
-                c *= _Res;
-                c = floor(c);
-                c /= _Res;
-                return c;
-            }
-
             fixed4 frag (v2f i) : SV_Target
             {
                 float4 col = _Color;
@@ -80,7 +69,7 @@ Shader "Unlit/SimpleToon"
                 float3 viewDir = normalize(_WorldSpaceCameraPos - i.vertexWorld);
                 float3 specular = PhongShading(_LightColor0.rgb, _SpecPow, i.worldNormal, _WorldSpaceLightPos0.xyz, viewDir);
                 col.rgb *= ambient + diffuse + specular;
-                return Toon(col);
+                return col;
             }
             ENDCG
         }
