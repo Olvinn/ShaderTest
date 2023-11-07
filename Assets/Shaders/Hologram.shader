@@ -63,4 +63,5 @@ Shader "Unlit/Hologram"
             ENDCG
         }
     }
+    Fallback "Standard"
 }

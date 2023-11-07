@@ -87,4 +87,6 @@ Shader "Unlit/SimpleToon"
             ENDCG
         }
     }
+    
+    Fallback "Legacy Shaders/Transparent/Cutout/VertexLit"
 }

@@ -10,6 +10,9 @@ Shader "Unlit/SimpleLit"
     {
         Tags { "RenderType"="Opaque" }
         LOD 100
+        
+        ZWrite On
+        ZTest LEqual
 
         Pass
         {
@@ -48,6 +51,7 @@ Shader "Unlit/SimpleLit"
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.worldNormal =  UnityObjectToWorldNormal(v.normal);
                 o.vertexWorld = mul(unity_ObjectToWorld, v.vertex).xyz;
+                // TRANSFER_SHADOW_CASTER_NORMALOFFSET(o.vertexWorld)
                 return o;
             }
 
@@ -78,4 +82,5 @@ Shader "Unlit/SimpleLit"
             ENDCG
         }
     }
+    Fallback "Legacy Shaders/Transparent/Cutout/VertexLit"
 }
