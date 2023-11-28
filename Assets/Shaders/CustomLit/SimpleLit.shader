@@ -67,6 +67,11 @@ Shader "Unlit/SimpleLit"
                 return colorRefl * pow(max(0, dot(normal, h)), power);
             }
 
+            float Fresnel(float3 normal, float3 viewDir, float strength)
+            {
+                return clamp(1 - pow(dot(normal, viewDir), strength), 0, 1);
+            }
+
             fixed4 frag (v2f i) : SV_Target
             {
                 float4 col = _Color;
@@ -76,7 +81,7 @@ Shader "Unlit/SimpleLit"
                 half3 reflectWorld = reflect(-viewDir, i.worldNormal);
                 half3 ambientData = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, reflectWorld);
                 half3 ambient = DecodeHDR(half4(ambientData, 1), unity_SpecCube0_HDR);
-                col.rgb *= lerp(unity_IndirectSpecColor, ambient, _SpecInt) + diffuse + specular * _SpecInt;
+                col.rgb *= lerp(unity_IndirectSpecColor, ambient, Fresnel(i.worldNormal, viewDir, _SpecInt)) + diffuse + specular * _SpecInt;
                 return col;
             }
             ENDCG
