@@ -22,6 +22,11 @@ Shader "Unlit/VertAndGeometry"
             #pragma multi_compile_shadowcaster
             float4 fragShadow(g2f i) : SV_Target
             {
+                float piece = 1 / (float)GRASS_LAYERS;
+                half a = i.height * piece;
+                half c = clamp(tex2D(_MainTex, i.uv1 + float2(sin(_Time.x * 10) *.01 * a, 0)) - tex2D(_SecTex, i.uv2 + float2(sin(_Time.x * 10) *.01 * a, 0)) * .5, 0, 1);
+                clip(c - a);
+                if ((c - a) < 0) return 0;
                 SHADOW_CASTER_FRAGMENT(i)
             }   
         ENDCG
@@ -130,8 +135,8 @@ Shader "Unlit/VertAndGeometry"
                 fixed4 col = lerp(_BotColor,_TopColor, c);
                 clip(c - a);
                 fixed light = saturate (dot (normalize(_WorldSpaceLightPos0), i.normal));
-                // float shadow = SHADOW_ATTENUATION(i);
-                col.rgb *= light + float4(ShadeSH9(float4(i.normal, 1)), 1.0);  
+                float shadow = SHADOW_ATTENUATION(i);
+                col.rgb *= light * shadow + float4(ShadeSH9(float4(i.normal, 1)), 1.0);  
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;
             }
