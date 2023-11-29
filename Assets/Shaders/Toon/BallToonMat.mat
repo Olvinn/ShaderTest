@@ -59,6 +59,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _TextureMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
     - _BumpScale: 1
@@ -71,14 +75,16 @@ Material:
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1
-    - _Outline: 0.06
+    - _Outline: 0.1
     - _Parallax: 0.02
     - _Res: 2
+    - _ShadowBrightness: 0.607
     - _SmoothnessTextureChannel: 0
-    - _SpecPow: 21.2
+    - _SpecPow: 88.88
     - _SpecStr: 0.389
     - _SpecularHighlights: 1
     - _SrcBlend: 1
+    - _TileAmount: 1
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:

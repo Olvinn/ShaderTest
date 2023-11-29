@@ -38,6 +38,7 @@ Shader "Unlit/OutlineToon"
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile_fog
             #pragma multi_compile_fwdbase
             #pragma multi_compile_fwdbase nolightmap nodirlightmap nodynlightmap novertexlight
 
@@ -57,6 +58,7 @@ Shader "Unlit/OutlineToon"
             {
                 half2 uv : TEXCOORD0;
                 SHADOW_COORDS(1)
+                UNITY_FOG_COORDS(5)
                 half3 worldNormal : TEXCOORD4;
                 half3 vertexWorld : TEXCOORD2;
                 half3 viewDir : TEXCOORD3;
@@ -98,10 +100,11 @@ Shader "Unlit/OutlineToon"
                 half4 col = tex2D(_MainTex, i.uv);
                 half shadow = floor(SHADOW_ATTENUATION(i)+.7);
                 half3 diffuse = GoochShading(_LightColor0.rgb, i.worldNormal, _WorldSpaceLightPos0.xyz,
-                    col, _WarmColor, _ColdColor, shadow);
+                    col, _WarmColor, _ColdColor, shadow) + float4(ShadeSH9(float4(i.worldNormal, 1)), 1.0) * .5;
                 half3 viewDir = normalize(_WorldSpaceCameraPos - i.vertexWorld); //something wrong!
                 half3 specular = PhongShading(_LightColor0.rgb, _SpecPow, i.worldNormal, _WorldSpaceLightPos0.xyz, viewDir, shadow);
                 col.rgb = diffuse + specular * _SpecStr;
+                // UNITY_APPLY_FOG(i.fogCoord, col);
                 return col; 
             }
             ENDCG
@@ -110,7 +113,6 @@ Shader "Unlit/OutlineToon"
         Pass //outline
         {
             Tags { "RenderType"="Transparent" }
-//            LOD 200
             
             Cull Front
             Lighting Off

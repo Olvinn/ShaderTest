@@ -10,6 +10,8 @@ Shader "Unlit/Hologram"
     SubShader
     {
         Tags { "RenderType"="Transparent" "RenderQueue"="Transparent" }
+        Cull Off
+        ZWrite Off
         Blend SrcAlpha OneMinusSrcAlpha
         LOD 100
 
