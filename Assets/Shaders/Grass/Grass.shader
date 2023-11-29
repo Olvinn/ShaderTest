@@ -9,29 +9,7 @@ Shader "Unlit/VertAndGeometry"
         _Offset ("Offset", float) = .1
     }
     SubShader
-    {
-        Pass
-        {
-        Tags { "RenderType"="Opaque" "LightMode" = "ShadowCaster" }
-        LOD 100
-        CGPROGRAM
-            #pragma vertex vert
-            #pragma geometry geom
-            #pragma fragment fragShadow
-            #pragma target 4.6
-            #pragma multi_compile_shadowcaster
-            float4 fragShadow(g2f i) : SV_Target
-            {
-                float piece = 1 / (float)GRASS_LAYERS;
-                half a = i.height * piece;
-                half c = clamp(tex2D(_MainTex, i.uv1 + float2(sin(_Time.x * 10) *.01 * a, 0)) - tex2D(_SecTex, i.uv2 + float2(sin(_Time.x * 10) *.01 * a, 0)) * .5, 0, 1);
-                clip(c - a);
-                if ((c - a) < 0) return 0;
-                SHADOW_CASTER_FRAGMENT(i)
-            }   
-        ENDCG
-        }
-        
+    {        
         Pass
         {
             ZWRITE ON
@@ -90,12 +68,13 @@ Shader "Unlit/VertAndGeometry"
             {
                 g2f o;
 
+                half h = 1 / (half)GRASS_LAYERS;
                 for (int l = 0; l < GRASS_LAYERS; l++)
                 {
                     for(int i = 0; i < 3; i++)
                     {
                         o.normal = UnityObjectToWorldNormal(input[i].normal);
-                        float4 vert = input[i].vertex + float4(o.normal * _Offset * l,0);
+                        float4 vert = input[i].vertex + float4(o.normal * _Offset * l * h,0);
                         o.vertex = UnityObjectToClipPos(vert);
                         o.height = l;
                         UNITY_TRANSFER_FOG(o,o.vertex);
@@ -140,7 +119,29 @@ Shader "Unlit/VertAndGeometry"
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;
             }
-            ENDCG
+        ENDCG
+        }
+        
+        Pass
+        {
+        Tags { "RenderType"="Opaque" "LightMode" = "ShadowCaster" }
+        LOD 100
+        CGPROGRAM
+            #pragma vertex vert
+            #pragma geometry geom
+            #pragma fragment fragShadow
+            #pragma target 4.6
+            #pragma multi_compile_shadowcaster
+            float4 fragShadow(g2f i) : SV_Target
+            {
+                float piece = 1 / (float)GRASS_LAYERS;
+                half a = i.height * piece;
+                half c = clamp(tex2D(_MainTex, i.uv1 + float2(sin(_Time.x * 10) *.01 * a, 0)) - tex2D(_SecTex, i.uv2 + float2(sin(_Time.x * 10) *.01 * a, 0)) * .5, 0, 1);
+                clip(c - a);
+                if ((c - a) < 0) return 0;
+                SHADOW_CASTER_FRAGMENT(i)
+            }   
+        ENDCG
         }
     }
 }

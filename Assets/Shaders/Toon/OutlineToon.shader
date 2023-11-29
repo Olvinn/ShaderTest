@@ -100,7 +100,7 @@ Shader "Unlit/OutlineToon"
                 half4 col = tex2D(_MainTex, i.uv);
                 half shadow = floor(SHADOW_ATTENUATION(i)+.7);
                 half3 diffuse = GoochShading(_LightColor0.rgb, i.worldNormal, _WorldSpaceLightPos0.xyz,
-                    col, _WarmColor, _ColdColor, shadow) + float4(ShadeSH9(float4(i.worldNormal, 1)), 1.0) * .5;
+                    col, _WarmColor, _ColdColor, shadow) + float4(ShadeSH9(float4(i.worldNormal, 1)), 1.0) * .2;
                 half3 viewDir = normalize(_WorldSpaceCameraPos - i.vertexWorld); //something wrong!
                 half3 specular = PhongShading(_LightColor0.rgb, _SpecPow, i.worldNormal, _WorldSpaceLightPos0.xyz, viewDir, shadow);
                 col.rgb = diffuse + specular * _SpecStr;

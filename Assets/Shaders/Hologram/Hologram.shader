@@ -44,7 +44,7 @@ Shader "Unlit/Hologram"
 
             float4 Fresnel(float3 viewDir, float3 normal)
             {
-                return 1 - max(0, dot(viewDir, normal));
+                return 1 - abs(dot(viewDir, normal));
             }
 
             v2f vert (appdata v)
