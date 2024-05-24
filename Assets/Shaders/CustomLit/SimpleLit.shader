@@ -35,7 +35,7 @@ Shader "Unlit/SimpleLit"
             {
                 float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
-                float3 worldNormal : TEXCOORD1;
+                float3 normal : TEXCOORD1;
                 float3 vertexWorld : TEXCOORD2;
             };
 
@@ -49,7 +49,7 @@ Shader "Unlit/SimpleLit"
                 v2f o;
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.vertex = UnityObjectToClipPos(v.vertex);
-                o.worldNormal =  UnityObjectToWorldNormal(v.normal);
+                o.normal =  v.normal;
                 o.vertexWorld = mul(unity_ObjectToWorld, v.vertex).xyz;
                 // TRANSFER_SHADOW_CASTER_NORMALOFFSET(o.vertexWorld)
                 return o;
@@ -60,11 +60,11 @@ Shader "Unlit/SimpleLit"
                 return colorRefl * max(0, dot(normal, lightDir));
             }
 
-            float3 PhongShading(float3 colorRefl, float power, float3 normal, float3 lightDir, float3 viewDir)
+            float3 PhongShading(float3 colorRefl, float3 normal, float3 lightDir, float3 viewDir)
             {
                 float3 h = normalize(lightDir + viewDir);
                 
-                return colorRefl * pow(max(0, dot(normal, h)), power);
+                return colorRefl * pow(max(0, dot(normal, h)), _SpecPow);
             }
 
             float Fresnel(float3 normal, float3 viewDir, float strength)
@@ -75,13 +75,14 @@ Shader "Unlit/SimpleLit"
             fixed4 frag (v2f i) : SV_Target
             {
                 float4 col = _Color;
-                float3 diffuse = LambertShading(_LightColor0.rgb, i.worldNormal, _WorldSpaceLightPos0.xyz);
-                float3 viewDir = normalize(_WorldSpaceCameraPos - i.vertexWorld);
-                float3 specular = PhongShading(_LightColor0.rgb, _SpecPow, i.worldNormal, _WorldSpaceLightPos0.xyz, viewDir);
-                half3 reflectWorld = reflect(-viewDir, i.worldNormal);
-                half3 ambientData = UNITY_SAMPLE_TEXCUBE(unity_SpecCube0, reflectWorld);
+                float3 worldNormal =  UnityObjectToWorldNormal(i.normal);
+                float3 diffuse = LambertShading(_LightColor0.rgb, worldNormal, _WorldSpaceLightPos0.xyz);
+                float3 viewDir = normalize(_WorldSpaceCameraPos - i.vertexWorld.xyz);
+                float3 specular = PhongShading(_LightColor0.rgb, worldNormal, _WorldSpaceLightPos0.xyz, viewDir);
+                float3 reflectWorld = reflect(-viewDir, worldNormal);
+                float3 ambientData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectWorld, 0);
                 half3 ambient = DecodeHDR(half4(ambientData, 1), unity_SpecCube0_HDR);
-                col.rgb *= lerp(unity_IndirectSpecColor, ambient, Fresnel(i.worldNormal, viewDir, _SpecInt)) + diffuse + specular * _SpecInt;
+                col.rgb *= lerp(unity_IndirectSpecColor, ambient, Fresnel(worldNormal, viewDir, _SpecInt)) + diffuse + specular * _SpecInt;
                 return col;
             }
             ENDCG
