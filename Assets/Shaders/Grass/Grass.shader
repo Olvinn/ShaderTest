@@ -2,79 +2,79 @@ Shader "Unlit/VertAndGeometry"
 {
     Properties
     {
-        _MainTex ("Noise", 2D) = "white" {}
-        _SecTex ("Noise2", 2D) = "white" {}
-        _TopColor ("Top Color", Color) = (0,1,0,1)
-        _BotColor ("Bottom Color", Color) = (0,0,0,1)
+        _MainTex ("Deffuse", 2D) = "white" {}
+        _NoiseTex ("Noise", 2D) = "white" {}
+        _FluffTex ("Fluffiness", 2D) = "white" {}
         _Offset ("Offset", float) = .1
+        _FluffLayers ("Fluff Layers", Range(1, 16)) = 8
     }
     SubShader
     {        
         Pass
         {
             ZWRITE ON
-            CGINCLUDE
+            
+            Tags { "RenderType"="Opaque" "LightMode" = "ForwardBase"}
+            CGPROGRAM
+            #pragma vertex vert
+            #pragma geometry geom
+            #pragma fragment frag
+            #pragma multi_compile_fog
+            #pragma multi_compile_fwdbase
         
-            #define GRASS_LAYERS 16
+            #define GRASS_LAYERS_MAX 16
         
             #include "UnityCG.cginc"
             #include "Autolight.cginc"
-        
-            struct appdata
-            {
-                float4 vertex : POSITION;
-                float4 normal : NORMAL;
-                float2 uv : TEXCOORD0;
-            };
-        
+                
             struct v2g
             {
-                float4 vertex : POSITION;
-                float3 normal : NORMAL;
-                float2 uv1 : TEXCOORD0;
-                float2 uv2 : TEXCOORD1;
+                half4 vertex : POSITION;
+                half3 normal : NORMAL;
+                half2 uv1 : TEXCOORD0;
+                half2 uv2 : TEXCOORD1;
             };
         
             struct g2f
             {
-                float2 uv1 : TEXCOORD0;
-                float2 uv2 : TEXCOORD3;
+                half2 uv1 : TEXCOORD0;
+                half2 uv2 : TEXCOORD3;
                 UNITY_FOG_COORDS(4)
-                float4 vertex : SV_POSITION;
-                float4 height : TEXCOORD2;
-                float3 normal : NORMAL;
+                half4 vertex : SV_POSITION;
+                half4 height : TEXCOORD2;
+                half3 normal : NORMAL;
                 unityShadowCoord4 _ShadowCoord : TEXCOORD1;
             };
         
-            sampler2D _MainTex, _SecTex;
-            float4 _MainTex_ST, _SecTex_ST;
+            sampler2D _MainTex, _NoiseTex, _FluffTex;
+            half4 _MainTex_ST, _NoiseTex_ST;
             half _Offset;
-            float4 _TopColor, _BotColor;
+            half _FluffLayers;
         
-            v2g vert (appdata v)
+            v2g vert (appdata_full v)
             {
                 v2g o;
-                float4 position = v.vertex;
+                half4 position = v.vertex;
                 o.vertex = position;
                 o.normal = v.normal;
-                o.uv1 = TRANSFORM_TEX(v.uv, _MainTex);
-                o.uv2 = TRANSFORM_TEX(v.uv, _SecTex);
+                o.uv1 = TRANSFORM_TEX(v.texcoord, _MainTex);
+                o.uv2 = TRANSFORM_TEX(v.texcoord1, _NoiseTex);
                 // UNITY_TRANSFER_FOG(o,o.vertex);
                 return o;
             }
         
-            [maxvertexcount(3 * GRASS_LAYERS)]
+            [maxvertexcount(3 * GRASS_LAYERS_MAX)]
             void geom(triangle v2g input[3], inout TriangleStream<g2f> triStream)
             {
                 g2f o;
 
-                half h = 1 / (half)GRASS_LAYERS;
-                for (int l = 0; l < GRASS_LAYERS; l++)
+                half h = 1 / _FluffLayers;
+                for (int l = 0; l < (int)_FluffLayers; l++)
                 {
                     for(int i = 0; i < 3; i++)
                     {
                         o.normal = UnityObjectToWorldNormal(input[i].normal);
-                        float4 vert = input[i].vertex + float4(o.normal * _Offset * l * h,0);
+                        half4 vert = input[i].vertex + half4(input[i].normal * _Offset * l * h, 0);
                         o.vertex = UnityObjectToClipPos(vert);
                         o.height = l;
                         UNITY_TRANSFER_FOG(o,o.vertex);
@@ -89,59 +89,43 @@ Shader "Unlit/VertAndGeometry"
                     triStream.RestartStrip();
                 }
             }
-            ENDCG
-        }
-        
-        Pass
-        {
-            Tags { "RenderType"="Opaque" "LightMode" = "ForwardBase"}
             
-            LOD 100
-                        
-            CGPROGRAM
-            #pragma vertex vert
-            #pragma geometry geom
-            #pragma fragment frag
-            #pragma multi_compile_fog
-            #pragma multi_compile_fwdbase
-            #pragma shader_feature IS_LIT
-            
-            fixed4 frag (g2f i) : SV_Target
+            half4 frag (g2f i) : SV_Target
             {
-                float piece = 1 / (float)GRASS_LAYERS;
+                half piece = 1 / min(GRASS_LAYERS_MAX, _FluffLayers);
                 half a = i.height * piece;
-                half c = clamp(tex2D(_MainTex, i.uv1 + float2(sin(_Time.x * 10) *.01 * a, 0)) - tex2D(_SecTex, i.uv2 + float2(sin(_Time.x * 10) *.01 * a, 0)) * .5, 0, 1);
-                fixed4 col = lerp(_BotColor,_TopColor, c);
+                half c = clamp(tex2D(_FluffTex, i.uv1) -
+                    tex2D(_NoiseTex, i.uv2), 0, 1);
+                half4 col = tex2D(_MainTex, i.uv1);
                 clip(c - a);
-                fixed light = saturate (dot (normalize(_WorldSpaceLightPos0), i.normal));
-                float shadow = SHADOW_ATTENUATION(i);
-                col.rgb *= light * shadow + float4(ShadeSH9(float4(i.normal, 1)), 1.0);  
+                if (a > 0) col = lerp(col * .75, col, a);
+                half light = saturate (dot (normalize(_WorldSpaceLightPos0), i.normal));
+                half shadow = 1;// SHADOW_ATTENUATION(i);
+                col.rgb *= light * shadow + half4(ShadeSH9(half4(i.normal, 1)), 1.0);
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;
             }
-        ENDCG
+            ENDCG
         }
-        
-        Pass
+
+        Pass //shadow casting
         {
-        Tags { "RenderType"="Opaque" "LightMode" = "ShadowCaster" }
-        LOD 100
-        CGPROGRAM
+            Tags{ "LightMode" = "ShadowCaster" }
+            CGPROGRAM
             #pragma vertex vert
-            #pragma geometry geom
-            #pragma fragment fragShadow
-            #pragma target 4.6
-            #pragma multi_compile_shadowcaster
-            float4 fragShadow(g2f i) : SV_Target
+            #pragma fragment frag
+            
+            float4 vert(float4 vertex : POSITION) : SV_POSITION
             {
-                float piece = 1 / (float)GRASS_LAYERS;
-                half a = i.height * piece;
-                half c = clamp(tex2D(_MainTex, i.uv1 + float2(sin(_Time.x * 10) *.01 * a, 0)) - tex2D(_SecTex, i.uv2 + float2(sin(_Time.x * 10) *.01 * a, 0)) * .5, 0, 1);
-                clip(c - a);
-                if ((c - a) < 0) return 0;
-                SHADOW_CASTER_FRAGMENT(i)
-            }   
-        ENDCG
+                return UnityObjectToClipPos(vertex);
+            }
+            
+            float4 frag(float4 vertex : SV_POSITION) : SV_TARGET
+            {
+                return 0;
+            }
+                     
+            ENDCG
         }
     }
 }
