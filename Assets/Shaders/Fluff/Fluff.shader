@@ -1,9 +1,10 @@
-Shader "Unlit/VertAndGeometry"
+Shader "Custom/Fluff"
 {
     Properties
     {
         _MainTex ("Deffuse", 2D) = "white" {}
         _NoiseTex ("Noise", 2D) = "white" {}
+        _Tint ("Tint", Color) = (1,1,1,1)
         _FluffTex ("Fluffiness", 2D) = "white" {}
         _Offset ("Offset", float) = .1
         _FluffLayers ("Fluff Layers", Range(1, 16)) = 8
@@ -48,6 +49,7 @@ Shader "Unlit/VertAndGeometry"
         
             sampler2D _MainTex, _NoiseTex, _FluffTex;
             half4 _MainTex_ST, _NoiseTex_ST;
+            half4 _Tint;
             half _Offset;
             half _FluffLayers;
         
@@ -96,7 +98,7 @@ Shader "Unlit/VertAndGeometry"
                 half a = i.height * piece;
                 half c = clamp(tex2D(_FluffTex, i.uv1) -
                     tex2D(_NoiseTex, i.uv2), 0, 1);
-                half4 col = tex2D(_MainTex, i.uv1);
+                half4 col = tex2D(_MainTex, i.uv1) * _Tint;
                 clip(c - a);
                 if (a > 0) col = lerp(col * .75, col, a);
                 half light = saturate (dot (normalize(_WorldSpaceLightPos0), i.normal));
