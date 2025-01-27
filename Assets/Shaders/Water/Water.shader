@@ -1,20 +1,17 @@
+// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
+
 Shader "Custom/WaterShaderRefined"
 {
     Properties
     {
-        _MainColor ("Main Color", Color) = (0.0, 0.5, 0.7, 1.0)
-        _Normal1 ("Normal Map 1", 2D) = "bump" {}
-        _Normal2 ("Normal Map 2", 2D) = "bump" {}
-        _NormalPow ("Normal Power", Float) = 1
-        _WaveSpeed ("Wave Speed", Range(0.1, 2.0)) = 0.5
-        _ReflectionStrength ("Reflection Strength", Range(0.1, 1.0)) = 0.5
+        _Normal ("Normal Map", 2D) = "Normal" {}
     }
 
     SubShader
     {
         Tags { "RenderType"="Transparent" "RenderQueue"="Transparent" }
         LOD 200
-        ZWrite Off
+        ZWrite On
         Blend SrcAlpha OneMinusSrcAlpha
 
         Pass
@@ -23,6 +20,7 @@ Shader "Custom/WaterShaderRefined"
             #pragma vertex vert
             #pragma fragment frag
             #include "UnityCG.cginc"
+            #include "UnityStandardUtils.cginc"
             #include "UnityLightingCommon.cginc"
 
             struct appdata
@@ -36,17 +34,15 @@ Shader "Custom/WaterShaderRefined"
             struct v2f
             {
                 half4 position : POSITION;
-                half2 uv1 : TEXCOORD0;
-                half2 uv2 : TEXCOORD1;
+                half2 uv : TEXCOORD0;
                 half3 worldPos : TEXCOORD2;
                 half3 worldNormal : TEXCOORD3;
-                half3 worldTangent : TEXCOORD4;
-                half3 worldBinormal : TEXCOORD5;
+                half4 worldTangent : TEXCOORD4;
                 UNITY_FOG_COORDS(1)
             };
 
-            sampler2D _Normal1, _Normal2;
-            half4 _Normal1_ST, _Normal2_ST;
+            sampler2D _Normal;
+            half4 _Normal_ST;
             half4 _MainColor;
             half _WaveSpeed, _NormalPow;
             half _ReflectionStrength;
@@ -54,23 +50,19 @@ Shader "Custom/WaterShaderRefined"
             v2f vert(appdata v)
             {
                 v2f o;
-                o.position = UnityObjectToClipPos(v.vertex);
-                o.uv1 = TRANSFORM_TEX(v.uv, _Normal1);
-                o.uv2 = TRANSFORM_TEX(v.uv, _Normal2);
-
-                o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
-
-                o.worldNormal = UnityObjectToWorldNormal(v.normal);
-                o.worldTangent = UnityObjectToWorldNormal(v.tangent);
-                o.worldBinormal = cross(o.worldNormal, o.worldTangent);
+	            o.position = UnityObjectToClipPos(v.vertex);
+	            o.worldPos = mul(unity_ObjectToWorld, v.vertex);
+	            o.worldNormal = UnityObjectToWorldNormal(v.normal);
+	            o.worldTangent = float4(UnityObjectToWorldDir(v.tangent.xyz), v.tangent.w);
+	            o.uv = TRANSFORM_TEX(v.uv, _Normal);
 
                 UNITY_TRANSFER_FOG(o, o.position);
                 return o;
             }
 
-            half4 PhongShading(half4 colorRefl, half3 normal, half3 lightDir, half3 viewDir)
+            float3 PhongShading(float3 colorRefl, float3 normal, float3 lightDir, float3 viewDir)
             {
-                half3 h = normalize(lightDir + viewDir);
+                float3 h = normalize(lightDir + viewDir);
                 
                 return colorRefl * pow(max(0, dot(normal, h)), 16);
             }
@@ -79,32 +71,36 @@ Shader "Custom/WaterShaderRefined"
             {
                 return clamp(1 - pow(dot(normal, viewDir), strength), 0, 4);
             }
+            
+            half3 ObjectScale()
+            {
+                return half3(
+                    length(unity_ObjectToWorld._m00_m10_m20),
+                    length(unity_ObjectToWorld._m01_m11_m21),
+                    length(unity_ObjectToWorld._m02_m12_m22)
+                );
+            }
 
             half4 frag(v2f i) : SV_Target
             {
-                half3 normal1;
-                half3 normal2;
-                normal1.xy = (tex2D(_Normal1, i.uv1 + _Time.x * _WaveSpeed).wy * 2 - 1) * _NormalPow;
-                normal2.xy = (tex2D(_Normal2, i.uv2 - _Time.x * _WaveSpeed).wy * 2 - 1) * _NormalPow;
-                normal1.z = sqrt(1 - saturate(dot(normal1.xy, normal1.xy)));
-                normal2.z = sqrt(1 - saturate(dot(normal2.xy, normal2.xy)));
-                normal1.xyz = normal1.xzy;
-                normal2.xyz = normal2.xzy;
-                half3 worldNormal = normalize(normal1 * 1.1 + normal2);
-                worldNormal = UnityObjectToWorldNormal(worldNormal);
+	            float3 normal = UnpackScaleNormal(tex2D(_Normal, i.uv.xy), 1);
+	            normal = normal.xzy;
+	            float3 binormal = cross(i.worldNormal, i.worldTangent.xyz) * i.worldTangent.w;
+                normal = normalize(
+		            normal.x * i.worldTangent +
+		            normal.y * i.worldNormal +
+		            normal.z * binormal
+	            );
                 
-                half3 viewDir = normalize(_WorldSpaceCameraPos.xyz - i.worldPos);
-
-                half3 reflection = reflect(viewDir, worldNormal);
-                half4 reflectedColor = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, -reflection, 0);
-
-                half4 albedo = _MainColor * clamp(0,1,dot(_WorldSpaceLightPos0.xyz, worldNormal));
-                half4 specular = PhongShading(_LightColor0, worldNormal, _WorldSpaceLightPos0.xyz, viewDir);
-
-                half4 finalColor = albedo + reflectedColor * _ReflectionStrength * Fresnel(worldNormal, viewDir, 1) + specular * _ReflectionStrength;
-
-                half4 col = saturate(finalColor);
-                // col = half4(reflection, 1);
+                float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos.xyz);
+                float3 reflectWorld = reflect(-viewDir, normal);
+                float3 ambientData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectWorld, 0);
+                half3 ambient = DecodeHDR(half4(ambientData, 1), unity_SpecCube0_HDR);
+                half4 col = half4(1, 1, 1, 1);
+                float3 specular = PhongShading(_LightColor0.rgb, normal, _WorldSpaceLightPos0.xyz, viewDir);
+                col.rgb *= lerp(unity_IndirectSpecColor, ambient, Fresnel(normal, viewDir, 128)) + specular * 2;
+                col = saturate(col);
+                
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;
             }

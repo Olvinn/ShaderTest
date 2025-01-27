@@ -16,7 +16,7 @@ Material:
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
+  m_CustomRenderQueue: 1999
   stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 
@@ -59,6 +59,10 @@ Material:
         m_Texture: {fileID: 2800000, guid: 7deb2c08cf9f3bc4aad311ae4bfcba64, type: 3}
         m_Scale: {x: 3, y: 3}
         m_Offset: {x: 0, y: 0}
+    - _NormalMap:
+        m_Texture: {fileID: 2800000, guid: 1cc3f244d93e74643a5ff36b5a09d13e, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -83,18 +87,21 @@ Material:
     - _Glossiness: 0.5
     - _GlossyReflections: 1
     - _GrassLayers: 5
-    - _Metallic: 0
+    - _Metallic: 1
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Offset: 0.09
     - _Parallax: 0.02
+    - _Roughness: 0.347
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _Temp: 1.64
+    - _TessellationFactor: 1
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
+    - _Albedo: {r: 1, g: 1, b: 1, a: 1}
     - _BotColor: {r: 0.4528302, g: 0.4528302, b: 0.4528302, a: 1}
     - _Color: {r: 0.48504806, g: 0.9433962, b: 0.5286423, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
