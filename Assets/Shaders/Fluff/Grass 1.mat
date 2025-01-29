@@ -57,7 +57,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _NoiseTex:
         m_Texture: {fileID: 2800000, guid: 7deb2c08cf9f3bc4aad311ae4bfcba64, type: 3}
-        m_Scale: {x: 3, y: 3}
+        m_Scale: {x: 100, y: 100}
         m_Offset: {x: 0, y: 0}
     - _NormalMap:
         m_Texture: {fileID: 2800000, guid: 1cc3f244d93e74643a5ff36b5a09d13e, type: 3}
@@ -105,6 +105,6 @@ Material:
     - _BotColor: {r: 0.4528302, g: 0.4528302, b: 0.4528302, a: 1}
     - _Color: {r: 0.48504806, g: 0.9433962, b: 0.5286423, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _Tint: {r: 0.14489143, g: 0.8301887, b: 0.26742804, a: 1}
+    - _Tint: {r: 0.18222678, g: 0.5943396, b: 0.25522962, a: 1}
     - _TopColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
