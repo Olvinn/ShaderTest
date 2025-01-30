@@ -1,49 +1,74 @@
 Shader "Ocean"
 {
-     Properties {
-            _EdgeLength ("Edge length", Range(2,50)) = 5
-            _Phong ("Phong Strengh", Range(0,1)) = 0.5
-            _MainTex ("Base (RGB)", 2D) = "white" {}
-            _Color ("Color", color) = (1,1,1,0)
-        }
-        SubShader {
-            Tags { "RenderType"="Opaque" }
+     Properties
+     {
+         _Color ("Color", color) = (1,1,1,0)
+         _Normal ("Normal", 2D) = "Normal" {}
+         _Ambient ("Ambient", Range(0, 1)) = .5
+         _Fresnel ("Fresnel", Range(0, 1)) = .03
+         _Specular ("Specular", Range(0.01, 64)) = 16
+         _NormalPow ("Normal Power", Range(0.01, 1)) = .7
+     }
+     SubShader
+     {
+         Pass
+         {
+            Tags { "RenderType" = "Opaque" }
             LOD 300
             
             CGPROGRAM
-            #pragma surface surf Lambert vertex:dispNone tessellate:tessEdge tessphong:_Phong nolightmap
-            #include "Tessellation.cginc"
+            
+            #pragma vertex vert
+            #pragma fragment frag
 
-            struct appdata {
-                float4 vertex : POSITION;
-                float3 normal : NORMAL;
-                float2 texcoord : TEXCOORD0;
-            };
+            #include "Helper.cginc"
 
-            void dispNone (inout appdata v) { }
+            sampler2D _Normal;
+            float4 _Color;
+            float _Ambient, _Fresnel, _Specular, _NormalPow;
 
-            float _Phong;
-            float _EdgeLength;
-
-            float4 tessEdge (appdata v0, appdata v1, appdata v2)
+            struct VertexData
             {
-                return UnityEdgeLengthBasedTess (v0.vertex, v1.vertex, v2.vertex, _EdgeLength);
-            }
-
-            struct Input {
-                float2 uv_MainTex;
+                float4 vertex : POSITION;
+                float4 normal : NORMAL;
+                float4 tangent : TANGENT;
             };
 
-            fixed4 _Color;
-            sampler2D _MainTex;
+            struct v2f
+            {
+                float4 pos : SV_POSITION;
+                float4 worldPos : TEXCOORD0;
+                float3 normal : TEXCOORD1;
+                float4 tangent : TEXCOORD2;
+            };
 
-            void surf (Input IN, inout SurfaceOutput o) {
-                half4 c = tex2D (_MainTex, IN.uv_MainTex) * _Color;
-                o.Albedo = c.rgb;
-                o.Alpha = c.a;
+            v2f vert(VertexData i)
+            {
+                v2f o;
+                o.worldPos = mul(unity_ObjectToWorld, i.vertex);
+                float displacement = sin(o.worldPos.x + o.worldPos.z + _Time.x * 10);
+                i.vertex.y += displacement;
+                o.pos = UnityObjectToClipPos(i.vertex);
+                i.normal.y += (1 + displacement) * .5;
+	            o.normal = UnityObjectToWorldNormal(i.normal);
+	            o.tangent = half4(UnityObjectToWorldDir(i.tangent.xyz), i.tangent.w);
+                return o;
             }
-
+            
+            fixed4 frag(v2f i) : SV_Target
+            {
+                float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos.xyz);
+                float3 normal = GetFullNormal(_Normal, i.worldPos, i.normal, i.tangent, _NormalPow, .2);
+                
+                float4 col = _Color * PhongDiffuse(normal);
+                float fresnel = Fresnel(viewDir, normal, _Fresnel);
+                col.rgb += fresnel * CubemapAmbient(viewDir, normal, _Ambient * 8);
+                col.rgb += PhongSpecular(viewDir, normal, _Specular);
+                
+                return saturate(col); 
+            }
             ENDCG
-        }
-        FallBack "Diffuse"
+         }
+     }
+     FallBack "Diffuse"
 }
