@@ -23,6 +23,15 @@ Shader "Ocean"
 
             #include "Helper.cginc"
 
+            #define NUM_WAVES 4 
+
+            static const float amplitudes[NUM_WAVES] = { 0.1, 0.1, 0.1, 0.05 }; 
+            static const float wavelengths[NUM_WAVES] = { 4.1, 2.4, 1.6, 1.2 };  
+            static const float speeds[NUM_WAVES] = { 3.1, 4.6, 6.3, 7.8 };       
+            static const float2 directions[NUM_WAVES] = { 
+                float2(1, 0), float2(0.5, 0.5), float2(0, 1), float2(-0.5, 0.5) 
+            }; 
+
             sampler2D _Normal;
             float4 _Color;
             float _Ambient, _Fresnel, _Specular, _NormalPow;
@@ -42,14 +51,34 @@ Shader "Ocean"
                 float4 tangent : TEXCOORD2;
             };
 
+            float getDisplacement(float3 worldPos)
+            {
+                float displacement = 0.0;
+                for (int j = 0; j < NUM_WAVES; j++)
+                {
+                    float k = 2.0 * UNITY_PI / wavelengths[j];
+                    float w = speeds[j] * k;
+                    float phase = w * _Time.x;  
+
+                    float wave = sin(k * dot(worldPos.xz, normalize(directions[j])) + phase);
+
+                    displacement += amplitudes[j] * wave;
+                }
+                return displacement;
+            }
+
             v2f vert(VertexData i)
             {
                 v2f o;
                 o.worldPos = mul(unity_ObjectToWorld, i.vertex);
-                float displacement = sin(o.worldPos.x + o.worldPos.z + _Time.x * 10);
+                float displacement = getDisplacement(o.worldPos);
                 i.vertex.y += displacement;
                 o.pos = UnityObjectToClipPos(i.vertex);
-                i.normal.y += (1 + displacement) * .5;
+                i.normal.xyz = normalize(i.normal.xyz + float3(
+                    displacement - getDisplacement(o.worldPos + float3(0.1, 0, 0)),
+                    0,
+                    displacement - getDisplacement(o.worldPos + float3(0, 0, 0.1))
+                    ));
 	            o.normal = UnityObjectToWorldNormal(i.normal);
 	            o.tangent = half4(UnityObjectToWorldDir(i.tangent.xyz), i.tangent.w);
                 return o;
