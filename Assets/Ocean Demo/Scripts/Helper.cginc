@@ -32,9 +32,8 @@ inline float PhongDiffuse(float3 normal)
 inline float3 PhongSpecular(float3 viewDir, float3 normal, float power)
 {
     float3 h = normalize(_WorldSpaceLightPos0.xyz + viewDir);
-    // float p = max(0, normalize(dot(normal, _WorldSpaceLightPos0.xyz + float3(0, .03, 0))));
-    // p=1;
-    return saturate(_LightColor0 * pow(max(0, dot(normal, h)), power));
+    float p = saturate(floor(dot(float3(0, 1, 0), _WorldSpaceLightPos0.xyz)) + 1);
+    return saturate(_LightColor0 * pow(max(0, dot(normal, h)), power) * p);
 }
 
 inline float3 GetFullNormal(sampler2D _Normal, float3 worldPos, float3 normal, float4 tangent, float power, float size)

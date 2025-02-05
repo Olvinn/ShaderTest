@@ -86,7 +86,7 @@ Material:
     - _GlossyReflections: 1
     - _Metallic: 0
     - _Mode: 0
-    - _NormalPow: 0.051
+    - _NormalPow: 0.09
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _Phong: 0.5
