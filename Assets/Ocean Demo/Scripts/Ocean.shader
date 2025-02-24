@@ -51,7 +51,8 @@ Shader "Ocean"
 
             struct v2t {
                 float3 worldPos : INTERNALTESSPOS;
-                float3 normal : NORMAL;
+                float4 normal : NORMAL;
+                float4 tangent : TANGENT;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -59,15 +60,16 @@ Shader "Ocean"
             {
                 float4 pos : SV_POSITION;
                 float4 worldPos : TEXCOORD0;
-                float3 normal : TEXCOORD1;
+                float4 normal : TEXCOORD1;
                 float4 tangent : TEXCOORD2;
             };
 
             struct Interpolators
             {
-                float3 normalWS                 : TEXCOORD0;
-                float3 positionWS               : TEXCOORD1;
-                float4 positionCS               : SV_POSITION;
+                float3 normalWS : TEXCOORD0;
+                float4 tangentWS : TEXCOORD2;
+                float3 positionWS : TEXCOORD1;
+                float4 positionCS : SV_POSITION;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -92,10 +94,10 @@ Shader "Ocean"
                 UNITY_SETUP_INSTANCE_ID(patch[0]); // Set up instancing
                 // Calculate tessellation factors
                 TessellationFactors f;
-                f.edge[0] = 1;
-                f.edge[1] = 1;
-                f.edge[2] = 1;
-                f.inside = 1;
+                f.edge[0] = 2;
+                f.edge[1] = 2;
+                f.edge[2] = 2;
+                f.inside = 2;
                 return f;
             }
 
@@ -119,10 +121,10 @@ Shader "Ocean"
             {
                 v2t o;
                 o.worldPos = mul(unity_ObjectToWorld, i.vertex);
-                // float displacement = getDisplacement(o.worldPos);
-                // i.vertex.y = displacement;
+                float displacement = getDisplacement(o.worldPos);
+                i.vertex.y = displacement;
                 // o.pos = UnityObjectToClipPos(i.vertex);
-	            o.normal = UnityObjectToWorldNormal(i.normal);
+	            o.normal.xyz = UnityObjectToWorldNormal(i.normal);
 	            // o.tangent = half4(UnityObjectToWorldDir(i.tangent.xyz), i.tangent.w);
                 return o;
             }
@@ -157,18 +159,20 @@ Shader "Ocean"
 
                 float3 positionWS = BARYCENTRIC_INTERPOLATE(worldPos);
                 float3 normalWS = BARYCENTRIC_INTERPOLATE(normal);
+                float4 tangentWS = BARYCENTRIC_INTERPOLATE(tangent);
 
                 output.positionCS = UnityWorldToClipPos(positionWS);
                 output.normalWS = normalWS;
+                output.tangentWS = half4(UnityObjectToWorldDir(tangentWS.xyz), tangentWS.w);
                 output.positionWS = positionWS;
 
                 return output;
             }
             
-            fixed4 frag(v2f i) : SV_Target
+            fixed4 frag(Interpolators i) : SV_Target
             {
-                float3 viewDir = normalize(_WorldSpaceCameraPos - i.worldPos.xyz);
-                float3 normal = GetFullNormal(_Normal, i.worldPos, i.normal, i.tangent, _NormalPow, .2);
+                float3 viewDir = normalize(_WorldSpaceCameraPos - i.positionWS.xyz);
+                float3 normal = GetFullNormal(_Normal, i.positionWS, i.normalWS, i.tangentWS, _NormalPow, .2);
                 
                 float4 col = _Color * PhongDiffuse(normal);
                 float fresnel = Fresnel(viewDir, normal, _Fresnel);
