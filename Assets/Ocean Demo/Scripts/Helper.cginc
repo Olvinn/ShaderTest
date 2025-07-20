@@ -38,14 +38,12 @@ inline float3 PhongSpecular(float3 viewDir, float3 normal, float power)
 
 inline float3 GetFullNormal(sampler2D _Normal, float3 worldPos, float3 normal, float4 tangent, float power, float size)
 {
-    float3 result = UnpackScaleNormal(tex2D(_Normal, worldPos.xz * size), 1);
-    result = result.xzy;
-    result.y /= power;
-    float3 binormal = cross(normal, tangent.xyz) * tangent.w;
-    result = normalize(
-        result.x * tangent +
-        result.y * normal +
-        result.z * binormal
-    );
-    return result;
+    float3 tangentWS = normalize(tangent.xyz);
+    float3 binormalWS = normalize(cross(normal, tangentWS)) * tangent.w;
+
+    float3 normalTS = UnpackScaleNormal(tex2D(_Normal, worldPos.xz * size), 1.0);
+    normalTS = normalize(float3(normalTS.x, normalTS.y / max(0.01, power), normalTS.z));
+
+    float3x3 TBN = float3x3(tangentWS, binormalWS, normal);
+    return normal;//normalize(mul(normalTS, TBN));
 }

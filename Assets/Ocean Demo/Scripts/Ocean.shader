@@ -1,188 +1,155 @@
-Shader "Ocean"
+Shader "Custom/Water_Clean_WithNormals"
 {
-     Properties
-     {
-         _Color ("Color", color) = (1,1,1,0)
-         _Normal ("Normal", 2D) = "Normal" {}
-         _Ambient ("Ambient", Range(0, 1)) = .5
-         _Fresnel ("Fresnel", Range(0, 1)) = .03
-         _Specular ("Specular", Range(0.01, 64)) = 16
-         _NormalPow ("Normal Power", Range(0.01, 1)) = .7
-     }
-     SubShader
-     {
-         Pass
-         {
-            Tags { "RenderType" = "Opaque" }
-            LOD 300
-            
-            CGPROGRAM
+    Properties
+    {
+        _Color ("Color", Color) = (0, 0.5, 1, 1)
+        _WaveStrength ("Wave Strength", Float) = 0.2
+        _TessFactor ("Tessellation Factor", Float) = 3
+    }
 
+    SubShader
+    {
+        Tags { "RenderType"="Opaque" }
+        LOD 200
+
+        Pass
+        {
+            CGPROGRAM
             #pragma target 5.0
-            
             #pragma vertex vert
-            #pragma hull hll
-            #pragma domain dom
+            #pragma hull hull
+            #pragma domain domain
             #pragma fragment frag
 
-            #include "Helper.cginc"
+            #include "UnityCG.cginc"
 
-            #define NUM_WAVES 8
-
-            static const float amplitudes[NUM_WAVES] = { 0.2, 0.2, 0.2, 0.05, 0.05, 0.07, 0.03, 0.2 }; 
-            static const float wavelengths[NUM_WAVES] = { 4.1, 2.4, 1.6, 1.2, 1.3, 1.4, 1.5, 1.6 };  
-            static const float speeds[NUM_WAVES] = { 3.1, 4.6, 6.3, 7.8, 6, 5, 4, 4.5 };       
-            static const float2 directions[NUM_WAVES] = { 
-                float2(1, 0), float2(0.5, 0.5), float2(0, 1), float2(-0.5, 0.5),
-                float2(1, 1), float2(0.5, 1), float2(1, 0), float2(0.5, -0.5) 
-            }; 
-
-            sampler2D _Normal;
             float4 _Color;
-            float _Ambient, _Fresnel, _Specular, _NormalPow;
+            float _WaveStrength, _TessFactor;
 
-            struct VertexData
+            struct appdata
             {
                 float4 vertex : POSITION;
-                float4 normal : NORMAL;
-                float4 tangent : TANGENT;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
-            struct v2t {
-                float3 worldPos : INTERNALTESSPOS;
-                float4 normal : NORMAL;
-                float4 tangent : TANGENT;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-            };
-
-            struct v2f
+            struct v2t
             {
-                float4 pos : SV_POSITION;
-                float4 worldPos : TEXCOORD0;
-                float4 normal : TEXCOORD1;
-                float4 tangent : TEXCOORD2;
+                float3 objectPos : INTERNALTESSPOS;
             };
 
             struct Interpolators
             {
-                float3 normalWS : TEXCOORD0;
-                float4 tangentWS : TEXCOORD2;
-                float3 positionWS : TEXCOORD1;
                 float4 positionCS : SV_POSITION;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-                UNITY_VERTEX_OUTPUT_STEREO
+                float3 worldPos   : TEXCOORD0;
+                float3 normalOS   : TEXCOORD1;
             };
 
             struct TessellationFactors
             {
                 float edge[3] : SV_TessFactor;
-                float inside : SV_InsideTessFactor;
-                float3 bezierPoints[8] : BEZIERPOS;
+                float inside  : SV_InsideTessFactor;
             };
 
-            // Call this macro to interpolate between a triangle patch, passing the field name
-            #define BARYCENTRIC_INTERPOLATE(fieldName) \
-		            patch[0].fieldName * barycentricCoordinates.x + \
-		            patch[1].fieldName * barycentricCoordinates.y + \
-		            patch[2].fieldName * barycentricCoordinates.z
-
-            // The patch constant function runs once per triangle, or "patch"
-            // It runs in parallel to the hull function
-            TessellationFactors PatchConstantFunction(
-                InputPatch<v2t, 3> patch) {
-                UNITY_SETUP_INSTANCE_ID(patch[0]); // Set up instancing
-                // Calculate tessellation factors
-                TessellationFactors f;
-                f.edge[0] = 2;
-                f.edge[1] = 2;
-                f.edge[2] = 2;
-                f.inside = 2;
-                return f;
-            }
-
-            float getDisplacement(float3 worldPos)
+            void displace(inout float3 objectPos, out float3 normalOS)
             {
-                float displacement = 0.0;
-                for (int j = 0; j < NUM_WAVES; j++)
-                {
-                    float k = 2.0 * UNITY_PI / wavelengths[j];
-                    float w = speeds[j] * k;
-                    float phase = w * _Time.x;  
+                float2 dir = normalize(float2(0.5, 0.5));
+                float phase = dot(objectPos.xz, dir) + _Time.y;
+                float wave = sin(phase) * _WaveStrength;
+                objectPos.y = wave;
 
-                    float wave = sin(k * dot(worldPos.xz, normalize(directions[j])) + phase);
-
-                    displacement += amplitudes[j] * wave;
-                }
-                return displacement;
+                float slope = cos(phase) * _WaveStrength;
+                float3 tangent = float3(1, slope * dir.x, 0);
+                float3 bitangent = float3(0, slope * dir.y, 1);
+                normalOS = normalize(cross(bitangent, tangent));
             }
 
-            v2t vert(VertexData i)
+            float3 displace(float3 objectPos)
+            {
+                float2 dir = normalize(float2(0.5, 0.5));
+                float phase = dot(objectPos.xz, dir) + _Time.y;
+                float wave = sin(phase) * _WaveStrength;
+                objectPos.y = wave;
+                return objectPos;
+            }
+
+            v2t vert(appdata v)
             {
                 v2t o;
-                o.worldPos = mul(unity_ObjectToWorld, i.vertex);
-                float displacement = getDisplacement(o.worldPos);
-                i.vertex.y = displacement;
-                // o.pos = UnityObjectToClipPos(i.vertex);
-	            o.normal.xyz = UnityObjectToWorldNormal(i.normal);
-	            // o.tangent = half4(UnityObjectToWorldDir(i.tangent.xyz), i.tangent.w);
+                o.objectPos = v.vertex.xyz;
                 return o;
             }
 
-            // The hull function runs once per vertex. You can use it to modify vertex
-            // data based on values in the entire triangle
-            [domain("tri")] // Signal we're inputting triangles
-            [outputcontrolpoints(3)] // Triangles have three points
-            [outputtopology("triangle_cw")] // Signal we're outputting triangles
-            [patchconstantfunc("PatchConstantFunction")] // Register the patch constant function
-            [partitioning("integer")] // Select a partitioning mode: integer, fractional_odd, fractional_even or pow2
-            v2t hll(InputPatch<v2t, 3> patch, // Input triangle
-                uint id : SV_OutputControlPointID) // Vertex index on the triangle
-            { 
+            [domain("tri")]
+            [outputcontrolpoints(3)]
+            [outputtopology("triangle_cw")]
+            [patchconstantfunc("PatchConstantFunction")]
+            [partitioning("fractional_even")]
+            v2t hull(InputPatch<v2t, 3> patch, uint id : SV_OutputControlPointID)
+            {
                 return patch[id];
             }
 
-            // The domain function runs once per vertex in the final, tessellated mesh
-            // Use it to reposition vertices and prepare for the fragment stage
-            [domain("tri")] // Signal we're inputting triangles
-            Interpolators dom(
-                TessellationFactors factors, // The output of the patch constant function
-                OutputPatch<v2t, 3> patch, // The Input triangle
-                float3 barycentricCoordinates : SV_DomainLocation) { // The barycentric coordinates of the vertex on the triangle
-
-                Interpolators output;
-
-                // Setup instancing and stereo support (for VR)
-                UNITY_SETUP_INSTANCE_ID(patch[0]);
-                UNITY_TRANSFER_INSTANCE_ID(patch[0], output);
-                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
-
-                float3 positionWS = BARYCENTRIC_INTERPOLATE(worldPos);
-                float3 normalWS = BARYCENTRIC_INTERPOLATE(normal);
-                float4 tangentWS = BARYCENTRIC_INTERPOLATE(tangent);
-
-                output.positionCS = UnityWorldToClipPos(positionWS);
-                output.normalWS = normalWS;
-                output.tangentWS = half4(UnityObjectToWorldDir(tangentWS.xyz), tangentWS.w);
-                output.positionWS = positionWS;
-
-                return output;
+            float4 WorldToClip(float3 worldPos)
+            {
+                return mul(UNITY_MATRIX_VP, float4(worldPos, 1.0));
             }
-            
+
+            float TessFactorForEdge(float3 a, float3 b)
+            {
+                float3 mid = (displace(a) + displace(b)) * 0.5;
+                float dist = distance(_WorldSpaceCameraPos, mid);
+                
+                return lerp(10, 1, saturate(dist / _TessFactor));
+            }
+
+            TessellationFactors PatchConstantFunction(InputPatch<v2t, 3> patch)
+            {
+                float3 wp0 = mul(unity_ObjectToWorld, float4(patch[0].objectPos, 1)).xyz;
+                float3 wp1 = mul(unity_ObjectToWorld, float4(patch[1].objectPos, 1)).xyz;
+                float3 wp2 = mul(unity_ObjectToWorld, float4(patch[2].objectPos, 1)).xyz;
+                
+                float e0 = TessFactorForEdge(wp0, wp1);
+                float e1 = TessFactorForEdge(wp1, wp2);
+                float e2 = TessFactorForEdge(wp2, wp0);
+                
+                TessellationFactors f;
+                f.edge[0] = e0;
+                f.edge[1] = e1;
+                f.edge[2] = e2;
+                f.inside = min(min(e0, e1), e2);
+
+                return f;
+            }
+
+            [domain("tri")]
+            Interpolators domain(TessellationFactors f, OutputPatch<v2t, 3> patch, float3 bary : SV_DomainLocation)
+            {
+                Interpolators o;
+
+                float3 objectPos =
+                    patch[0].objectPos * bary.x +
+                    patch[1].objectPos * bary.y +
+                    patch[2].objectPos * bary.z;
+
+                float3 normalOS;
+                displace(objectPos, normalOS);
+
+                float3 worldPos = mul(unity_ObjectToWorld, float4(objectPos, 1.0)).xyz;
+                o.positionCS = UnityWorldToClipPos(worldPos);
+                o.worldPos = worldPos;
+                o.normalOS = normalOS;
+
+                return o;
+            }
+
             fixed4 frag(Interpolators i) : SV_Target
             {
-                float3 viewDir = normalize(_WorldSpaceCameraPos - i.positionWS.xyz);
-                float3 normal = GetFullNormal(_Normal, i.positionWS, i.normalWS, i.tangentWS, _NormalPow, .2);
-                
-                float4 col = _Color * PhongDiffuse(normal);
-                float fresnel = Fresnel(viewDir, normal, _Fresnel);
-                col.rgb += fresnel * CubemapAmbient(viewDir, normal, _Ambient * 8);
-                col.rgb += PhongSpecular(viewDir, normal, _Specular);
-                
-                return saturate(col); 
+                float3 normalWS = UnityObjectToWorldNormal(i.normalOS);
+                float d = dot(_WorldSpaceLightPos0.xyz, normalWS) * 0.5 + 0.5;
+                float3 color = _Color.rgb * d;
+                return float4(color, 1);
             }
             ENDCG
-         }
-     }
-     FallBack "Diffuse"
+        }
+    }
+    FallBack Off
 }

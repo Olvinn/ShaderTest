@@ -5,6 +5,7 @@ public class MeshCreator : MonoBehaviour
 {
     [SerializeField] private bool _showGizmos;
     [SerializeField] private int _detalization;
+    [SerializeField] private float _size;
     [SerializeField] private MeshFilter _meshFilter;
 
     private void OnValidate()
@@ -20,11 +21,11 @@ public class MeshCreator : MonoBehaviour
 
         var verticies = new Vector3[d * d];
         var uv = new Vector2[d * d];
-        Vector3 offset = new Vector3(-_detalization * .5f + .5f, 0, -_detalization * .5f + .5f);
+        Vector3 offset = new Vector3(-_detalization * _size * .5f + .5f * _size, 0, -_detalization * _size * .5f + .5f * _size);
         for (int i = 0; i < d; i++)
             for (int j = 0; j < d; j++)
             {
-                verticies[i * d + j] = new Vector3(i, 0, j) + offset;
+                verticies[i * d + j] = new Vector3(i * _size, 0, j * _size) + offset;
                 uv[i * d + j] = new Vector3((float)i / d, (float)j / d);
             }
 
