@@ -80,6 +80,7 @@ Material:
     - _Displacement: 1
     - _DstBlend: 0
     - _EdgeLength: 20
+    - _FoamStrength: 1.5
     - _Fresnel: 0.03
     - _GlossMapScale: 1
     - _Glossiness: 0.5
@@ -90,19 +91,23 @@ Material:
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _Phong: 0.5
+    - _Roughness: 0.2
     - _SmoothnessTextureChannel: 0
     - _Specular: 32
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _Tess: 32
-    - _TessFactor: 150
+    - _TessFactor: 5
     - _Tessellation: 8
     - _UVSec: 0
-    - _WaveStrength: 4.58
+    - _WaveLength: 15
+    - _WaveSteepness: 6.5
+    - _WaveStrength: 0.95
     - _ZWrite: 1
     m_Colors:
-    - _Color: {r: 0.43805626, g: 0.7003817, b: 0.8679245, a: 1}
+    - _Color: {r: 0.11992702, g: 0.24979444, b: 0.3301887, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _SSSColor: {r: 0.3445621, g: 0.65635484, b: 0.8207547, a: 1}
     - _SpecColor: {r: 0.46226418, g: 0.46226418, b: 0.46226418, a: 0.5}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
