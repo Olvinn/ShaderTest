@@ -7,16 +7,23 @@ Shader "Custom/Ocean"
         _WaveStrength ("Wave Strength", Float) = 0.2
         _WaveLength ("Wave Length", Float) = 2
         _WaveSteepness ("Wave Steepness", Float) = .8
+        _WaveStrengthDistribution ("Wave Strength Distribution", Range(1, 2)) = 1.2
+        _WaveLengthDistribution ("Wave Length Distribution", Range(1, 2)) = 1.2
         _FoamStrength ("Foam", Float) = 1
+        _PartialNormals ("Partial Normals", Range(0,1)) = .5
         _TessFactor ("Tessellation Factor", Float) = 3
         _Metallic ("Metallic", Range(0,1)) = .5
         _Roughness ("Roughness", Range(0,1)) = .5
+        _Transparency ("Transparency", Float) = 20
     }
 
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
-        LOD 200
+        Tags { "RenderType" = "Transparent" "RenderQueue" = "Transparent" "LightMode" = "ForwardBase" }
+        ZWrite On
+        Blend SrcAlpha OneMinusSrcAlpha
+        
+        LOD 600
 
         Pass
         {
@@ -31,10 +38,10 @@ Shader "Custom/Ocean"
             #include "Helper.cginc"
 
             float4 _Color, _SSSColor;
-            float _WaveStrength, _WaveLength, _WaveSteepness, _TessFactor, _FoamStrength;
-            float _Metallic, _Roughness;
+            float _WaveStrength, _WaveLength, _WaveSteepness, _TessFactor, _FoamStrength, _Transparency;
+            float _Metallic, _Roughness, _WaveStrengthDistribution, _WaveLengthDistribution, _PartialNormals;
 
-            #define MAX_WAVES 64
+            #define MAX_WAVES 32
             uniform float2 _WaveDirs[MAX_WAVES];
 
             struct appdata
@@ -50,8 +57,7 @@ Shader "Custom/Ocean"
             struct Interpolators
             {
                 float4 positionCS : SV_POSITION;
-                float3 worldPos   : TEXCOORD0;
-                float3 normalOS   : TEXCOORD1;
+                float3 positionWS   : TEXCOORD0;
             };
 
             struct TessellationFactors
@@ -88,45 +94,66 @@ Shader "Custom/Ocean"
                 return f;
             }
 
-            float3 GerstnerDisplaceWithNormals(
+            void WaveDistribution(int i, inout float waveLength, inout float waveAmplitude)
+            {
+                waveLength = _WaveLength / pow(_WaveLengthDistribution, i);
+                waveAmplitude = _WaveStrength / pow(_WaveStrengthDistribution, i);
+            }
+
+            float3 GerstnerDisplace(
                 float2 xzPos,
-                float time,
-                float baseAmp,
-                float baseWL,
-                float baseSpeed,
-                float steepness,
-                inout float3 normalOS
+                float baseSpeed
             )
             {
                 float3 totalOffset = float3(0, 0, 0);
-                float3 tangentX = float3(1, 0, 0);
-                float3 tangentZ = float3(0, 0, 1);
-
                 
-
                 for (int i = 0; i < MAX_WAVES; i++)
                 {
                     float2 dir = _WaveDirs[i];
-                    float wavelength = baseWL / pow(1.15, i);
-                    float amplitude = baseAmp / pow(1.25, i);
+                    float wavelength = 0;
+                    float amplitude = 0;
+                    WaveDistribution(i, wavelength, amplitude);
                     float k = UNITY_PI / wavelength;
                     float speed = sqrt(baseSpeed * k);
-                    float phase = k * dot(dir, xzPos) - speed * time;
+                    float phase = k * dot(dir, xzPos) - speed * _Time.y;
 
                     float sinP = sin(phase);
                     float cosP = cos(phase);
 
-                    float Qi = steepness / (k * amplitude * MAX_WAVES); // stability fix
+                    float Qi = _WaveSteepness / (k * amplitude * MAX_WAVES);
 
-                    // Displacement
                     totalOffset.x += Qi * dir.x * amplitude * cosP;
                     totalOffset.z += Qi * dir.y * amplitude * cosP;
                     totalOffset.y += amplitude * sinP;
-                    
-                    //float2 displacementXZ = Qi * dir * amplitude * cosP;
-                    //totalXZ += displacementXZ;
+                }
+                
+                return totalOffset;
+            }
 
-                    // Partial derivatives (∂P/∂x and ∂P/∂z)
+            float3 GerstnerNormals(
+                float2 xzPos,
+                float baseSpeed,
+                inout float3 halfNormal
+            )
+            {
+                float3 tangentX = float3(1, 0, 0);
+                float3 tangentZ = float3(0, 0, 1);
+                
+                for (int i = 0; i < MAX_WAVES; i++)
+                {
+                    float2 dir = _WaveDirs[i];
+                    float wavelength = 0;
+                    float amplitude = 0;
+                    WaveDistribution(i, wavelength, amplitude);
+                    float k = UNITY_PI / wavelength;
+                    float speed = sqrt(baseSpeed * k);
+                    float phase = k * dot(dir, xzPos) - speed * _Time.y;
+
+                    float sinP = sin(phase);
+                    float cosP = cos(phase);
+
+                    float Qi = _WaveSteepness / (k * amplitude * MAX_WAVES);
+                    
                     float2 dPhase_dXZ = k * dir;
 
                     float dYdX = amplitude * cosP * dPhase_dXZ.x;
@@ -140,14 +167,42 @@ Shader "Custom/Ocean"
 
                     tangentX += float3(dXdX, dYdX, dZdX);
                     tangentZ += float3(dXdZ, dYdZ, dZdZ);
+
+                    if (i <= (MAX_WAVES * _PartialNormals))
+                    {
+                        halfNormal = normalize(cross(tangentZ, tangentX));
+                    }
                 }
 
-                //totalXZ /= MAX_WAVES;
-                //totalOffset.x = totalXZ.x;
-                //totalOffset.z = totalXZ.y;
-                normalOS = normalize(cross(tangentZ, tangentX));
+                float3 normalOS = normalize(cross(tangentZ, tangentX));
                 
-                return totalOffset;
+                return normalOS;
+            }
+
+            float3 ComputePeakCurvature(
+                float2 xzPos,
+                float baseSpeed
+            )
+            {
+                float laplacian = 0.0;
+
+                const int USE_WAVES = min(MAX_WAVES, MAX_WAVES);
+                for (int i = 0; i < USE_WAVES; i++)
+                {
+                    float2 dir = normalize(_WaveDirs[i]);
+                    float wavelength = 0;
+                    float amplitude = 0;
+                    WaveDistribution(i, wavelength, amplitude);
+                    float k = UNITY_PI / wavelength;
+                    float speed = sqrt(baseSpeed * k);
+                    float phase = k * dot(dir, xzPos) - speed * _Time.y;
+
+                    float sinP = sin(phase);
+
+                    laplacian += max(amplitude * sinP * k * k, 0);
+                }
+
+                return laplacian;
             }
 
             [domain("tri")]
@@ -162,52 +217,56 @@ Shader "Custom/Ocean"
                 
                 float3 worldPos = mul(unity_ObjectToWorld, float4(objectPos , 1.0)).xyz;
 
-                float3 normalOS = float3(0,1,0);
-                float3 offset = GerstnerDisplaceWithNormals(
+                float3 offset = GerstnerDisplace(
                     worldPos.xz,
-                    _Time.y,
-                    _WaveStrength,  
-                    _WaveLength,
-                    9.81,
-                    _WaveSteepness,
-                    normalOS
+                    9.81
                 );
 
                 worldPos += offset;
                 
                 o.positionCS = UnityWorldToClipPos(worldPos);
-                o.worldPos = worldPos;
-                o.normalOS = normalOS;
+                o.positionWS = worldPos;
 
                 return o;
             }
 
             fixed4 frag(Interpolators i) : SV_Target
             {
-                float3 normalWS = UnityObjectToWorldNormal(i.normalOS);
-                float3 viewDir = normalize(i.worldPos - _WorldSpaceCameraPos);
+                float3 halfNormalWS = float3(0,1,0);
+                float3 normalWS = GerstnerNormals(i.positionWS.xz, 9.81, halfNormalWS);
+                float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos);
 
                 float3 lightDir = _WorldSpaceLightPos0.xyz;
 
-                float ndotl = saturate(dot(normalWS, lightDir));
-                float backSSS = saturate(dot(normalWS, -lightDir)) * 0.4; // fake backscatter
-                float wrap = ndotl * 0.5 + 0.5; // wrap lighting
-                float transmission = pow(1.0 - saturate(dot(normalWS, viewDir)), 3.0);
-
-                float3 sss = (backSSS * transmission * wrap) * _SSSColor * _LightColor0;
+                float ndotl = saturate(dot(halfNormalWS, lightDir));
+                float backSSS = saturate(dot(halfNormalWS, -lightDir)) * 0.4; 
+                float wrap = ndotl * 0.5 + 0.5; 
+                float transmission = pow(1.0 - saturate(dot(halfNormalWS, viewDir)), 3.0);
                 
                 float3 reflection = reflect(viewDir, normalWS);
                 float4 skyColorReflect = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflection, 0);
 
+                float light = pow(saturate(dot(lightDir, float3(0,1,0))), .5);
+
+                float3 sss = (backSSS * transmission * wrap) * _SSSColor * _LightColor0 * light;
+
                 float3 fresnel = FresnelSchlick(saturate(dot(normalWS, -viewDir)), lerp(float3(0.04, 0.04, 0.04), _Color, _Metallic));
                 float3 specular = PBRSpecular(normalWS, -viewDir, lightDir, _Color, _Metallic, _Roughness);
-                
-                float d = dot(lightDir, normalWS) * 0.5 + 0.5;
-                float3 color = d * _Color;
-                color = lerp(sss + color, skyColorReflect, fresnel);
+                //specular *= light *10;
 
-                //return float4(sss, 1);
-                return float4(saturate(max(specular, color)), 1);
+                //float laplacian = ComputePeakCurvature(i.positionWS.xz, 9.81);
+
+                float foamAmount = 0;//saturate(laplacian - _FoamStrength);
+                
+                float d = dot(lightDir, halfNormalWS) * 0.5 + 0.5;
+                float3 color = d * _Color * light;
+                color = lerp(lerp(sss + color, skyColorReflect, fresnel.x * fresnel.y * fresnel.z), float3(1,1,1), saturate(foamAmount));
+
+                float transparency = max(skyColorReflect.x + skyColorReflect.y + skyColorReflect.z, specular.x + specular.y + specular.z);
+                transparency = saturate(max(transparency * .33 * _Transparency, (fresnel.x + fresnel.y + fresnel.z) * .33));
+
+                //return float4(foamAmount.xxx, 1);
+                return float4(saturate(max(specular, color)), transparency);
             }
             ENDCG
         }
