@@ -4,7 +4,7 @@ Shader "Custom/Ocean"
     {
         _Color ("Color", Color) = (0, 0.5, 1, 1)
         _SSSColor ("SSS Color", Color) = (0, 0.5, 1, 1)
-        _WaveStrength ("Wave Strength", Float) = 0.2
+        _WaveStrength ("Wave Amplitude", Float) = 0.2
         _WaveLength ("Wave Length", Float) = 2
         _WaveSteepness ("Wave Steepness", Float) = .8
         _WaveStrengthDistribution ("Wave Strength Distribution", Range(1, 2)) = 1.2
@@ -41,7 +41,7 @@ Shader "Custom/Ocean"
             float _WaveStrength, _WaveLength, _WaveSteepness, _TessFactor, _FoamStrength, _FoamAmount, _Transparency;
             float _Metallic, _Roughness, _WaveStrengthDistribution, _WaveLengthDistribution;
 
-            #define MAX_WAVES 56
+            #define MAX_WAVES 64
             uniform float2 _WaveDirs[MAX_WAVES];
 
             struct appdata
@@ -180,7 +180,7 @@ Shader "Custom/Ocean"
             {
                 float laplacian = 0.0;
 
-                const int USE_WAVES = min(32, MAX_WAVES);
+                const int USE_WAVES = MAX_WAVES;//min(32, MAX_WAVES);
                 for (int i = 0; i < USE_WAVES; i++)
                 {
                     float2 dir = normalize(_WaveDirs[i]);
@@ -241,10 +241,11 @@ Shader "Custom/Ocean"
                 float light = pow(saturate(dot(lightDir, float3(0,1,0))), .5);
 
                 float3 sss = (backSSS * transmission * wrap) * _SSSColor * _LightColor0 * light;
-
-                float3 fresnel = FresnelSchlick(saturate(dot(normalWS, -viewDir)), lerp(float3(0.04, 0.04, 0.04), _Color, _Metallic));
+                
+                float NdotV = saturate(dot(normalWS, -viewDir));
+                float3 F0 = lerp(float3(0.02, 0.02, 0.02), _Color, _Metallic);
+                float3 fresnel = FresnelSchlick(NdotV, F0);
                 float3 specular = PBRSpecular(normalWS, -viewDir, lightDir, _Color, _Metallic, _Roughness);
-                //specular *= light *10;
 
                 float laplacian = ComputePeakCurvature(i.positionWS.xz, 9.81);
 
@@ -255,7 +256,7 @@ Shader "Custom/Ocean"
                 color = lerp(lerp(sss + color, skyColorReflect, fresnel.x * fresnel.y * fresnel.z), float3(1,1,1), saturate(foamAmount));
 
                 float transparency = max(skyColorReflect.x + skyColorReflect.y + skyColorReflect.z, specular.x + specular.y + specular.z);
-                transparency = saturate(max(transparency * .33 * _Transparency, (fresnel.x + fresnel.y + fresnel.z) * .33));
+                transparency = lerp(saturate(max(transparency * .33 * _Transparency, (fresnel.x + fresnel.y + fresnel.z) * .33)), float3(1,1,1), saturate(foamAmount));;
 
                 //return float4(foamAmount.xxx, 1);
                 return float4(saturate(max(specular, color)), transparency);

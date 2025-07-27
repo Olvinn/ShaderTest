@@ -88,7 +88,7 @@ Material:
     - _DstBlend: 0
     - _EdgeLength: 20
     - _FoamAmount: 0.75
-    - _FoamStrength: 3
+    - _FoamStrength: 1
     - _Fresnel: 0.03
     - _GlossMapScale: 1
     - _Glossiness: 0.5
@@ -101,7 +101,7 @@ Material:
     - _Parallax: 0.02
     - _PartialNormals: 1
     - _Phong: 0.5
-    - _Roughness: 0.25
+    - _Roughness: 0.1
     - _SmoothnessTextureChannel: 0
     - _Specular: 32
     - _SpecularHighlights: 1
@@ -109,15 +109,15 @@ Material:
     - _Tess: 32
     - _TessFactor: 10
     - _Tessellation: 8
-    - _Transparency: 8
+    - _Transparency: 1
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
-    - _WaveLength: 40
-    - _WaveLengthDistribution: 1.18
-    - _WaveSteepness: 6
-    - _WaveStrength: 3
-    - _WaveStrengthDistribution: 1.25
+    - _WaveLength: 10
+    - _WaveLengthDistribution: 1.08
+    - _WaveSteepness: 5
+    - _WaveStrength: 0.15
+    - _WaveStrengthDistribution: 1.1
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 0.101960786, g: 0.30980393, b: 0.3882353, a: 1}
