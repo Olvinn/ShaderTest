@@ -16,7 +16,7 @@ Material:
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
+  m_CustomRenderQueue: 3000
   stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 
@@ -55,6 +55,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _Noise:
+        m_Texture: {fileID: 2800000, guid: 7deb2c08cf9f3bc4aad311ae4bfcba64, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _Normal:
         m_Texture: {fileID: 2800000, guid: 1cc3f244d93e74643a5ff36b5a09d13e, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -83,33 +87,36 @@ Material:
     - _Displacement: 1
     - _DstBlend: 0
     - _EdgeLength: 20
-    - _FoamStrength: 44.67
+    - _FoamAmount: 0.75
+    - _FoamStrength: 3
     - _Fresnel: 0.03
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
     - _Metallic: 0
     - _Mode: 0
+    - _NoiseScale: 0.08
     - _NormalPow: 1
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _PartialNormals: 0.4
+    - _PartialNormals: 1
     - _Phong: 0.5
-    - _Roughness: 0.2
+    - _Roughness: 0.25
     - _SmoothnessTextureChannel: 0
     - _Specular: 32
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _Tess: 32
-    - _TessFactor: 2
+    - _TessFactor: 10
     - _Tessellation: 8
+    - _Transparency: 8
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
-    - _WaveLength: 30
-    - _WaveLengthDistribution: 1.2
-    - _WaveSteepness: 3
-    - _WaveStrength: 0.5
+    - _WaveLength: 40
+    - _WaveLengthDistribution: 1.18
+    - _WaveSteepness: 6
+    - _WaveStrength: 3
     - _WaveStrengthDistribution: 1.25
     - _ZWrite: 1
     m_Colors:

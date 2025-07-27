@@ -21,12 +21,14 @@ public class MeshCreator : MonoBehaviour
 
         var verticies = new Vector3[d * d];
         var uv = new Vector2[d * d];
-        Vector3 offset = new Vector3(-_detalization * _size * .5f + .5f * _size, 0, -_detalization * _size * .5f + .5f * _size);
+        float growth = _size / (_detalization - 1); // Optional for exact edge fit
+        Vector3 offset = new Vector3(-_size * 0.5f, 0, -_size * 0.5f);
+
         for (int i = 0; i < d; i++)
             for (int j = 0; j < d; j++)
             {
-                verticies[i * d + j] = new Vector3(i * _size, 0, j * _size) + offset;
-                uv[i * d + j] = new Vector3((float)i / d, (float)j / d);
+                verticies[i * d + j] = new Vector3(i * growth, 0, j * growth) + offset;
+                uv[i * d + j] = new Vector2((float)i / (d - 1), (float)j / (d - 1));
             }
 
         var triangles = new List<int>();
@@ -51,18 +53,5 @@ public class MeshCreator : MonoBehaviour
         mesh.RecalculateBounds();
 
         _meshFilter.mesh = mesh;
-    }
-
-    private void OnDrawGizmos()
-    {
-        if (!_meshFilter || !_meshFilter.sharedMesh || !_showGizmos)
-            return;
-        Gizmos.color = Color.red;
-        var s = transform.localScale;
-        foreach (var vertex in _meshFilter.sharedMesh.vertices)
-        {
-            var pos = new Vector3(vertex.x * s.x, vertex.y * s.y, vertex.z * s.z);
-            Gizmos.DrawSphere(transform.rotation * pos, .05f);
-        }
     }
 }

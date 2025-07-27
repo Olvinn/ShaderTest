@@ -90,7 +90,7 @@ Material:
     - _Metallic: 1
     - _Mode: 0
     - _OcclusionStrength: 1
-    - _Offset: 0.1
+    - _Offset: 0.5
     - _Parallax: 0.02
     - _Roughness: 0.347
     - _SmoothnessTextureChannel: 0
@@ -105,6 +105,7 @@ Material:
     - _BotColor: {r: 0.4528302, g: 0.4528302, b: 0.4528302, a: 1}
     - _Color: {r: 0.48504806, g: 0.9433962, b: 0.5286423, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _Tint: {r: 0.18222678, g: 0.5943396, b: 0.25522962, a: 1}
+    - _Tint: {r: 0.26041296, g: 0.7169812, b: 0.34225062, a: 1}
     - _TopColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
