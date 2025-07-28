@@ -35,8 +35,8 @@ public class OceanWaveController : MonoBehaviour
             waveDirections[i] = new Vector4(x, y, 0f, 0f);
         }
         oceanMaterial.SetVectorArray("_WaveDirs", result);
-        oceanMaterial.SetFloat("_WaveLength", Mathf.Lerp(10, 40, stormy));
-        oceanMaterial.SetFloat("_WaveStrength", Mathf.Lerp(.15f, 3, stormy));
+        oceanMaterial.SetFloat("_WaveLength", Mathf.Lerp(5, 30, stormy));
+        oceanMaterial.SetFloat("_WaveStrength", Mathf.Lerp(.01f, 1.5f, stormy));
     }
 
     private void Reinitialize()
@@ -53,6 +53,6 @@ public class OceanWaveController : MonoBehaviour
         }
         oceanMaterial.SetVectorArray("_WaveDirs", result);
         oceanMaterial.SetFloat("_WaveLength", Mathf.Lerp(5, 30, stormy));
-        oceanMaterial.SetFloat("_WaveStrength", Mathf.Lerp(.05f, 1.5f, stormy));
+        oceanMaterial.SetFloat("_WaveStrength", Mathf.Lerp(.01f, 1.5f, stormy));
     }
 }

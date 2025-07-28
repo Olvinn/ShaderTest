@@ -101,13 +101,13 @@ Material:
     - _Parallax: 0.02
     - _PartialNormals: 1
     - _Phong: 0.5
-    - _Roughness: 0.1
+    - _Roughness: 0.2
     - _SmoothnessTextureChannel: 0
     - _Specular: 32
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _Tess: 32
-    - _TessFactor: 10
+    - _TessFactor: 80
     - _Tessellation: 8
     - _Transparency: 8
     - _UVSec: 0
@@ -116,7 +116,7 @@ Material:
     - _WaveLength: 5
     - _WaveLengthDistribution: 1.1
     - _WaveSteepness: 3
-    - _WaveStrength: 0.05
+    - _WaveStrength: 0.01
     - _WaveStrengthDistribution: 1.12
     - _ZWrite: 1
     m_Colors:

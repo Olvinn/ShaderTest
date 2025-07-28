@@ -85,11 +85,19 @@ Shader "Custom/GerstnerOcean"
 
             TessellationFactors PatchConstantFunction(InputPatch<v2t, 3> patch)
             {
+                float3 p0 = mul(unity_ObjectToWorld, float4(patch[0].objectPos, 1.0)).xyz;
+                float3 p1 = mul(unity_ObjectToWorld, float4(patch[1].objectPos, 1.0)).xyz;
+                float3 p2 = mul(unity_ObjectToWorld, float4(patch[2].objectPos, 1.0)).xyz;
+                float3 avgPosWS = (p0 + p1 + p2) / 3.0;
+
+                float dist = distance(avgPosWS, _WorldSpaceCameraPos);
+                float tess = lerp(_TessFactor, 1.0, saturate(dist * 0.002));
+
                 TessellationFactors f;
-                f.edge[0] = _TessFactor;
-                f.edge[1] = _TessFactor;
-                f.edge[2] = _TessFactor;
-                f.inside = _TessFactor;
+                f.edge[0] = tess;
+                f.edge[1] = tess;
+                f.edge[2] = tess;
+                f.inside  = tess;
 
                 return f;
             }
@@ -101,13 +109,16 @@ Shader "Custom/GerstnerOcean"
             }
 
             float3 GerstnerDisplace(
-                float2 xzPos,
+                float3 posOS,
                 float baseSpeed
             )
             {
                 float3 totalOffset = float3(0, 0, 0);
+
+                float dist = distance(posOS, _WorldSpaceCameraPos);
+                int maxWaves = lerp(MAX_WAVES, 8, saturate(dist * .001));
                 
-                for (int i = 0; i < MAX_WAVES; i++)
+                for (int i = 0; i < maxWaves; i++)
                 {
                     float2 dir = _WaveDirs[i];
                     float wavelength = 0;
@@ -115,7 +126,7 @@ Shader "Custom/GerstnerOcean"
                     WaveDistribution(i, wavelength, amplitude);
                     float k = UNITY_PI / wavelength;
                     float speed = sqrt(baseSpeed * k);
-                    float phase = k * dot(dir, xzPos) - speed * _Time.y;
+                    float phase = k * dot(dir, posOS.xz) - speed * _Time.y;
 
                     float sinP = sin(phase);
                     float cosP = cos(phase);
@@ -131,7 +142,7 @@ Shader "Custom/GerstnerOcean"
             }
 
             float3 GerstnerNormalsAndCurvature(
-                float2 xzPos,
+                float3 posOS,
                 float baseSpeed,
                 inout float laplacian
             )
@@ -139,7 +150,10 @@ Shader "Custom/GerstnerOcean"
                 float3 tangentX = float3(1, 0, 0);
                 float3 tangentZ = float3(0, 0, 1);
                 
-                for (int i = 0; i < MAX_WAVES; i++)
+                float dist = distance(posOS, _WorldSpaceCameraPos);
+                int maxWaves = lerp(MAX_WAVES, 8, saturate(dist * .001));
+                
+                for (int i = 0; i < maxWaves; i++)
                 {
                     float2 dir = _WaveDirs[i];
                     float wavelength = 0;
@@ -147,7 +161,7 @@ Shader "Custom/GerstnerOcean"
                     WaveDistribution(i, wavelength, amplitude);
                     float k = UNITY_PI / wavelength;
                     float speed = sqrt(baseSpeed * k);
-                    float phase = k * dot(dir, xzPos) - speed * _Time.y;
+                    float phase = k * dot(dir, posOS.xz) - speed * _Time.y;
 
                     float sinP = sin(phase);
                     float cosP = cos(phase);
@@ -190,7 +204,7 @@ Shader "Custom/GerstnerOcean"
                 float3 worldPos = mul(unity_ObjectToWorld, float4(objectPos , 1.0)).xyz;
 
                 float3 offset = GerstnerDisplace(
-                    worldPos.xz,
+                    worldPos,
                     9.81
                 );
 
@@ -205,7 +219,7 @@ Shader "Custom/GerstnerOcean"
             fixed4 frag(Interpolators i) : SV_Target
             {
                 float laplacian = 0;
-                float3 normalWS = GerstnerNormalsAndCurvature(i.positionWS.xz, 9.81, laplacian);
+                float3 normalWS = GerstnerNormalsAndCurvature(i.positionWS, 9.81, laplacian);
                 float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos);
 
                 float3 lightDir = _WorldSpaceLightPos0.xyz;
