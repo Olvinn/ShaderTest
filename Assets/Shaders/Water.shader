@@ -30,6 +30,7 @@ Shader "Custom/WaterShaderRefined"
             #include "UnityStandardUtils.cginc"
             #include "UnityLightingCommon.cginc"
             #include "Autolight.cginc"
+            #include "Helper.cginc"
 
             sampler2D _Normal, _Detail;
             half4 _Normal_ST, _Detail_ST, _Color;
@@ -89,10 +90,10 @@ Shader "Custom/WaterShaderRefined"
 
             half4 frag(v2f i) : SV_Target
             {
-	            float3 normal = UnpackScaleNormal(tex2D(_Normal, (i.worldPos.xz * i.uv0) + _Time.x), 1);
+	            float3 normal = UnpackScaleNormal(tex2D(_Normal, (i.worldPos.xz * _Normal_ST) + _Time.x), 1);
 	            normal = normal.xzy;
                 normal.y = 1 / _NormalPow;
-	            float3 detail = UnpackScaleNormal(tex2D(_Detail, (i.worldPos.xz * i.uv1) - _Time.x), 1);
+	            float3 detail = UnpackScaleNormal(tex2D(_Detail, (i.worldPos.xz * _Detail_ST) - _Time.x), 1);
 	            detail = detail.xzy;
                 detail.y = 1 / _DetailPow;
                 normal += detail;
@@ -108,20 +109,23 @@ Shader "Custom/WaterShaderRefined"
                 float3 ambientData = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectWorld, 0);
                 half4 ambient = half4(DecodeHDR(half4(ambientData, 1), unity_SpecCube0_HDR), 1);
                 fixed shadow = UNITY_SHADOW_ATTENUATION(i, i.worldPos);
-                float fresnelNormal = Fresnel(normal, viewDir, _Fresnel);
+                
+                float NdotV = saturate(dot(normal, -viewDir));
+                float3 F0 = lerp(float3(0.02, 0.02, 0.02), _Color, 0);
+                float3 fresnel = FresnelSchlick(NdotV, F0);
+                float3 specular = PBRSpecular(normal, viewDir, _WorldSpaceLightPos0.xyz, _Color, 0, .2);
+                
                 half4 diffuse = GoochShading(_LightColor0.rgb, normal, _WorldSpaceLightPos0.xyz,
-                    lerp(_Color, ambient, fresnelNormal), lerp(_Color, ambient, fresnelNormal) * .9, shadow) +
+                    lerp(_Color, ambient, fresnel.x * fresnel.y * fresnel.z),
+                    lerp(_Color, ambient, fresnel.x * fresnel.y * fresnel.z) * .9, shadow) +
                         float4(ShadeSH9(float4(i.normal, 1)), 1.0) * .2; 
-                float3 specular = PhongShading(_LightColor0.rgb, normal, _WorldSpaceLightPos0.xyz, viewDir) * shadow;
                 float fresnelDistance = Fresnel(i.normal, viewDir, _Fresnel);
 
-                // return float4(shadow, shadow, shadow, 1);
-
-                diffuse.rgb = lerp(diffuse, ambient, fresnelNormal) * max(0.9, shadow);
+                diffuse.rgb = lerp(diffuse, ambient, fresnel) * max(0.9, shadow);
                 diffuse.rgb += specular * _SpecPow;
                 diffuse.a = saturate(specular + fresnelDistance);
                 diffuse = saturate(diffuse); 
-                
+
                 return diffuse;
             }
             
