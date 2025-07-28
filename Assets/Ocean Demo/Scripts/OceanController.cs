@@ -52,7 +52,7 @@ public class OceanWaveController : MonoBehaviour
             result[i] = new Vector4(x, y, 0f, 0f);
         }
         oceanMaterial.SetVectorArray("_WaveDirs", result);
-        oceanMaterial.SetFloat("_WaveLength", Mathf.Lerp(10, 40, stormy));
-        oceanMaterial.SetFloat("_WaveStrength", Mathf.Lerp(.15f, 3, stormy));
+        oceanMaterial.SetFloat("_WaveLength", Mathf.Lerp(5, 30, stormy));
+        oceanMaterial.SetFloat("_WaveStrength", Mathf.Lerp(.05f, 1.5f, stormy));
     }
 }

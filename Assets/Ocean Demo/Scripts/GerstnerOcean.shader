@@ -1,4 +1,4 @@
-Shader "Custom/Ocean"
+Shader "Custom/GerstnerOcean"
 {
     Properties
     {
@@ -130,9 +130,10 @@ Shader "Custom/Ocean"
                 return totalOffset;
             }
 
-            float3 GerstnerNormals(
+            float3 GerstnerNormalsAndCurvature(
                 float2 xzPos,
-                float baseSpeed
+                float baseSpeed,
+                inout float laplacian
             )
             {
                 float3 tangentX = float3(1, 0, 0);
@@ -151,6 +152,10 @@ Shader "Custom/Ocean"
                     float sinP = sin(phase);
                     float cosP = cos(phase);
 
+                    float scale = pow(k, 2);
+                    float suppression = pow(k, -1);
+                    laplacian += -amplitude * sin(phase) * scale * suppression;
+
                     float Qi = _WaveSteepness / (k * amplitude * MAX_WAVES);
                     
                     float2 dPhase_dXZ = k * dir;
@@ -167,35 +172,9 @@ Shader "Custom/Ocean"
                     tangentX += float3(dXdX, dYdX, dZdX);
                     tangentZ += float3(dXdZ, dYdZ, dZdZ);
                 }
-
                 float3 normalOS = normalize(cross(tangentZ, tangentX));
                 
                 return normalOS;
-            }
-
-            float3 ComputePeakCurvature(
-                float2 xzPos,
-                float baseSpeed
-            )
-            {
-                float laplacian = 0.0;
-
-                const int USE_WAVES = MAX_WAVES;//min(32, MAX_WAVES);
-                for (int i = 0; i < USE_WAVES; i++)
-                {
-                    float2 dir = normalize(_WaveDirs[i]);
-                    float wavelength = 0;
-                    float amplitude = 0;
-                    WaveDistribution(i, wavelength, amplitude);
-                    float k = UNITY_PI / wavelength;
-                    float speed = sqrt(baseSpeed * k);
-                    float phase = k * dot(dir, xzPos) - speed * _Time.y;
-
-                    float scale = pow(k, 2);
-                    float suppression = pow(k, -1);
-                    laplacian += -amplitude * sin(phase) * scale * suppression;
-                }
-                return -laplacian;
             }
 
             [domain("tri")]
@@ -225,7 +204,8 @@ Shader "Custom/Ocean"
 
             fixed4 frag(Interpolators i) : SV_Target
             {
-                float3 normalWS = GerstnerNormals(i.positionWS.xz, 9.81);
+                float laplacian = 0;
+                float3 normalWS = GerstnerNormalsAndCurvature(i.positionWS.xz, 9.81, laplacian);
                 float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos);
 
                 float3 lightDir = _WorldSpaceLightPos0.xyz;
@@ -246,8 +226,6 @@ Shader "Custom/Ocean"
                 float3 F0 = lerp(float3(0.02, 0.02, 0.02), _Color, _Metallic);
                 float3 fresnel = FresnelSchlick(NdotV, F0);
                 float3 specular = PBRSpecular(normalWS, -viewDir, lightDir, _Color, _Metallic, _Roughness);
-
-                float laplacian = ComputePeakCurvature(i.positionWS.xz, 9.81);
 
                 float foamAmount = saturate(laplacian - _FoamAmount) * _FoamStrength;
                 

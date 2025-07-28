@@ -107,9 +107,9 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _Tess: 32
-    - _TessFactor: 10
+    - _TessFactor: 2
     - _Tessellation: 8
-    - _Transparency: 1
+    - _Transparency: 8
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
@@ -120,7 +120,7 @@ Material:
     - _WaveStrengthDistribution: 1.1
     - _ZWrite: 1
     m_Colors:
-    - _Color: {r: 0.101960786, g: 0.30980393, b: 0.3882353, a: 1}
+    - _Color: {r: 0.09420612, g: 0.18372479, b: 0.2735849, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SSSColor: {r: 0.21176471, g: 0.827451, b: 0.7713392, a: 1}
     - _SpecColor: {r: 0.46226418, g: 0.46226418, b: 0.46226418, a: 0.5}
