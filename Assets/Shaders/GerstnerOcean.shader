@@ -154,7 +154,7 @@ Shader "Custom/GerstnerOcean"
 
                     float scale = pow(k, 2);
                     float suppression = pow(k, -1);
-                    laplacian += -amplitude * sin(phase) * scale * suppression;
+                    laplacian += amplitude * sin(phase) * scale * suppression;
 
                     float Qi = _WaveSteepness / (k * amplitude * MAX_WAVES);
                     
@@ -225,7 +225,7 @@ Shader "Custom/GerstnerOcean"
                 float NdotV = saturate(dot(normalWS, -viewDir));
                 float3 F0 = lerp(float3(0.02, 0.02, 0.02), _Color, _Metallic);
                 float3 fresnel = FresnelSchlick(NdotV, F0);
-                float3 specular = PBRSpecular(normalWS, -viewDir, lightDir, _Color, _Metallic, _Roughness);
+                float3 specular = PBRSpecular(normalWS, -viewDir, lightDir, _Color, _Metallic, _Roughness) * _LightColor0;
 
                 float foamAmount = saturate(laplacian - _FoamAmount) * _FoamStrength;
                 
@@ -234,9 +234,8 @@ Shader "Custom/GerstnerOcean"
                 color = lerp(lerp(sss + color, skyColorReflect, fresnel.x * fresnel.y * fresnel.z), float3(1,1,1), saturate(foamAmount));
 
                 float transparency = max(skyColorReflect.x + skyColorReflect.y + skyColorReflect.z, specular.x + specular.y + specular.z);
-                transparency = lerp(saturate(max(transparency * .33 * _Transparency, (fresnel.x + fresnel.y + fresnel.z) * .33)), float3(1,1,1), saturate(foamAmount));;
+                transparency = lerp(saturate(max(transparency * .33 * _Transparency, (fresnel.x + fresnel.y + fresnel.z) * .33)), float3(1,1,1), saturate(foamAmount));
 
-                //return float4(foamAmount.xxx, 1);
                 return float4(saturate(max(specular, color)), transparency);
             }
             ENDCG

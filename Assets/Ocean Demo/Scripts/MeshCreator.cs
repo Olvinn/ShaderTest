@@ -19,7 +19,7 @@ public class MeshCreator : MonoBehaviour
 
         var d = _detalization;
 
-        var verticies = new Vector3[d * d];
+        var vertices = new Vector3[d * d];
         var uv = new Vector2[d * d];
         float growth = _size / (_detalization - 1); // Optional for exact edge fit
         Vector3 offset = new Vector3(-_size * 0.5f, 0, -_size * 0.5f);
@@ -27,7 +27,7 @@ public class MeshCreator : MonoBehaviour
         for (int i = 0; i < d; i++)
             for (int j = 0; j < d; j++)
             {
-                verticies[i * d + j] = new Vector3(i * growth, 0, j * growth) + offset;
+                vertices[i * d + j] = new Vector3(i * growth, 0, j * growth) + offset;
                 uv[i * d + j] = new Vector2((float)i / (d - 1), (float)j / (d - 1));
             }
 
@@ -45,7 +45,7 @@ public class MeshCreator : MonoBehaviour
             }
         } 
 
-        mesh.vertices = verticies;
+        mesh.vertices = vertices;
         mesh.triangles = triangles.ToArray();
         mesh.uv = uv;
         
