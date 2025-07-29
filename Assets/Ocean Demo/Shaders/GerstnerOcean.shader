@@ -21,7 +21,7 @@ Shader "Custom/GerstnerOcean"
     SubShader
     {
         Tags { "RenderType" = "Transparent" "RenderQueue" = "Transparent" "LightMode" = "ForwardBase" }
-        ZWrite Off
+        ZWrite On
         Blend SrcAlpha OneMinusSrcAlpha
         
         Pass
