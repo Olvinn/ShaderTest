@@ -21,7 +21,7 @@ Shader "Custom/GerstnerOcean"
     SubShader
     {
         Tags { "RenderType" = "Transparent" "RenderQueue" = "Transparent" "LightMode" = "ForwardBase" }
-        ZWrite On
+        ZWrite Off
         Blend SrcAlpha OneMinusSrcAlpha
         
         Pass
@@ -33,8 +33,10 @@ Shader "Custom/GerstnerOcean"
             #pragma domain domain
             #pragma fragment frag
 
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
+
             #include "UnityCG.cginc"
-            #include "Helper.cginc" 
+            #include "Helper.cginc"
 
             float4 _Color, _SSSColor;
             float _WaveStrength, _WaveLength, _WaveSteepness, _TessFactor, _FoamStrength, _FoamAmount, _Transparency;
@@ -57,6 +59,7 @@ Shader "Custom/GerstnerOcean"
             {
                 float4 positionCS : SV_POSITION;
                 float3 positionWS   : TEXCOORD0;
+                float lodFade : TEXCOORD1; 
             };
 
             struct TessellationFactors
@@ -199,6 +202,9 @@ Shader "Custom/GerstnerOcean"
 
                 worldPos += offset;
                 
+                UNITY_INITIALIZE_OUTPUT(Interpolators, o);
+                o.lodFade = unity_LODFade.y;
+                
                 o.positionCS = UnityWorldToClipPos(worldPos);
                 o.positionWS = worldPos;
 
@@ -238,8 +244,11 @@ Shader "Custom/GerstnerOcean"
 
                 float transparency = dot(specular, float3(0.333,0.333,0.333));
                 transparency = lerp(saturate(max(transparency, fresnelFactor) * _Transparency), 1, saturate(foamAmount));
-
-                //return float4(specular, 1);
+                #ifdef LOD_FADE_CROSSFADE
+                    transparency *= (sqrt(1-i.lodFade)); 
+                #endif
+                
+                //return float4(i.lodFade.xxx, 1);
                 return float4(saturate(specular + color), transparency);
             }
             ENDCG
