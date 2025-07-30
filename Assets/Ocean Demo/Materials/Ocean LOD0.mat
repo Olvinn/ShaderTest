@@ -110,14 +110,14 @@ Material:
     - _Tess: 32
     - _TessFactor: 3
     - _Tessellation: 8
-    - _Transparency: 10
+    - _Transparency: 30
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
-    - _WaveLength: 5
-    - _WaveLengthDistribution: 1.15
-    - _WaveSteepness: 4
-    - _WaveStrength: 0.01
+    - _WaveLength: 8.375
+    - _WaveLengthDistribution: 1.155
+    - _WaveSteepness: 3.405
+    - _WaveStrength: 0.21115
     - _WaveStrengthDistribution: 1.2
     - _ZWrite: 1
     m_Colors:

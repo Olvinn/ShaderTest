@@ -24,7 +24,6 @@ namespace Ocean_Demo.Scripts
             waveLength = mat.GetFloat("_WaveLength");
             waveStrength = mat.GetFloat("_WaveStrength");
             waveLengthDistribution = mat.GetFloat("_WaveLengthDistribution");
-            waveSteepness = mat.GetFloat("_WaveSteepness");
             waveStrengthDistribution = mat.GetFloat("_WaveStrengthDistribution");
         }
 
@@ -73,13 +72,13 @@ namespace Ocean_Demo.Scripts
                 mat.SetVectorArray("_WaveDirs", waves);
                 mat.SetFloat("_WaveLength", Mathf.Lerp(5, 30, storm));
                 mat.SetFloat("_WaveStrength", Mathf.Lerp(.01f, 1.5f, storm));
+                mat.SetFloat("_WaveSteepness", Mathf.Lerp(3f, 6f, storm));
             }
             
             var material = oceanMaterials[0];
             waveLength = material.GetFloat("_WaveLength");
             waveStrength = material.GetFloat("_WaveStrength");
             waveLengthDistribution = material.GetFloat("_WaveLengthDistribution");
-            waveSteepness = material.GetFloat("_WaveSteepness");
             waveStrengthDistribution = material.GetFloat("_WaveStrengthDistribution");
         }
     }

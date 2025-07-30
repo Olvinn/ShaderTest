@@ -32,7 +32,7 @@ namespace Ocean_Demo.Scripts
             if (depth > 0f)
             {
                 Vector3 force = Vector3.up * (depth * buoyancyForce);
-                _rb.AddForce(force, ForceMode.Acceleration);
+                _rb.AddForce(force, ForceMode.Force);
 
                 Vector3 drag = -_rb.linearVelocity;
                 _rb.AddForce(drag, ForceMode.Force);

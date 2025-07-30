@@ -93,7 +93,7 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _MaxWaves: 16
+    - _MaxWaves: 64
     - _Metallic: 0
     - _Mode: 0
     - _NoiseScale: 0.08
@@ -110,15 +110,15 @@ Material:
     - _Tess: 32
     - _TessFactor: 0.001
     - _Tessellation: 8
-    - _Transparency: 50
+    - _Transparency: 30
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
     - _WaveLength: 12.325001
-    - _WaveLengthDistribution: 1.1
-    - _WaveSteepness: 6
+    - _WaveLengthDistribution: 1.155
+    - _WaveSteepness: 5
     - _WaveStrength: 0.44657
-    - _WaveStrengthDistribution: 1.12
+    - _WaveStrengthDistribution: 1.2
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 0.09420612, g: 0.18372479, b: 0.2735849, a: 1}

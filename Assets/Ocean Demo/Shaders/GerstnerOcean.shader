@@ -162,7 +162,7 @@ Shader "Custom/GerstnerOcean"
                     float suppression = pow(k, -1);
                     laplacian += amplitude * sin(phase) * scale * suppression;
 
-                    float Qi = _WaveSteepness / (k * amplitude * MAX_WAVES);
+                    float Qi = _WaveSteepness/ (k * amplitude * MAX_WAVES);
                     
                     float2 dPhase_dXZ = k * dir;
 
