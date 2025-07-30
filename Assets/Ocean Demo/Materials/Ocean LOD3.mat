@@ -110,7 +110,7 @@ Material:
     - _Tess: 32
     - _TessFactor: 0.001
     - _Tessellation: 8
-    - _Transparency: 30
+    - _Transparency: 40
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2

@@ -20,10 +20,10 @@ Shader "Custom/GerstnerOcean"
 
     SubShader
     {
-        Tags { "RenderType" = "Transparent" "RenderQueue" = "Transparent" "LightMode" = "ForwardBase" }
-        //Tags { "RenderType" = "Opaque" "RenderQueue" = "Opaque" "LightMode" = "ForwardBase" }
+        //Tags { "RenderType" = "Transparent" "RenderQueue" = "Transparent" "LightMode" = "ForwardBase" }
+        Tags { "RenderType" = "Opaque" "RenderQueue" = "Opaque" "LightMode" = "ForwardBase" }
         ZWrite On
-        Blend SrcAlpha OneMinusSrcAlpha
+        //Blend SrcAlpha OneMinusSrcAlpha
         
         Pass
         {
@@ -36,9 +36,12 @@ Shader "Custom/GerstnerOcean"
 
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fog
+            #pragma multi_compile_fwdbase nolightmap nodirlightmap nodynlightmap novertexlight
 
             #include "UnityCG.cginc"
             #include "Helper.cginc"
+            #include "UnityLightingCommon.cginc"
+            #include "AutoLight.cginc"
 
             float4 _Color, _SSSColor;
             float _WaveStrength, _WaveLength, _WaveSteepness, _TessFactor, _FoamStrength, _FoamAmount, _Transparency;
@@ -59,10 +62,11 @@ Shader "Custom/GerstnerOcean"
 
             struct Interpolators
             {
-                float4 positionCS : SV_POSITION;
+                float4 pos : SV_POSITION;
                 float3 positionWS   : TEXCOORD0;
                 UNITY_FOG_COORDS(1)
                 float lodFade : TEXCOORD2;
+                SHADOW_COORDS(3)
             };
 
             struct TessellationFactors
@@ -207,10 +211,11 @@ Shader "Custom/GerstnerOcean"
                 
                 UNITY_INITIALIZE_OUTPUT(Interpolators, o);
                 o.lodFade = unity_LODFade.y;
-                o.positionCS = UnityWorldToClipPos(worldPos);
+                o.pos = UnityWorldToClipPos(worldPos);
                 o.positionWS = worldPos;
-                UNITY_TRANSFER_FOG(o,o.positionCS);
-
+                UNITY_TRANSFER_FOG(o,o.pos);
+                TRANSFER_SHADOW_WPOS(o, worldPos);
+ 
                 return o;
             }
 
@@ -219,6 +224,8 @@ Shader "Custom/GerstnerOcean"
                 float laplacian = 0;
                 float3 normalWS = GerstnerNormalsAndCurvature(i.positionWS, 9.81, laplacian);
                 float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos);
+                
+                float shadow = SHADOW_ATTENUATION(i);
 
                 float3 lightDir = _WorldSpaceLightPos0.xyz;
 
@@ -236,12 +243,13 @@ Shader "Custom/GerstnerOcean"
                 float NdotV = saturate(dot(normalWS, -viewDir));
                 float3 F0 = lerp(float3(0.02, 0.02, 0.02), _Color, _Metallic);
                 float3 fresnel = FresnelSchlick(NdotV, F0);
-                float3 specular = PBRSpecular(normalWS, -viewDir, lightDir, _Color, _Metallic, _Roughness) * _LightColor0;
+                float3 specular = PBRSpecular(normalWS, -viewDir, lightDir, _Color, _Metallic, _Roughness) * _LightColor0 * shadow;
 
                 float foamAmount = saturate(laplacian - _FoamAmount) * _FoamStrength;
                 
                 float d = dot(lightDir, normalWS) * 0.5 + 0.5;
                 float3 color = d * _Color * light;
+                color *= lerp(1, .75, shadow);
                 float fresnelFactor = dot(fresnel, float3(0.333,0.333,0.333));
                 color = lerp(lerp(sss + color, skyColorReflect, fresnelFactor), float3(1,1,1), saturate(foamAmount));
 
@@ -253,7 +261,148 @@ Shader "Custom/GerstnerOcean"
                 
                 float3 finalColor = saturate(specular + color);
                 UNITY_APPLY_FOG(i.fogCoord, finalColor);
+                //return float4(shadow.xxx,1);
                 return float4(finalColor, transparency);
+            }
+            ENDCG
+        }
+
+        Pass //shadow casting
+        {
+            Tags{ "LightMode" = "ShadowCaster" }
+            CGPROGRAM
+            
+            #pragma target 5.0
+            #pragma vertex vert
+            #pragma hull hull
+            #pragma domain domain
+            #pragma fragment frag
+
+            #include "UnityCG.cginc"
+            #include "Helper.cginc"
+
+            float _WaveStrength, _WaveLength, _WaveSteepness, _TessFactor, _FoamStrength, _FoamAmount, _Transparency;
+            float _WaveStrengthDistribution, _WaveLengthDistribution, _MaxWaves;
+
+            #define MAX_WAVES 64
+            #define UNITY_PASS_SHADOWCASTER
+            uniform float2 _WaveDirs[MAX_WAVES];
+
+            struct appdata
+            {
+                float4 vertex : POSITION;
+            };
+
+            struct v2t
+            {
+                float3 objectPos : INTERNALTESSPOS;
+            };
+
+            struct Interpolators
+            {
+                float4 pos : SV_POSITION;
+            };
+
+            struct TessellationFactors
+            {
+                float edge[3] : SV_TessFactor;
+                float inside  : SV_InsideTessFactor;
+            };
+
+            v2t vert(appdata v)
+            {
+                v2t o;
+                o.objectPos = v.vertex.xyz;
+                return o;
+            }
+
+            [domain("tri")]
+            [outputcontrolpoints(3)]
+            [outputtopology("triangle_cw")]
+            [patchconstantfunc("PatchConstantFunction")]
+            [partitioning("fractional_even")]
+            v2t hull(InputPatch<v2t, 3> patch, uint id : SV_OutputControlPointID)
+            {
+                return patch[id];
+            }
+
+            TessellationFactors PatchConstantFunction(InputPatch<v2t, 3> patch)
+            {
+                TessellationFactors f;
+                f.edge[0] = _TessFactor;
+                f.edge[1] = _TessFactor;
+                f.edge[2] = _TessFactor;
+                f.inside  = _TessFactor;
+
+                return f;
+            }
+
+            void WaveDistribution(int i, inout float waveLength, inout float waveAmplitude)
+            {
+                waveLength = _WaveLength / pow(_WaveLengthDistribution, i);
+                waveAmplitude = _WaveStrength / pow(_WaveStrengthDistribution, i);
+            }
+
+            float3 GerstnerDisplace(
+                float3 posOS,
+                float baseSpeed
+            )
+            {
+                float3 totalOffset = float3(0, 0, 0);
+
+                int maxWaves = min(MAX_WAVES, _MaxWaves);
+                
+                for (int i = 0; i < maxWaves; i++)
+                {
+                    float2 dir = _WaveDirs[i];
+                    float wavelength = 0;
+                    float amplitude = 0;
+                    WaveDistribution(i, wavelength, amplitude);
+                    float k = UNITY_PI / wavelength;
+                    float speed = sqrt(baseSpeed * k);
+                    float phase = k * dot(dir, posOS.xz) - speed * _Time.y;
+
+                    float sinP = sin(phase);
+                    float cosP = cos(phase);
+
+                    float Qi = _WaveSteepness / (k * amplitude * MAX_WAVES);
+
+                    totalOffset.x += Qi * dir.x * amplitude * cosP;
+                    totalOffset.z += Qi * dir.y * amplitude * cosP;
+                    totalOffset.y += amplitude * sinP;
+                }
+                
+                return totalOffset;
+            }
+
+            [domain("tri")]
+            Interpolators domain(TessellationFactors f, OutputPatch<v2t, 3> patch, float3 bary : SV_DomainLocation)
+            {
+                Interpolators o;
+
+                float3 objectPos =
+                    patch[0].objectPos * bary.x +
+                    patch[1].objectPos * bary.y +
+                    patch[2].objectPos * bary.z;
+                
+                float3 worldPos = mul(unity_ObjectToWorld, float4(objectPos , 1.0)).xyz;
+
+                float3 offset = GerstnerDisplace(
+                    worldPos,
+                    9.81
+                );
+
+                worldPos += offset;
+                
+                UNITY_INITIALIZE_OUTPUT(Interpolators, o);
+                o.pos = UnityWorldToClipPos(worldPos);
+
+                return o;
+            }
+
+            fixed4 frag(Interpolators i) : SV_Target
+            {
+                SHADOW_CASTER_FRAGMENT(i)
             }
             ENDCG
         }
