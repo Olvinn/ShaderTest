@@ -115,10 +115,10 @@ Material:
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
     - _WaveLength: 8.375
-    - _WaveLengthDistribution: 1.155
+    - _WaveLengthDistribution: 1.12
     - _WaveSteepness: 3.405
     - _WaveStrength: 0.21115
-    - _WaveStrengthDistribution: 1.2
+    - _WaveStrengthDistribution: 1.19
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 0.09420612, g: 0.18372479, b: 0.2735849, a: 1}

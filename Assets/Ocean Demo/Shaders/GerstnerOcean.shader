@@ -21,6 +21,7 @@ Shader "Custom/GerstnerOcean"
     SubShader
     {
         Tags { "RenderType" = "Transparent" "RenderQueue" = "Transparent" "LightMode" = "ForwardBase" }
+        //Tags { "RenderType" = "Opaque" "RenderQueue" = "Opaque" "LightMode" = "ForwardBase" }
         ZWrite On
         Blend SrcAlpha OneMinusSrcAlpha
         
@@ -34,6 +35,7 @@ Shader "Custom/GerstnerOcean"
             #pragma fragment frag
 
             #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_fog
 
             #include "UnityCG.cginc"
             #include "Helper.cginc"
@@ -59,7 +61,8 @@ Shader "Custom/GerstnerOcean"
             {
                 float4 positionCS : SV_POSITION;
                 float3 positionWS   : TEXCOORD0;
-                float lodFade : TEXCOORD1; 
+                UNITY_FOG_COORDS(1)
+                float lodFade : TEXCOORD2;
             };
 
             struct TessellationFactors
@@ -204,9 +207,9 @@ Shader "Custom/GerstnerOcean"
                 
                 UNITY_INITIALIZE_OUTPUT(Interpolators, o);
                 o.lodFade = unity_LODFade.y;
-                
                 o.positionCS = UnityWorldToClipPos(worldPos);
                 o.positionWS = worldPos;
+                UNITY_TRANSFER_FOG(o,o.positionCS);
 
                 return o;
             }
@@ -248,8 +251,9 @@ Shader "Custom/GerstnerOcean"
                     transparency *= (sqrt(1-i.lodFade)); 
                 #endif
                 
-                //return float4(i.lodFade.xxx, 1);
-                return float4(saturate(specular + color), transparency);
+                float3 finalColor = saturate(specular + color);
+                UNITY_APPLY_FOG(i.fogCoord, finalColor);
+                return float4(finalColor, transparency);
             }
             ENDCG
         }
