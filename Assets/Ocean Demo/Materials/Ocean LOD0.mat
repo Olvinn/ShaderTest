@@ -108,16 +108,16 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _Tess: 32
-    - _TessFactor: 2
+    - _TessFactor: 3
     - _Tessellation: 8
-    - _Transparency: 50
+    - _Transparency: 10
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
-    - _WaveLength: 12.325001
+    - _WaveLength: 5
     - _WaveLengthDistribution: 1.15
-    - _WaveSteepness: 6
-    - _WaveStrength: 0.44657
+    - _WaveSteepness: 4
+    - _WaveStrength: 0.01
     - _WaveStrengthDistribution: 1.2
     - _ZWrite: 1
     m_Colors:
