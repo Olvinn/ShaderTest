@@ -16,6 +16,9 @@ Shader "Custom/GerstnerOcean"
         _Metallic ("Metallic", Range(0,1)) = .5
         _Roughness ("Roughness", Range(0,1)) = .5
         _Transparency ("Transparency", Float) = 20
+        _SSRSteps ("SSR Steps", Integer) = 32
+        _SSRStepSize ("SSR Step Size", Range(0.1, 5)) = .5
+        _SSRThickness ("SSR Thickness", Range(0.1, 1)) = .5
     }
 
     SubShader
@@ -45,9 +48,14 @@ Shader "Custom/GerstnerOcean"
 
             float4 _Color, _SSSColor;
             float _WaveStrength, _WaveLength, _WaveSteepness, _TessFactor, _FoamStrength, _FoamAmount, _Transparency;
-            float _Metallic, _Roughness, _WaveStrengthDistribution, _WaveLengthDistribution, _MaxWaves;
+            float _Metallic, _Roughness, _WaveStrengthDistribution, _WaveLengthDistribution, _MaxWaves, _SSRStepSize;
+            float _SSRThickness;
+            int _SSRSteps;
+            sampler2D _LastFrameColor;
+            sampler2D _CameraDepthTexture;
 
             #define MAX_WAVES 64
+            #define SSR_MAX_STEPS 32
             uniform float2 _WaveDirs[MAX_WAVES];
 
             struct appdata
@@ -67,6 +75,7 @@ Shader "Custom/GerstnerOcean"
                 UNITY_FOG_COORDS(1)
                 float lodFade : TEXCOORD2;
                 SHADOW_COORDS(3)
+                float4 screenPos : TEXCOORD4;
             };
 
             struct TessellationFactors
@@ -211,7 +220,9 @@ Shader "Custom/GerstnerOcean"
                 
                 UNITY_INITIALIZE_OUTPUT(Interpolators, o);
                 o.lodFade = unity_LODFade.y;
-                o.pos = UnityWorldToClipPos(worldPos);
+                float4 clipPos = UnityWorldToClipPos(worldPos);
+                o.pos = clipPos;
+                o.screenPos = ComputeScreenPos(clipPos);
                 o.positionWS = worldPos;
                 UNITY_TRANSFER_FOG(o,o.pos);
                 TRANSFER_SHADOW_WPOS(o, worldPos);
@@ -219,8 +230,53 @@ Shader "Custom/GerstnerOcean"
                 return o;
             }
 
-            fixed4 frag(Interpolators i) : SV_Target
+            float3 RaymarchSSR_ViewSpace(
+                float3 originWS,
+                float3 normalWS,
+                out bool hit
+            )
             {
+                if (_SSRSteps == 0) return 0;
+                
+                float3 originVS = mul(UNITY_MATRIX_V, float4(originWS, 1.0)).xyz;
+                float3 viewDirVS = normalize(-originVS); 
+                float3 normalVS = mul((float3x3)UNITY_MATRIX_V, normalWS);
+
+                float3 reflDirVS = reflect(viewDirVS, normalVS);
+
+                float3 currVS = originVS + reflDirVS * 0.1;
+                float stepSize = _SSRStepSize;
+                float thickness = _SSRThickness;
+                int maxSteps = min(max(1, _SSRSteps), SSR_MAX_STEPS);
+
+                for (int i = 0; i < maxSteps; i++)
+                {
+                    float4 clipPos = mul(UNITY_MATRIX_P, float4(currVS, 1.0));
+                    float2 uv = (clipPos.xy / clipPos.w) * 0.5 + 0.5;
+
+                    #if UNITY_UV_STARTS_AT_TOP
+                        uv.y = 1.0 - uv.y;
+                    #endif
+
+                    if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
+                        break;
+
+                    float rawDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv);
+                    float sceneLinearZ = LinearEyeDepth(rawDepth);
+
+                    float dz = abs(-currVS.z - sceneLinearZ);
+                    if (dz < thickness)
+                    {
+                        hit = true;
+                        return tex2D(_LastFrameColor, uv).rgb;
+                    }
+                    currVS += reflDirVS * stepSize;
+                }
+                return float3(0, 0, 0);
+            }
+
+            fixed4 frag(Interpolators i) : SV_Target
+            {                
                 float laplacian = 0;
                 float3 normalWS = GerstnerNormalsAndCurvature(i.positionWS, 9.81, laplacian);
                 float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos);
@@ -235,7 +291,7 @@ Shader "Custom/GerstnerOcean"
                 float transmission = pow(1.0 - saturate(dot(normalWS, viewDir)), 3.0);
                 
                 float3 reflection = reflect(viewDir, normalWS);
-                float4 skyColorReflect = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflection, 0);
+                float3 skyColorReflect = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflection, 0);
 
                 float light = pow(saturate(dot(lightDir, float3(0,1,0))), .5);
                 float3 sss = (backSSS * transmission * wrap) * _SSSColor * _LightColor0 * light;
@@ -251,7 +307,17 @@ Shader "Custom/GerstnerOcean"
                 float3 color = d * _Color * light;
                 color *= lerp(1, .75, shadow);
                 float fresnelFactor = dot(fresnel, float3(0.333,0.333,0.333));
+
+                bool ssrHit;
+                float3 ssrColor = RaymarchSSR_ViewSpace(
+                    i.positionWS,
+                    reflection,
+                    ssrHit
+                );
+                float blend = ssrHit ? 1.0 : 0.0;
+                skyColorReflect = lerp(skyColorReflect, ssrColor, blend * fresnel);
                 color = lerp(lerp(sss + color, skyColorReflect, fresnelFactor), float3(1,1,1), saturate(foamAmount));
+                //return float4(ssrColor, 1);
 
                 float transparency = dot(specular, float3(0.333,0.333,0.333));
                 transparency = lerp(saturate(max(transparency, fresnelFactor) * _Transparency), 1, saturate(foamAmount));
@@ -269,7 +335,7 @@ Shader "Custom/GerstnerOcean"
 
         Pass //shadow casting
         {
-            Tags{ "LightMode" = "ShadowCaster" }
+            Tags{ "LightMode" = "ShadowCaster"  }
             CGPROGRAM
             
             #pragma target 5.0

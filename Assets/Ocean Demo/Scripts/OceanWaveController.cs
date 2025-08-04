@@ -1,8 +1,10 @@
+using System;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
 namespace Ocean_Demo.Scripts
 {
+    [ExecuteInEditMode]
     public class OceanWaveController : MonoBehaviour
     {
         public Material[] oceanMaterials;

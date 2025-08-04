@@ -75,7 +75,8 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    m_Ints: []
+    m_Ints:
+    - _SSRSteps: 0
     m_Floats:
     - _A: 0.21
     - _Ambient: 0
@@ -103,6 +104,9 @@ Material:
     - _PartialNormals: 1
     - _Phong: 0.5
     - _Roughness: 0.2
+    - _SSRStepSize: 0.51
+    - _SSRSteps: 16
+    - _SSRThickness: 0.299
     - _SmoothnessTextureChannel: 0
     - _Specular: 32
     - _SpecularHighlights: 1
@@ -114,10 +118,10 @@ Material:
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
-    - _WaveLength: 8.375
+    - _WaveLength: 5
     - _WaveLengthDistribution: 1.12
-    - _WaveSteepness: 3.405
-    - _WaveStrength: 0.21115
+    - _WaveSteepness: 3
+    - _WaveStrength: 0.01
     - _WaveStrengthDistribution: 1.19
     - _ZWrite: 1
     m_Colors:
