@@ -35,24 +35,24 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 }
 
 float PBRSpecular(
-    float3 N,          // Normal
-    float3 V,          // View direction
-    float3 L,          // Light direction
-    float3 albedo,     // Base color
-    float metallic,    // 0 = dielectric, 1 = metal
-    float roughness    // 0 = smooth, 1 = rough
+    float3 normal,          
+    float3 viewDir,         
+    float3 lightDir,         
+    float3 albedo,     
+    float metallic,    
+    float roughness    
 )
 {
-    float3 H = normalize(V + L);
+    float3 H = normalize(viewDir + lightDir);
     float3 F0 = lerp(float3(0.04, 0.04, 0.04), albedo, metallic);
 
-    float D =  DistributionGGX(N, H, roughness);
-    float3 F = FresnelSchlick(saturate(dot(N, V)), F0);
-    float G = GeometrySmith(N, V, L, roughness);
+    float D =  DistributionGGX(normal, H, roughness);
+    float3 F = FresnelSchlick(saturate(dot(normal, viewDir)), F0);
+    float G = GeometrySmith(normal, viewDir, lightDir, roughness);
 
-    float NdotL =  max(dot(N, L), 0.0);
+    float NdotL =  max(dot(normal, lightDir), 0.0);
 
-    float3 specular = (D * F * G) / (4.0 * max(dot(N, V), 0.0) * NdotL + 0.001);
+    float3 specular = (D * F * G) / (4.0 * max(dot(normal, viewDir), 0.0) * NdotL + 0.001);
 
     return specular;
 }
@@ -75,16 +75,4 @@ inline float3 PhongSpecular(float3 viewDir, float3 normal, float power)
     float3 h = normalize(_WorldSpaceLightPos0.xyz + viewDir);
     float p = saturate(floor(dot(float3(0, 1, 0), _WorldSpaceLightPos0.xyz)) + 1);
     return saturate(_LightColor0 * pow(max(0, dot(normal, h)), power) * p);
-}
-
-inline float3 GetFullNormal(sampler2D _Normal, float3 worldPos, float3 normal, float4 tangent, float power, float size)
-{
-    float3 tangentWS = normalize(tangent.xyz);
-    float3 binormalWS = normalize(cross(normal, tangentWS)) * tangent.w;
-
-    float3 normalTS = UnpackScaleNormal(tex2D(_Normal, worldPos.xz * size), 1.0);
-    normalTS = normalize(float3(normalTS.x, normalTS.y / max(0.01, power), normalTS.z));
-
-    float3x3 TBN = float3x3(tangentWS, binormalWS, normal);
-    return normal;//normalize(mul(normalTS, TBN));
 }
