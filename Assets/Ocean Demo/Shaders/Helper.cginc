@@ -1,6 +1,7 @@
 #include <UnityLightingCommon.cginc>
-#include <UnityShaderVariables.cginc>
-#include <UnityStandardUtils.cginc>
+#include "UnityCG.cginc"
+
+#define SSR_MAX_STEPS 64
 
 float3 FresnelSchlick(float cosTheta, float3 F0)
 {
@@ -55,6 +56,55 @@ float PBRSpecular(
     float3 specular = (D * F * G) / (4.0 * max(dot(normal, viewDir), 0.0) * NdotL + 0.001);
 
     return specular;
+}
+
+
+float3 RaymarchSSR_ViewSpace(
+    float3 originWS,
+    float3 normalWS,
+    int steps,
+    float stepSize,
+    float thickness,
+    sampler2D depth,
+    sampler2D lastFrame,
+    out bool hit
+)
+{
+    if (steps == 0) return 0;
+                
+    float3 originVS = mul(UNITY_MATRIX_V, float4(originWS, 1.0)).xyz;
+    float3 viewDirVS = normalize(-originVS); 
+    float3 normalVS = mul((float3x3)UNITY_MATRIX_V, normalWS);
+
+    float3 reflDirVS = reflect(viewDirVS, normalVS);
+
+    float3 currVS = originVS + reflDirVS * 0.1;
+    int maxSteps = min(max(1, steps), SSR_MAX_STEPS);
+
+    for (int i = 0; i < maxSteps; i++)
+    {
+        float4 clipPos = mul(UNITY_MATRIX_P, float4(currVS, 1.0));
+        float2 uv = (clipPos.xy / clipPos.w) * 0.5 + 0.5;
+
+        #if UNITY_UV_STARTS_AT_TOP
+        uv.y = 1.0 - uv.y;
+        #endif
+
+        if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
+            break;
+
+        float rawDepth = SAMPLE_DEPTH_TEXTURE(depth, uv);
+        float sceneLinearZ = LinearEyeDepth(rawDepth);
+
+        float dz = abs(-currVS.z - sceneLinearZ);
+        if (dz < thickness)
+        {
+            hit = true;
+            return tex2D(lastFrame, uv).rgb;
+        }
+        currVS += reflDirVS * stepSize;
+    }
+    return float3(0, 0, 0);
 }
 
 inline float3 CubemapAmbient(float3 viewDir, float3 normal, float smooth)

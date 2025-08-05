@@ -94,7 +94,7 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _MaxWaves: 64
+    - _MaxWaves: 8
     - _Metallic: 0
     - _Mode: 0
     - _NoiseScale: 0.08
