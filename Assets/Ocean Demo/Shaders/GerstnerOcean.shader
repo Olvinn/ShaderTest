@@ -315,6 +315,7 @@ Shader "Custom/GerstnerOcean"
                     ssrHit
                 );
                 float blend = ssrHit ? 1.0 : 0.0;
+                blend *= dot(normalWS, -viewDir) * 4;
                 skyColorReflect = lerp(skyColorReflect, ssrColor, blend * fresnel);
                 color = lerp(lerp(sss + color, skyColorReflect, fresnelFactor), float3(1,1,1), saturate(foamAmount));
                 //return float4(ssrColor, 1);

@@ -69,9 +69,9 @@ namespace Ocean_Demo.Scripts
             Vector3 tangentX = new Vector3(1, 0, 0); 
             Vector3 tangentZ = new Vector3(0, 0, 1); 
     
-            for (int i = 0; i < _WaveController.waveDirections.Length; i++)
+            for (int i = 0; i < _WaveController.waveDirectionsReady.Length; i++)
             {
-                Vector2 dir = new Vector2(_WaveController.waveDirections[i].x, _WaveController.waveDirections[i].y);
+                Vector2 dir = new Vector2(_WaveController.waveDirectionsReady[i].x, _WaveController.waveDirectionsReady[i].y);
                 float wavelength = 0;
                 float amplitude = 0;
                 WaveDistribution(i, ref wavelength, ref amplitude);
@@ -82,13 +82,13 @@ namespace Ocean_Demo.Scripts
                 float sinP = Mathf.Sin(phase);
                 float cosP = Mathf.Cos(phase);
 
-                float Qi = _WaveController.waveSteepness / (k * amplitude * _WaveController.waveDirections.Length);
+                float Qi = _WaveController.waveSteepness / (k * amplitude * _WaveController.waveDirectionsReady.Length);
 
                 totalOffset.x += Qi * dir.x * amplitude * cosP;
                 totalOffset.z += Qi * dir.y * amplitude * cosP;
                 totalOffset.y += amplitude * sinP;
                 
-                if (i > 8) continue;
+                if (i > 12) continue;
 
                 Vector2 dPhase_dXZ = k * dir;
 
