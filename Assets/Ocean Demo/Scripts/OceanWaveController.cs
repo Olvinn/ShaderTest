@@ -25,6 +25,11 @@ namespace Ocean_Demo.Scripts
             Settings.Instance.onSettingsChanged += OnSettingsChanged;
         }
 
+        private void OnDestroy()
+        {
+            Settings.Instance.onSettingsChanged -= OnSettingsChanged;
+        }
+
         private void OnSettingsChanged(SettingsProperty data)
         {
             if (data.Name == "Tesselation")

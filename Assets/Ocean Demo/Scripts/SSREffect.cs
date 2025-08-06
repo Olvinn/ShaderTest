@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Ocean_Demo.Scripts
@@ -33,6 +34,11 @@ namespace Ocean_Demo.Scripts
         {
             if (lastFrameColor != null)
                 lastFrameColor.Release();
+        }
+
+        private void OnDestroy()
+        {
+            Settings.Instance.onSettingsChanged -= OnSettingsChanged;
         }
 
         void SetupRenderTexture()
