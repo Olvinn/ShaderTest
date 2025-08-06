@@ -7,25 +7,43 @@ public class GerstnerOceanInspector : ShaderGUI
     {
         Material mat = materialEditor.target as Material;
 
-        bool tessellation = mat.IsKeywordEnabled("TESSELATION");
+        bool ssr = mat.IsKeywordEnabled("SSR");
 
         foreach (var prop in properties)
         {
-            if (prop.name == "_TessFactor")
+            if (prop.name == "_SSRSteps")
             {
-                tessellation = EditorGUILayout.Toggle("Tessellation", tessellation);
-                if (!tessellation)
+                ssr = EditorGUILayout.Toggle("SSR", ssr);
+                if (!ssr)
                     continue;
+                else
+                    EditorGUI.indentLevel++;
+            }
+            else if (prop.name == "_SSRThickness")
+            {
+                if (!ssr)
+                    continue;
+                else
+                    EditorGUI.indentLevel++;
+            }
+            else if (prop.name == "_SSRStepSize")
+            {
+                if (!ssr)
+                    continue;
+                else
+                    EditorGUI.indentLevel++;
             }
 
             materialEditor.ShaderProperty(prop, prop.displayName);
+            if (EditorGUI.indentLevel > 0)
+                EditorGUI.indentLevel--;
         }
 
         materialEditor.RenderQueueField();
         
-        if (tessellation)
-            mat.EnableKeyword("TESSELATION");
+        if (ssr)
+            mat.EnableKeyword("SSR");
         else
-            mat.DisableKeyword("TESSELATION");
+            mat.DisableKeyword("SSR");
     }
 }

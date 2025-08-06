@@ -46,6 +46,19 @@ namespace Ocean_Demo.Scripts
                         mat.shader = noTesselationShader;
                 }
             }
+            else if (data.Name == "SSR")
+            {
+                if (data.BoolValue)
+                {
+                    foreach (var mat in oceanMaterials)
+                        mat.EnableKeyword("SSR");
+                }
+                else
+                {
+                    foreach (var mat in oceanMaterials)
+                        mat.DisableKeyword("SSR");
+                }
+            }
         }
 
         private void Start()

@@ -35,6 +35,7 @@ Shader "Custom/GerstnerOcean"
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fog
             #pragma multi_compile_fwdbase nolightmap nodirlightmap nodynlightmap novertexlight
+            #pragma multi_compile _ SSR
 
             #include "UnityCG.cginc"
             #include "Helper.cginc"
@@ -44,9 +45,11 @@ Shader "Custom/GerstnerOcean"
 
             float4 _Color, _SSSColor;
             float _WaveStrength, _WaveLength, _WaveSteepness, _FoamStrength, _FoamAmount, _Transparency;
-            float _Metallic, _Roughness, _WaveStrengthDistribution, _WaveLengthDistribution, _MaxWaves, _SSRStepSize;
-            float _SSRThickness;
+            float _Metallic, _Roughness, _WaveStrengthDistribution, _WaveLengthDistribution, _MaxWaves;
+            #ifdef SSR
+            float _SSRThickness, _SSRStepSize;
             int _SSRSteps;
+            #endif
             sampler2D _LastFrameColor;
             sampler2D _CameraDepthTexture;
 
@@ -142,6 +145,7 @@ Shader "Custom/GerstnerOcean"
                 color *= lerp(1, .75, shadow);
                 float fresnelFactor = dot(fresnel, float3(0.333,0.333,0.333));
 
+                #ifdef SSR
                 bool ssrHit;
                 float3 ssrColor = RaymarchSSR_ViewSpace(
                     i.positionWS,
@@ -156,6 +160,8 @@ Shader "Custom/GerstnerOcean"
                 float blend = ssrHit ? 1.0 : 0.0;
                 blend *= dot(wd.normal, -viewDir) * 4;
                 skyColorReflect = lerp(skyColorReflect, ssrColor, blend * fresnel);
+                #endif
+                
                 color = lerp(lerp(sss + color, skyColorReflect, fresnelFactor), float3(1,1,1), saturate(foamAmount));
                 //return float4(ssrColor, 1);
 
@@ -236,5 +242,8 @@ Shader "Custom/GerstnerOcean"
             ENDCG
         }
     }
+
+    CustomEditor "GerstnerOceanInspector"
+    
     FallBack Off
 }
