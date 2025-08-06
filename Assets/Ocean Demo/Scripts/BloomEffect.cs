@@ -14,6 +14,17 @@ namespace Ocean_Demo.Scripts
         [Range(1, 8)] public int blurIterations = 3;
         [Range(0, 1)] public float threshold = 0.8f;
 
+        void Awake()
+        {
+            Settings.Instance.onSettingsChanged += OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(SettingsProperty data)
+        {
+            if (data.Name == "Bloom")
+                enabled = data.BoolValue;
+        }
+
         void OnRenderImage(RenderTexture src, RenderTexture dst)
         {
             if (_bloomMat == null)

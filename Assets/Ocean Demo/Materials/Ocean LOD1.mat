@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Ocean LOD1
-  m_Shader: {fileID: 4800000, guid: f402faa43191ba946bfac34581d457c1, type: 3}
+  m_Shader: {fileID: 4800000, guid: 0595cbe020c1c654f918cdbd368ccf6d, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -16,7 +16,7 @@ Material:
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 3000
+  m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 
@@ -118,10 +118,10 @@ Material:
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
-    - _WaveLength: 5
+    - _WaveLength: 26.574999
     - _WaveLengthDistribution: 1.12
-    - _WaveSteepness: 3
-    - _WaveStrength: 0.01
+    - _WaveSteepness: 5.5889997
+    - _WaveStrength: 1.29587
     - _WaveStrengthDistribution: 1.19
     - _ZWrite: 1
     m_Colors:

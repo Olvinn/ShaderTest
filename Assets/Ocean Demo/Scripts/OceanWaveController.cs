@@ -6,6 +6,8 @@ namespace Ocean_Demo.Scripts
     [ExecuteInEditMode]
     public class OceanWaveController : MonoBehaviour
     {
+        public Shader tesselationShader, noTesselationShader;
+        
         public Material[] oceanMaterials;
     
         [Range(0, 1)]
@@ -17,6 +19,28 @@ namespace Ocean_Demo.Scripts
         public Vector4[] waveDirectionsReady = new Vector4[64];
     
         public float windDirection = 60;
+        
+        void Awake()
+        {
+            Settings.Instance.onSettingsChanged += OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(SettingsProperty data)
+        {
+            if (data.Name == "Tesselation")
+            {
+                if (data.BoolValue)
+                {
+                    foreach (var mat in oceanMaterials)
+                        mat.shader = tesselationShader;
+                }
+                else
+                {
+                    foreach (var mat in oceanMaterials)
+                        mat.shader = noTesselationShader;
+                }
+            }
+        }
 
         private void Start()
         {

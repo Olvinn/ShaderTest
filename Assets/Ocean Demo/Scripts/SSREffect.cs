@@ -1,6 +1,4 @@
-using System;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace Ocean_Demo.Scripts
 {
@@ -12,7 +10,18 @@ namespace Ocean_Demo.Scripts
         private Camera cam;
         public Material[] targetMaterials;
         public RenderTexture lastFrameColor;
-        
+
+        void Awake()
+        {
+            Settings.Instance.onSettingsChanged += OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(SettingsProperty data)
+        {
+            if (data.Name == "SSR")
+                enabled = data.BoolValue;
+        }
+
         void OnEnable()
         {
             cam = GetComponent<Camera>();
