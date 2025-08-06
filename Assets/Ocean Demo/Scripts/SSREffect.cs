@@ -38,7 +38,8 @@ namespace Ocean_Demo.Scripts
 
         private void OnDestroy()
         {
-            Settings.Instance.onSettingsChanged -= OnSettingsChanged;
+            if (Settings.Instance != null)
+                Settings.Instance.onSettingsChanged -= OnSettingsChanged;
         }
 
         void SetupRenderTexture()
