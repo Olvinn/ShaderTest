@@ -77,6 +77,8 @@ float3 RaymarchSSR_ViewSpace(
     float3 normalVS = mul((float3x3)UNITY_MATRIX_V, normalWS);
 
     float3 reflDirVS = reflect(viewDirVS, normalVS);
+    
+    if (abs(dot(reflDirVS, viewDirVS)) > .85) return 0; //fix distant gliches
 
     float3 currVS = originVS + reflDirVS * 0.1;
     int maxSteps = min(max(1, steps), SSR_MAX_STEPS);

@@ -18,6 +18,12 @@ namespace Ocean_Demo.Scripts
                 Settings.Instance.onSettingsChanged += OnSettingsChanged;
         }
 
+        private void OnDestroy()
+        {
+            if (Settings.Instance != null)
+                Settings.Instance.onSettingsChanged -= OnSettingsChanged;
+        }
+
         private void OnSettingsChanged(SettingsProperty data)
         {
             if (data.Name == "SSR")
@@ -35,12 +41,6 @@ namespace Ocean_Demo.Scripts
         {
             if (lastFrameColor != null)
                 lastFrameColor.Release();
-        }
-
-        private void OnDestroy()
-        {
-            if (Settings.Instance != null)
-                Settings.Instance.onSettingsChanged -= OnSettingsChanged;
         }
 
         void SetupRenderTexture()
@@ -62,13 +62,7 @@ namespace Ocean_Demo.Scripts
             GL.Clear(true, true, Color.clear);
             RenderTexture.active = activeRT;
         }
-
-        private void OnPreRender()
-        {
-            Shader.SetGlobalMatrix("unity_CameraInvProjection", cam.projectionMatrix.inverse);
-            Shader.SetGlobalMatrix("unity_CameraToWorld", cam.cameraToWorldMatrix);
-        }
-
+        
         void OnRenderImage(RenderTexture src, RenderTexture dest)
         { 
             ClearLastFrameColor(lastFrameColor);

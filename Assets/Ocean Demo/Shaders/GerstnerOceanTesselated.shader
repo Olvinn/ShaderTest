@@ -4,18 +4,22 @@ Shader "Custom/GerstnerOceanTesselated"
     {
         _Color ("Color", Color) = (0, 0.5, 1, 1)
         _SSSColor ("SSS Color", Color) = (0, 0.5, 1, 1)
+        
         _WaveStrength ("Wave Amplitude", Float) = 0.2
         _WaveLength ("Wave Length", Float) = 2
         _WaveSteepness ("Wave Steepness", Float) = .8
         _MaxWaves ("Max Waves", Range(1, 64)) = 64
         _WaveStrengthDistribution ("Wave Strength Distribution", Range(1, 2)) = 1.2
         _WaveLengthDistribution ("Wave Length Distribution", Range(1, 2)) = 1.2
+        
         _FoamAmount ("Foam Amount", Float) = 1
         _FoamStrength ("Foam Strength", Float) = 1
+        
         _TessFactor ("Tessellation Factor", Float) = 3
+        
         _Metallic ("Metallic", Range(0,1)) = .5
         _Roughness ("Roughness", Range(0,1)) = .5
-        _Transparency ("Transparency", Float) = 20
+        
         _SSRSteps ("SSR Steps", Integer) = 32
         _SSRStepSize ("SSR Step Size", Range(0.1, 5)) = .5
         _SSRThickness ("SSR Thickness", Range(0.1, 1)) = .5
@@ -38,7 +42,7 @@ Shader "Custom/GerstnerOceanTesselated"
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fog
             #pragma multi_compile_fwdbase nolightmap nodirlightmap nodynlightmap novertexlight
-            #pragma multi_compile _ SSR
+            #pragma shader_feature SSR
 
             #include "UnityCG.cginc"
             #include "Helper.cginc"

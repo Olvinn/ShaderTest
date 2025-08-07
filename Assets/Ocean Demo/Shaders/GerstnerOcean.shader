@@ -4,17 +4,20 @@ Shader "Custom/GerstnerOcean"
     {
         _Color ("Color", Color) = (0, 0.5, 1, 1)
         _SSSColor ("SSS Color", Color) = (0, 0.5, 1, 1)
+        
         _WaveStrength ("Wave Amplitude", Float) = 0.2
         _WaveLength ("Wave Length", Float) = 2
         _WaveSteepness ("Wave Steepness", Float) = .8
         _MaxWaves ("Max Waves", Range(1, 64)) = 64
         _WaveStrengthDistribution ("Wave Strength Distribution", Range(1, 2)) = 1.2
         _WaveLengthDistribution ("Wave Length Distribution", Range(1, 2)) = 1.2
+        
         _FoamAmount ("Foam Amount", Float) = 1
         _FoamStrength ("Foam Strength", Float) = 1
+        
         _Metallic ("Metallic", Range(0,1)) = .5
         _Roughness ("Roughness", Range(0,1)) = .5
-        _Transparency ("Transparency", Float) = 20
+        
         _SSRSteps ("SSR Steps", Integer) = 32
         _SSRStepSize ("SSR Step Size", Range(0.1, 5)) = .5
         _SSRThickness ("SSR Thickness", Range(0.1, 1)) = .5
@@ -35,7 +38,7 @@ Shader "Custom/GerstnerOcean"
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fog
             #pragma multi_compile_fwdbase nolightmap nodirlightmap nodynlightmap novertexlight
-            #pragma multi_compile _ SSR
+            #pragma shader_feature SSR
 
             #include "UnityCG.cginc"
             #include "Helper.cginc"
@@ -54,7 +57,7 @@ Shader "Custom/GerstnerOcean"
             sampler2D _CameraDepthTexture;
 
             #define MAX_WAVES 64
-            #define SSR_MAX_STEPS 32
+            #define SSR_MAX_STEPS 64
             uniform float2 _WaveDirs[MAX_WAVES];
 
             struct appdata
@@ -100,6 +103,7 @@ Shader "Custom/GerstnerOcean"
                 o.positionWS = worldPos;
                 UNITY_TRANSFER_FOG(o,o.pos);
                 TRANSFER_SHADOW_WPOS(o, worldPos);
+                
                 return o;
             }
 
@@ -128,7 +132,7 @@ Shader "Custom/GerstnerOcean"
                 float transmission = pow(1.0 - saturate(dot(wd.normal, viewDir)), 3.0);
                 
                 float3 reflection = reflect(viewDir, wd.normal);
-                float3 skyColorReflect = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflection, 0);
+                float3 skyColor = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflection, 0);
 
                 float light = pow(saturate(dot(lightDir, float3(0,1,0))), .5);
                 float3 sss = (backSSS * transmission * wrap) * _SSSColor * _LightColor0 * light;
@@ -142,7 +146,7 @@ Shader "Custom/GerstnerOcean"
                 
                 float d = dot(lightDir, wd.normal) * 0.5 + 0.5;
                 float3 color = d * _Color * light;
-                color *= lerp(1, .75, shadow);
+                color *= lerp(1, .25, shadow);
                 float fresnelFactor = dot(fresnel, float3(0.333,0.333,0.333));
 
                 #ifdef SSR
@@ -157,13 +161,12 @@ Shader "Custom/GerstnerOcean"
                     _LastFrameColor,
                     ssrHit
                 );
+
                 float blend = ssrHit ? 1.0 : 0.0;
-                blend *= dot(wd.normal, -viewDir) * 4;
-                skyColorReflect = lerp(skyColorReflect, ssrColor, blend * fresnel);
+                skyColor = lerp(skyColor, ssrColor, blend);
                 #endif
                 
-                color = lerp(lerp(sss + color, skyColorReflect, fresnelFactor), float3(1,1,1), saturate(foamAmount));
-                //return float4(ssrColor, 1);
+                color = lerp(lerp(sss + color, skyColor, fresnelFactor), float3(1,1,1), saturate(foamAmount));
 
                 float transparency = dot(specular, float3(0.333,0.333,0.333));
                 transparency = lerp(saturate(max(transparency, fresnelFactor) * _Transparency), 1, saturate(foamAmount));
@@ -173,7 +176,7 @@ Shader "Custom/GerstnerOcean"
                 
                 float3 finalColor = saturate(specular + color);
                 UNITY_APPLY_FOG(i.fogCoord, finalColor);
-                //return float4(shadow.xxx,1);
+                
                 return float4(finalColor, transparency);
             }
             ENDCG

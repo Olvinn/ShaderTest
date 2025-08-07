@@ -125,7 +125,7 @@ Material:
     - _WaveStrengthDistribution: 1.19
     - _ZWrite: 1
     m_Colors:
-    - _Color: {r: 0.09420612, g: 0.18372479, b: 0.2735849, a: 1}
+    - _Color: {r: 0, g: 0.08735455, b: 0.254717, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SSSColor: {r: 0.21176471, g: 0.827451, b: 0.7713392, a: 1}
     - _SpecColor: {r: 0.46226418, g: 0.46226418, b: 0.46226418, a: 0.5}
