@@ -14,7 +14,8 @@ namespace Ocean_Demo.Scripts
 
         void Awake()
         {
-            Settings.Instance.onSettingsChanged += OnSettingsChanged;
+            if (Settings.Instance != null)
+                Settings.Instance.onSettingsChanged += OnSettingsChanged;
         }
 
         private void OnSettingsChanged(SettingsProperty data)
