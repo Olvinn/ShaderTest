@@ -8,6 +8,7 @@ Shader "Custom/GerstnerOcean"
         _WaveStrength ("Wave Amplitude", Float) = 0.2
         _WaveLength ("Wave Length", Float) = 2
         _WaveSteepness ("Wave Steepness", Float) = .8
+        _SteepnessSuppression ("Steepness Suppression", Range(0, 1)) = .95
         _MaxWaves ("Max Waves", Range(1, 64)) = 64
         _WaveStrengthDistribution ("Wave Strength Distribution", Range(1, 2)) = 1.2
         _WaveLengthDistribution ("Wave Length Distribution", Range(1, 2)) = 1.2
@@ -49,6 +50,7 @@ Shader "Custom/GerstnerOcean"
             float4 _Color, _SSSColor;
             float _WaveStrength, _WaveLength, _WaveSteepness, _FoamStrength, _FoamAmount, _Transparency;
             float _Metallic, _Roughness, _WaveStrengthDistribution, _WaveLengthDistribution, _MaxWaves;
+            float _SteepnessSuppression;
             #ifdef SSR
             float _SSRThickness, _SSRStepSize;
             int _SSRSteps;
@@ -90,7 +92,8 @@ Shader "Custom/GerstnerOcean"
                     _WaveLengthDistribution,
                     _WaveStrength,
                     _WaveStrengthDistribution,
-                    _WaveSteepness
+                    _WaveSteepness,
+                    _SteepnessSuppression
                 );
                 
                 worldPos += offset;
@@ -118,7 +121,8 @@ Shader "Custom/GerstnerOcean"
                     _WaveLengthDistribution,
                     _WaveStrength,
                     _WaveStrengthDistribution,
-                    _WaveSteepness);
+                    _WaveSteepness,
+                    _SteepnessSuppression);
                 
                 float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos);
                 
@@ -142,10 +146,12 @@ Shader "Custom/GerstnerOcean"
                 float3 fresnel = FresnelSchlick(NdotV, F0);
                 float3 specular = PBRSpecular(wd.normal, -viewDir, lightDir, _Color, _Metallic, _Roughness) * _LightColor0 * shadow;
 
-                float foamAmount = saturate(wd.laplacian - _FoamAmount) * _FoamStrength;
-                
                 float d = dot(lightDir, wd.normal) * 0.5 + 0.5;
-                float3 color = d * _Color * light;
+                
+                float foamAmount = saturate(wd.laplacian - _FoamAmount) * _FoamStrength;
+                float3 foamColor = float3(1,1,1) * d * light * _LightColor0;
+                
+                float3 color = d * _Color * light * _LightColor0;
                 color *= lerp(1, .25, shadow);
                 float fresnelFactor = dot(fresnel, float3(0.333,0.333,0.333));
 
@@ -166,7 +172,7 @@ Shader "Custom/GerstnerOcean"
                 skyColor = lerp(skyColor, ssrColor, blend);
                 #endif
                 
-                color = lerp(lerp(sss + color, skyColor, fresnelFactor), float3(1,1,1), saturate(foamAmount));
+                color = lerp(lerp(sss + color, skyColor, fresnelFactor), foamColor, saturate(foamAmount));
 
                 float transparency = dot(specular, float3(0.333,0.333,0.333));
                 transparency = lerp(saturate(max(transparency, fresnelFactor) * _Transparency), 1, saturate(foamAmount));
@@ -195,7 +201,7 @@ Shader "Custom/GerstnerOcean"
             #include "Gerstner.cginc"
 
             float _WaveStrength, _WaveLength, _WaveSteepness, _FoamStrength, _FoamAmount, _Transparency;
-            float _WaveStrengthDistribution, _WaveLengthDistribution, _MaxWaves;
+            float _WaveStrengthDistribution, _WaveLengthDistribution, _MaxWaves, _SteepnessSuppression;
 
             #define MAX_WAVES 64
             #define UNITY_PASS_SHADOWCASTER
@@ -227,7 +233,8 @@ Shader "Custom/GerstnerOcean"
                     _WaveLengthDistribution,
                     _WaveStrength,
                     _WaveStrengthDistribution,
-                    _WaveSteepness
+                    _WaveSteepness,
+                    _SteepnessSuppression
                 );
 
                 worldPos += offset;

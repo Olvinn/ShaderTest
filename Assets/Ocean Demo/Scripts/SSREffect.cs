@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 namespace Ocean_Demo.Scripts
@@ -12,7 +11,7 @@ namespace Ocean_Demo.Scripts
         public Material[] targetMaterials;
         public RenderTexture lastFrameColor;
 
-        void Awake()
+        void Start()
         {
             if (Settings.Instance != null)
                 Settings.Instance.onSettingsChanged += OnSettingsChanged;

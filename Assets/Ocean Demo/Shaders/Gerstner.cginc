@@ -23,7 +23,7 @@ WaveData WaveDistribution(int i, float waveLengthKoeff, float waveLengthDistribu
 
 float3 GerstnerDisplace(float3 posOS,float baseSpeed, int maxWaves, float2 waveDirections[64],
     float waveLengthKoeff, float waveLengthDistribution, float waveAmplitudeKoeff, float waveAmplitudeDistribution,
-    float waveSteepness)
+    float waveSteepness, float steepnessSuppression)
 {
     float3 totalOffset = float3(0, 0, 0);
 
@@ -42,7 +42,7 @@ float3 GerstnerDisplace(float3 posOS,float baseSpeed, int maxWaves, float2 waveD
         float sinP = sin(phase);
         float cosP = cos(phase);
 
-        float Qi = waveSteepness / (k * amplitude * NAX_GERSTNER_WAVES);
+        float Qi = waveSteepness * pow(steepnessSuppression, i) / (k * amplitude * NAX_GERSTNER_WAVES);
 
         totalOffset.x += Qi * dir.x * amplitude * cosP;
         totalOffset.z += Qi * dir.y * amplitude * cosP;
@@ -54,7 +54,7 @@ float3 GerstnerDisplace(float3 posOS,float baseSpeed, int maxWaves, float2 waveD
 
 WaveDetails GerstnerNormalsAndCurvature(float3 posOS,float baseSpeed, int maxWaves, float2 waveDirections[64],
     float waveLengthKoeff, float waveLengthDistribution, float waveAmplitudeKoeff, float waveAmplitudeDistribution,
-    float waveSteepness)
+    float waveSteepness, float steepnessSuppression)
 {
     WaveDetails r;
 
@@ -80,7 +80,7 @@ WaveDetails GerstnerNormalsAndCurvature(float3 posOS,float baseSpeed, int maxWav
         float suppression = pow(k, -1);
         laplacian += amplitude * sin(phase) * scale * suppression;
 
-        float Qi = waveSteepness / (k * amplitude * NAX_GERSTNER_WAVES);
+        float Qi = waveSteepness * pow(steepnessSuppression, i) / (k * amplitude * NAX_GERSTNER_WAVES);
                     
         float2 dPhase_dXZ = k * dir;
 

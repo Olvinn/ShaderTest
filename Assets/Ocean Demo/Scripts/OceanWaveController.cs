@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -13,18 +14,12 @@ namespace Ocean_Demo.Scripts
         [Range(0, 1)]
         public float stormy = 360;
     
-        public float waveLength, waveStrength, waveLengthDistribution, waveStrengthDistribution, waveSteepness;
+        public float waveLength, waveStrength, waveLengthDistribution, waveStrengthDistribution, waveSteepness, steepnessSuppression;
 
         public Vector4[] waveDirections = new Vector4[64];
         public Vector4[] waveDirectionsReady = new Vector4[64];
     
         public float windDirection = 60;
-        
-        void Awake()
-        {
-            if (Settings.Instance != null)
-                Settings.Instance.onSettingsChanged += OnSettingsChanged;
-        }
         
         private void OnDestroy()
         {
@@ -38,32 +33,33 @@ namespace Ocean_Demo.Scripts
             {
                 if (data.BoolValue)
                 {
-                    foreach (var mat in oceanMaterials)
-                        mat.shader = tesselationShader;
+                    oceanMaterials[0].shader = tesselationShader;
                 }
                 else
                 {
-                    foreach (var mat in oceanMaterials)
-                        mat.shader = noTesselationShader;
+                    oceanMaterials[0].shader = noTesselationShader;
                 }
             }
             else if (data.Name == "SSR")
             {
                 if (data.BoolValue)
                 {
-                    foreach (var mat in oceanMaterials)
-                        mat.EnableKeyword("SSR");
+                    oceanMaterials[0].EnableKeyword("SSR");
                 }
                 else
                 {
-                    foreach (var mat in oceanMaterials)
-                        mat.DisableKeyword("SSR");
+                    oceanMaterials[0].DisableKeyword("SSR");
                 }
             }
+
+            Reinitialize();
         }
 
         private void Start()
         {
+            if (Settings.Instance != null)
+                Settings.Instance.onSettingsChanged += OnSettingsChanged;
+            
             Initialize();
 
             var mat = oceanMaterials[0];
@@ -118,14 +114,20 @@ namespace Ocean_Demo.Scripts
                 mat.SetVectorArray("_WaveDirs", waves);
                 mat.SetFloat("_WaveLength", Mathf.Lerp(5, 30, storm));
                 mat.SetFloat("_WaveStrength", Mathf.Lerp(.01f, 1.5f, storm));
-                mat.SetFloat("_WaveSteepness", Mathf.Lerp(3f, 6f, storm));
+                mat.SetFloat("_WaveSteepness", Mathf.Lerp(3f, 9f, storm));
             }
             
-            var material = oceanMaterials[0];
+            var material = oceanMaterials[0]; //I assume we've got LOD0 at first index
             waveLength = material.GetFloat("_WaveLength");
             waveStrength = material.GetFloat("_WaveStrength");
             waveLengthDistribution = material.GetFloat("_WaveLengthDistribution");
             waveStrengthDistribution = material.GetFloat("_WaveStrengthDistribution");
+            steepnessSuppression = material.GetFloat("_SteepnessSuppression");
+            
+            if (storm > .5f)
+                material.DisableKeyword("SSR");
+            else if (Settings.Instance.Properties.First(v => v.Name == "SSR").BoolValue)
+                material.EnableKeyword("SSR");
         }
     }
 }

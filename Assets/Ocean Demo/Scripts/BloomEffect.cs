@@ -14,7 +14,7 @@ namespace Ocean_Demo.Scripts
         [Range(1, 8)] public int blurIterations = 3;
         [Range(0, 1)] public float threshold = 0.8f;
 
-        void Awake()
+        void Start()
         {
             if (Settings.Instance != null)
                 Settings.Instance.onSettingsChanged += OnSettingsChanged;

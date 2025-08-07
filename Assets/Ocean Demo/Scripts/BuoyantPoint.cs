@@ -23,19 +23,25 @@ namespace Ocean_Demo.Scripts
         {
             Vector3 waveNormal;
             Vector3 waveOffset = GerstnerDisplace(_initialPosition, out waveNormal);
-            float waterHeight = waveOffset.y;
+            
+            if (transform.position.y > waveOffset.y) return;
 
             Vector3 position = _rb.position;
 
-            float depth = waterHeight - position.y;
+            float depth = waveOffset.y - position.y;
 
             if (depth > 0f)
             {
                 Vector3 force = Vector3.up * (depth * buoyancyForce);
                 _rb.AddForce(force, ForceMode.Force);
 
-                Vector3 drag = -_rb.linearVelocity;
-                _rb.AddForce(drag, ForceMode.Force);
+                position.y = 0;
+                waveOffset.y = 0;
+                force = (position - waveOffset) * .01f;
+                _rb.AddForce(force, ForceMode.Force);
+
+                Vector3 drag = -_rb.linearVelocity * .05f;
+                _rb.AddForce(drag, ForceMode.VelocityChange);
             }
 
             if (!torque) return;
@@ -47,6 +53,9 @@ namespace Ocean_Demo.Scripts
             if (angle > 180f) angle -= 360f;
             if (Mathf.Abs(angle) > 0.01f)
                 _rb.AddTorque(axis * angle);
+
+            Vector3 angDrag = -_rb.angularVelocity * .05f;
+            _rb.AddTorque(angDrag, ForceMode.VelocityChange);
         }
         
         // void Update()
@@ -82,7 +91,8 @@ namespace Ocean_Demo.Scripts
                 float sinP = Mathf.Sin(phase);
                 float cosP = Mathf.Cos(phase);
 
-                float Qi = _WaveController.waveSteepness / (k * amplitude * _WaveController.waveDirectionsReady.Length);
+                float Qi = _WaveController.waveSteepness * Mathf.Pow(_WaveController.steepnessSuppression, i) / 
+                           (k * amplitude * _WaveController.waveDirectionsReady.Length);
 
                 totalOffset.x += Qi * dir.x * amplitude * cosP;
                 totalOffset.z += Qi * dir.y * amplitude * cosP;
