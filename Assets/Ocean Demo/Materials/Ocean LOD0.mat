@@ -11,13 +11,14 @@ Material:
   m_Shader: {fileID: 4800000, guid: 0595cbe020c1c654f918cdbd368ccf6d, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
+  m_ValidKeywords:
+  - SSR
   m_InvalidKeywords:
   - TESSELATION
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
+  m_CustomRenderQueue: 2100
   stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 
@@ -89,8 +90,8 @@ Material:
     - _Displacement: 1
     - _DstBlend: 0
     - _EdgeLength: 20
-    - _FoamAmount: 0.5
-    - _FoamStrength: 2
+    - _FoamAmount: 0.25
+    - _FoamStrength: 5
     - _Fresnel: 0.03
     - _GlossMapScale: 1
     - _Glossiness: 0.5
@@ -107,12 +108,12 @@ Material:
     - _Roughness: 0.1
     - _SSRStepSize: 0.3
     - _SSRSteps: 32
-    - _SSRThickness: 0.15
+    - _SSRThickness: 0.065
     - _SmoothnessTextureChannel: 0
     - _Specular: 32
     - _SpecularHighlights: 1
     - _SrcBlend: 1
-    - _SteepnessSuppression: 0.97
+    - _SteepnessSuppression: 0.9
     - _SteepnessSupression: 0.8
     - _Tess: 32
     - _TessFactor: 3
@@ -121,10 +122,10 @@ Material:
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
-    - _WaveLength: 30
+    - _WaveLength: 7.1749997
     - _WaveLengthDistribution: 1.12
-    - _WaveSteepness: 9
-    - _WaveStrength: 1.5
+    - _WaveSteepness: 3.522
+    - _WaveStrength: 0.13962999
     - _WaveStrengthDistribution: 1.19
     - _ZWrite: 1
     m_Colors:

@@ -20,14 +20,14 @@ Shader "Custom/GerstnerOcean"
         _Roughness ("Roughness", Range(0,1)) = .5
         
         _SSRSteps ("SSR Steps", Integer) = 32
-        _SSRStepSize ("SSR Step Size", Range(0.1, 5)) = .5
-        _SSRThickness ("SSR Thickness", Range(0.1, 1)) = .5
+        _SSRStepSize ("SSR Step Size", Range(0.01, 5)) = .5
+        _SSRThickness ("SSR Thickness", Range(0.01, 1)) = .5
     }
 
     SubShader
     {
         Tags { "RenderType" = "Opaque" "RenderQueue" = "Opaque" "LightMode" = "ForwardBase" }
-        ZWrite On
+        //ZWrite On
         
         Pass
         {
@@ -48,15 +48,15 @@ Shader "Custom/GerstnerOcean"
             #include "Gerstner.cginc"
 
             float4 _Color, _SSSColor;
-            float _WaveStrength, _WaveLength, _WaveSteepness, _FoamStrength, _FoamAmount, _Transparency;
-            float _Metallic, _Roughness, _WaveStrengthDistribution, _WaveLengthDistribution, _MaxWaves;
-            float _SteepnessSuppression;
-            #ifdef SSR
-            float _SSRThickness, _SSRStepSize;
-            int _SSRSteps;
-            #endif
+            half _WaveStrength, _WaveLength, _WaveSteepness, _FoamStrength, _FoamAmount, _Transparency;
+            half _Metallic, _Roughness, _WaveStrengthDistribution, _WaveLengthDistribution, _SteepnessSuppression;
+            int _MaxWaves;
             sampler2D _LastFrameColor;
             sampler2D _CameraDepthTexture;
+            #ifdef SSR
+            half _SSRThickness, _SSRStepSize;
+            int _SSRSteps;
+            #endif
 
             #define MAX_WAVES 64
             #define SSR_MAX_STEPS 64
@@ -72,7 +72,7 @@ Shader "Custom/GerstnerOcean"
                 float4 pos : SV_POSITION;
                 float3 positionWS   : TEXCOORD0;
                 UNITY_FOG_COORDS(1)
-                float lodFade : TEXCOORD2;
+                half lodFade : TEXCOORD2;
                 SHADOW_COORDS(3)
                 float4 screenPos : TEXCOORD4;
             };
@@ -126,37 +126,37 @@ Shader "Custom/GerstnerOcean"
                 
                 float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos);
                 
-                float shadow = SHADOW_ATTENUATION(i);
+                half shadow = SHADOW_ATTENUATION(i);
 
                 float3 lightDir = _WorldSpaceLightPos0.xyz;
 
-                float ndotl = saturate(dot(wd.normal, lightDir));
-                float backSSS = saturate(dot(wd.normal, -lightDir)) * 0.4; 
-                float wrap = ndotl * 0.5 + 0.5; 
-                float transmission = pow(1.0 - saturate(dot(wd.normal, viewDir)), 3.0);
+                half ndotl = saturate(dot(wd.normal, lightDir));
+                half backSSS = saturate(dot(wd.normal, -lightDir)) * 0.4; 
+                half wrap = ndotl * 0.5 + 0.5; 
+                half transmission = pow(1.0 - saturate(dot(wd.normal, viewDir)), 3.0);
                 
                 float3 reflection = reflect(viewDir, wd.normal);
                 float3 skyColor = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflection, 0);
 
-                float light = pow(saturate(dot(lightDir, float3(0,1,0))), .5);
+                half light = pow(saturate(dot(lightDir, float3(0,1,0))), .5);
                 float3 sss = (backSSS * transmission * wrap) * _SSSColor * _LightColor0 * light;
                 
-                float NdotV = saturate(dot(wd.normal, -viewDir));
+                half NdotV = saturate(dot(wd.normal, -viewDir));
                 float3 F0 = lerp(float3(0.02, 0.02, 0.02), _Color, _Metallic);
                 float3 fresnel = FresnelSchlick(NdotV, F0);
                 float3 specular = PBRSpecular(wd.normal, -viewDir, lightDir, _Color, _Metallic, _Roughness) * _LightColor0 * shadow;
 
-                float d = dot(lightDir, wd.normal) * 0.5 + 0.5;
+                half d = dot(lightDir, wd.normal) * 0.5 + 0.5;
                 
-                float foamAmount = saturate(wd.laplacian - _FoamAmount) * _FoamStrength;
+                half foamAmount = saturate(wd.laplacian - _FoamAmount) * _FoamStrength;
                 float3 foamColor = float3(1,1,1) * d * light * _LightColor0;
                 
                 float3 color = d * _Color * light * _LightColor0;
                 color *= lerp(1, .25, shadow);
-                float fresnelFactor = dot(fresnel, float3(0.333,0.333,0.333));
+                half fresnelFactor = dot(fresnel, float3(0.333,0.333,0.333));
 
                 #ifdef SSR
-                bool ssrHit;
+                bool ssrHit = false;
                 float3 ssrColor = RaymarchSSR_ViewSpace(
                     i.positionWS,
                     reflection,
@@ -168,13 +168,13 @@ Shader "Custom/GerstnerOcean"
                     ssrHit
                 );
 
-                float blend = ssrHit ? 1.0 : 0.0;
+                half blend = ssrHit ? 1.0 : 0.0;
                 skyColor = lerp(skyColor, ssrColor, blend);
                 #endif
                 
                 color = lerp(lerp(sss + color, skyColor, fresnelFactor), foamColor, saturate(foamAmount));
 
-                float transparency = dot(specular, float3(0.333,0.333,0.333));
+                half transparency = dot(specular, float3(0.333,0.333,0.333));
                 transparency = lerp(saturate(max(transparency, fresnelFactor) * _Transparency), 1, saturate(foamAmount));
                 #ifdef LOD_FADE_CROSSFADE
                     transparency *= (sqrt(1-i.lodFade)); 

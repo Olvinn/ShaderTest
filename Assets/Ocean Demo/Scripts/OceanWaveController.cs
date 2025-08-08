@@ -126,7 +126,7 @@ namespace Ocean_Demo.Scripts
             
             if (storm > .5f)
                 material.DisableKeyword("SSR");
-            else if (Settings.Instance.Properties.First(v => v.Name == "SSR").BoolValue)
+            else if (Settings.Instance && Settings.Instance.Properties.First(v => v.Name == "SSR").BoolValue)
                 material.EnableKeyword("SSR");
         }
     }

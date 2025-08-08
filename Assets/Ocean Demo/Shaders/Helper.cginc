@@ -70,20 +70,22 @@ float3 RaymarchSSR_ViewSpace(
     out bool hit
 )
 {
-    if (steps == 0) return 0;
+    hit = false;
+    
+    if (steps <= 0) return float3(0, 0, 0);
                 
     float3 originVS = mul(UNITY_MATRIX_V, float4(originWS, 1.0)).xyz;
     float3 viewDirVS = normalize(-originVS); 
     float3 normalVS = mul((float3x3)UNITY_MATRIX_V, normalWS);
 
-    float3 reflDirVS = reflect(viewDirVS, normalVS);
-    
-    if (abs(dot(reflDirVS, viewDirVS)) > .85) return 0; //fix distant gliches
+    float3 reflDirVS = reflect(viewDirVS, normalVS) * .1;
 
-    float3 currVS = originVS + reflDirVS * 0.1;
+    float3 currVS = originVS + reflDirVS;
     int maxSteps = min(max(1, steps), SSR_MAX_STEPS);
 
-    for (int i = 0; i < maxSteps; i++)
+    //if (dot(viewDirVS, normalVS) > .8) return float3(0, 0, 0);
+
+    for (int i = 1; i < maxSteps; i++)
     {
         float4 clipPos = mul(UNITY_MATRIX_P, float4(currVS, 1.0));
         float2 uv = (clipPos.xy / clipPos.w) * 0.5 + 0.5;
@@ -96,16 +98,21 @@ float3 RaymarchSSR_ViewSpace(
             break;
 
         float rawDepth = SAMPLE_DEPTH_TEXTURE(depth, uv);
+
+        if (rawDepth >= 0.9999)
+            return float3(0, 0, 0);
+        
         float sceneLinearZ = LinearEyeDepth(rawDepth);
 
-        float dz = abs(-currVS.z - sceneLinearZ);
-        if (dz < thickness)
+        float dz = -currVS.z - sceneLinearZ;
+        if (dz > 0 && dz < thickness)
         {
             hit = true;
             return tex2D(lastFrame, uv).rgb;
         }
-        currVS += reflDirVS * stepSize;
+        currVS += reflDirVS * (stepSize * (1 + abs(dz * .01)));
     }
+    
     return float3(0, 0, 0);
 }
 

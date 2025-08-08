@@ -22,9 +22,9 @@ namespace Ocean_Demo.Scripts
         void FixedUpdate()
         {
             Vector3 waveNormal;
-            Vector3 waveOffset = GerstnerDisplace(_initialPosition, out waveNormal);
+            Vector3 waveOffset = GerstnerDisplace(_rb.position, out waveNormal);
             
-            if (transform.position.y > waveOffset.y) return;
+            if (_rb.position.y > waveOffset.y) return;
 
             Vector3 position = _rb.position;
 

@@ -111,7 +111,7 @@ Material:
     - _Specular: 32
     - _SpecularHighlights: 1
     - _SrcBlend: 1
-    - _SteepnessSuppression: 0.97
+    - _SteepnessSuppression: 0.9
     - _SteepnessSupression: 0.8
     - _Tess: 32
     - _TessFactor: 0.1
@@ -120,10 +120,10 @@ Material:
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
-    - _WaveLength: 30
+    - _WaveLength: 7.1749997
     - _WaveLengthDistribution: 1.12
-    - _WaveSteepness: 9
-    - _WaveStrength: 1.5
+    - _WaveSteepness: 3.522
+    - _WaveStrength: 0.13962999
     - _WaveStrengthDistribution: 1.19
     - _ZWrite: 1
     m_Colors:
