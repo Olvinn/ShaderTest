@@ -151,7 +151,7 @@ Shader "Custom/GerstnerOcean"
                 half foamAmount = saturate(wd.laplacian - _FoamAmount) * _FoamStrength;
                 float3 foamColor = float3(1,1,1) * d * light * _LightColor0;
                 
-                float3 color = d * _Color * light * _LightColor0;
+                float3 color = saturate(d * _Color * light * _LightColor0);
                 color *= lerp(1, .25, shadow);
                 half fresnelFactor = dot(fresnel, float3(0.333,0.333,0.333));
 
