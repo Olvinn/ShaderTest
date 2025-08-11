@@ -13,6 +13,8 @@ namespace Ocean_Demo.Scripts
     
         [Range(0, 1)]
         public float stormy = 360;
+        [Range(1, 360)]
+        public float minAngle = 45;
     
         public float waveLength, waveStrength, waveLengthDistribution, waveStrengthDistribution, waveSteepness, steepnessSuppression;
 
@@ -76,7 +78,7 @@ namespace Ocean_Demo.Scripts
 
         private void Initialize()
         {
-            float angle = Mathf.Lerp(360, 45, stormy) * Mathf.Deg2Rad;
+            float angle = minAngle;//Mathf.Lerp(360, 45, stormy) * Mathf.Deg2Rad;
             float initDir = windDirection * Mathf.Deg2Rad; 
             waveDirectionsReady = new Vector4[waveDirections.Length];
             for (int i = 0; i < waveDirections.Length; i++)
@@ -93,7 +95,7 @@ namespace Ocean_Demo.Scripts
 
         private void Reinitialize()
         {
-            float angle = Mathf.Lerp(360, 45, stormy) * Mathf.Deg2Rad;
+            float angle = minAngle;//Mathf.Lerp(360, 45, stormy) * Mathf.Deg2Rad;
             float initDir = windDirection * Mathf.Deg2Rad; 
             waveDirectionsReady = new Vector4[waveDirections.Length];
             for (int i = 0; i < waveDirections.Length; i++)

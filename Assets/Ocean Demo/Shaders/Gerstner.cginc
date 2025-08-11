@@ -77,7 +77,7 @@ WaveDetails GerstnerNormalsAndCurvature(float3 posOS,float baseSpeed, int maxWav
         float cosP = cos(phase);
 
         float scale = pow(k, 2);
-        float suppression = pow(k, -1);
+        float suppression = pow(.9, i);
         laplacian += amplitude * sin(phase) * scale * suppression;
 
         float Qi = waveSteepness * pow(steepnessSuppression, i) / (k * amplitude * NAX_GERSTNER_WAVES);

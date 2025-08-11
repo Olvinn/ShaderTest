@@ -46,6 +46,9 @@ namespace Ocean_Demo.Scripts
         {
             if (lastFrameColor == null || lastFrameColor.width != Screen.width || lastFrameColor.height != Screen.height)
             {
+                if (Screen.width <= 0 || Screen.height <= 0)
+                    return;
+                
                 if (lastFrameColor != null)
                     lastFrameColor.Release();
 

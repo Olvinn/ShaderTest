@@ -13,6 +13,7 @@ Shader "Custom/GerstnerOcean"
         _WaveStrengthDistribution ("Wave Strength Distribution", Range(1, 2)) = 1.2
         _WaveLengthDistribution ("Wave Length Distribution", Range(1, 2)) = 1.2
         
+        _FoamTexture ("Foam Texture", 2D) = "white" {}
         _FoamAmount ("Foam Amount", Float) = 1
         _FoamStrength ("Foam Strength", Float) = 1
         
@@ -51,8 +52,9 @@ Shader "Custom/GerstnerOcean"
             half _WaveStrength, _WaveLength, _WaveSteepness, _FoamStrength, _FoamAmount, _Transparency;
             half _Metallic, _Roughness, _WaveStrengthDistribution, _WaveLengthDistribution, _SteepnessSuppression;
             int _MaxWaves;
-            sampler2D _LastFrameColor;
+            sampler2D _LastFrameColor, _FoamTexture;
             sampler2D _CameraDepthTexture;
+            half4 _FoamTexture_ST;
             #ifdef SSR
             half _SSRThickness, _SSRStepSize;
             int _SSRSteps;
@@ -65,6 +67,7 @@ Shader "Custom/GerstnerOcean"
             struct appdata
             {
                 float4 vertex : POSITION;
+                half2 uv : TEXCOORD0;
             };
 
             struct v2t
@@ -75,6 +78,7 @@ Shader "Custom/GerstnerOcean"
                 half lodFade : TEXCOORD2;
                 SHADOW_COORDS(3)
                 float4 screenPos : TEXCOORD4;
+                half2 uv : TEXCOORD5;
             };
 
             v2t vert(appdata v)
@@ -106,6 +110,7 @@ Shader "Custom/GerstnerOcean"
                 o.positionWS = worldPos;
                 UNITY_TRANSFER_FOG(o,o.pos);
                 TRANSFER_SHADOW_WPOS(o, worldPos);
+                o.uv = TRANSFORM_TEX(v.uv, _FoamTexture);
                 
                 return o;
             }
@@ -149,7 +154,9 @@ Shader "Custom/GerstnerOcean"
                 half d = dot(lightDir, wd.normal) * 0.5 + 0.5;
                 
                 half foamAmount = saturate(wd.laplacian - _FoamAmount) * _FoamStrength;
-                float3 foamColor = float3(1,1,1) * d * light * _LightColor0;
+                float3 foamColor = float3(1,1,1) * d * light;
+                foamAmount *= saturate(tex2D(_FoamTexture, i.uv).r + tex2D(_FoamTexture, i.uv * .1).r);
+                specular *= 1 - foamAmount;
                 
                 float3 color = saturate(d * _Color * light * _LightColor0);
                 color *= lerp(1, .25, shadow);
