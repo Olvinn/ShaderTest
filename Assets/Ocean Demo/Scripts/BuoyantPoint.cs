@@ -33,10 +33,10 @@ namespace Ocean_Demo.Scripts
                 Vector3 force = Vector3.up * (depth * buoyancyForce);
                 _rb.AddForce(force, ForceMode.Force);
 
-                position.y = 0;
-                waveOffset.y = 0;
-                force = (position - waveOffset) * .01f;
-                _rb.AddForce(force, ForceMode.Force);
+                // position.y = 0;
+                // waveOffset.y = 0;
+                // force = (position - waveOffset) * .01f;
+                // _rb.AddForce(force, ForceMode.Force);
 
                 Vector3 drag = -_rb.linearVelocity * Time.fixedDeltaTime;
                 _rb.AddForce(drag, ForceMode.VelocityChange);
