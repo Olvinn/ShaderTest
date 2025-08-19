@@ -17,11 +17,20 @@ MonoBehaviour:
     Storm: 0
     Cubemap: {fileID: 8900000, guid: 3b5d67736d7b8ad4f8da4d58eaef0b98, type: 3}
     FogColor: {r: 0.7568628, g: 1, b: 1, a: 0}
+    DirLightDirection: {x: 22, y: 185, z: 0}
+    DirLightIntensity: 1
+    DirLightColor: {r: 1, g: 1, b: 1, a: 0}
   - Name: Sea water
-    Storm: 0
+    Storm: 0.15
     Cubemap: {fileID: 8900000, guid: 18a0be10f0f64ac4c9f679d68e2cf857, type: 3}
-    FogColor: {r: 0.97564197, g: 1, b: 0.75686276, a: 0}
+    FogColor: {r: 1, g: 1, b: 0.9686275, a: 0}
+    DirLightDirection: {x: -15, y: 30, z: 0}
+    DirLightIntensity: 1
+    DirLightColor: {r: 1, g: 1, b: 1, a: 0}
   - Name: Stormy ocean
-    Storm: 0
+    Storm: 1
     Cubemap: {fileID: 8900000, guid: 762f22ba43541df4e95e0e7126e8d96c, type: 3}
-    FogColor: {r: 0.21568629, g: 0.21568629, b: 0.21568629, a: 0}
+    FogColor: {r: 0.1254902, g: 0.13333334, b: 0.14117648, a: 0}
+    DirLightDirection: {x: 30, y: 180, z: 0}
+    DirLightIntensity: 0.1
+    DirLightColor: {r: 0.5882353, g: 0.5647059, b: 0.5254902, a: 0}
