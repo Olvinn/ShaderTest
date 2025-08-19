@@ -29,6 +29,12 @@ namespace Ocean_Demo.Scripts
                 Settings.Instance.onSettingsChanged -= OnSettingsChanged;
         }
 
+        public void ChangeWater(float storm)
+        {
+            stormy = storm;
+            Reinitialize();
+        }
+
         private void OnSettingsChanged(SettingsProperty data)
         {
             if (data.Name == "Tesselation")
@@ -126,10 +132,10 @@ namespace Ocean_Demo.Scripts
             waveStrengthDistribution = material.GetFloat("_WaveStrengthDistribution");
             steepnessSuppression = material.GetFloat("_SteepnessSuppression");
             
-            if (storm > .5f)
-                material.DisableKeyword("SSR");
-            else if (Settings.Instance && Settings.Instance.Properties.First(v => v.Name == "SSR").BoolValue)
-                material.EnableKeyword("SSR");
+            // if (Settings.Instance.Properties.First(v => v.Name == "SSR").BoolValue)
+            //     material.DisableKeyword("SSR");
+            // else
+            //     material.EnableKeyword("SSR");
         }
     }
 }

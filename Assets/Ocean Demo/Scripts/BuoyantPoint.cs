@@ -11,12 +11,10 @@ namespace Ocean_Demo.Scripts
         public bool torque = true;
         
         private Rigidbody _rb;
-        private Vector3 _initialPosition;
     
         void Start()
         {
             _rb = GetComponent<Rigidbody>();
-            _initialPosition = transform.position;
         }
 
         void FixedUpdate()
@@ -40,7 +38,7 @@ namespace Ocean_Demo.Scripts
                 force = (position - waveOffset) * .01f;
                 _rb.AddForce(force, ForceMode.Force);
 
-                Vector3 drag = -_rb.linearVelocity * .05f;
+                Vector3 drag = -_rb.linearVelocity * Time.fixedDeltaTime;
                 _rb.AddForce(drag, ForceMode.VelocityChange);
             }
 
@@ -54,7 +52,7 @@ namespace Ocean_Demo.Scripts
             if (Mathf.Abs(angle) > 0.01f)
                 _rb.AddTorque(axis * angle);
 
-            Vector3 angDrag = -_rb.angularVelocity * .05f;
+            Vector3 angDrag = -_rb.angularVelocity * Time.fixedDeltaTime;
             _rb.AddTorque(angDrag, ForceMode.VelocityChange);
         }
         

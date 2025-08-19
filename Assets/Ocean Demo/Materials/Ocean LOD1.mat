@@ -124,10 +124,10 @@ Material:
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
-    - _WaveLength: 30
+    - _WaveLength: 7.35
     - _WaveLengthDistribution: 1.12
-    - _WaveSteepness: 9
-    - _WaveStrength: 1.5
+    - _WaveSteepness: 3.564
+    - _WaveStrength: 0.15006
     - _WaveStrengthDistribution: 1.2
     - _ZWrite: 1
     m_Colors:
