@@ -6,10 +6,12 @@ namespace Ocean_Demo.Scripts
     public class BuoyantPoint : MonoBehaviour
     {
         [SerializeField] OceanWaveController _WaveController;
+        [SerializeField] private ParticleSystem _splash;
 
         public float buoyancyForce;
         public bool torque = true;
-        
+
+        public bool _inAir = false;
         private Rigidbody _rb;
     
         void Start()
@@ -22,16 +24,23 @@ namespace Ocean_Demo.Scripts
             Vector3 waveNormal;
             Vector3 waveOffset = GerstnerDisplace(_rb.position, out waveNormal);
             
-            if (_rb.position.y > waveOffset.y) return;
+            //if (_rb.position.y > waveOffset.y) return;
 
             Vector3 position = _rb.position;
 
             float depth = waveOffset.y - position.y;
 
-            if (depth > 0f)
+            if (depth >= 0f)
             {
-                depth = Mathf.Clamp01(depth);
+                if (_inAir)
+                {
+                    if (_splash)
+                        _splash.Play();
+                    _inAir = false;
+                }
                 
+                depth = Mathf.Clamp01(depth);
+
                 Vector3 force = Vector3.up * (depth * buoyancyForce);
                 _rb.AddForce(force, ForceMode.Force);
 
@@ -39,8 +48,9 @@ namespace Ocean_Demo.Scripts
                 _rb.AddForce(drag, ForceMode.VelocityChange);
 
                 if (!torque) return;
-            
-                Quaternion targetRotation = Quaternion.LookRotation(Vector3.Cross(transform.right, waveNormal), waveNormal);
+
+                Quaternion targetRotation =
+                    Quaternion.LookRotation(Vector3.Cross(transform.right, waveNormal), waveNormal);
                 Quaternion delta = targetRotation * Quaternion.Inverse(_rb.rotation);
                 delta.ToAngleAxis(out float angle, out Vector3 axis);
 
@@ -51,6 +61,8 @@ namespace Ocean_Demo.Scripts
                 Vector3 angDrag = -_rb.angularVelocity * Time.fixedDeltaTime;
                 _rb.AddTorque(angDrag, ForceMode.VelocityChange);
             }
+            else
+                _inAir = true;
         }
         
         // void Update()
