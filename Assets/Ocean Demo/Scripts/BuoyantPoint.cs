@@ -30,30 +30,27 @@ namespace Ocean_Demo.Scripts
 
             if (depth > 0f)
             {
+                depth = Mathf.Clamp01(depth);
+                
                 Vector3 force = Vector3.up * (depth * buoyancyForce);
                 _rb.AddForce(force, ForceMode.Force);
 
-                // position.y = 0;
-                // waveOffset.y = 0;
-                // force = (position - waveOffset) * .01f;
-                // _rb.AddForce(force, ForceMode.Force);
-
                 Vector3 drag = -_rb.linearVelocity * Time.fixedDeltaTime;
                 _rb.AddForce(drag, ForceMode.VelocityChange);
-            }
 
-            if (!torque) return;
+                if (!torque) return;
             
-            Quaternion targetRotation = Quaternion.LookRotation(Vector3.Cross(transform.right, waveNormal), waveNormal);
-            Quaternion delta = targetRotation * Quaternion.Inverse(_rb.rotation);
-            delta.ToAngleAxis(out float angle, out Vector3 axis);
+                Quaternion targetRotation = Quaternion.LookRotation(Vector3.Cross(transform.right, waveNormal), waveNormal);
+                Quaternion delta = targetRotation * Quaternion.Inverse(_rb.rotation);
+                delta.ToAngleAxis(out float angle, out Vector3 axis);
 
-            if (angle > 180f) angle -= 360f;
-            if (Mathf.Abs(angle) > 0.01f)
-                _rb.AddTorque(axis * angle);
+                if (angle > 180f) angle -= 360f;
+                if (Mathf.Abs(angle) > 0.01f)
+                    _rb.AddTorque(axis * angle);
 
-            Vector3 angDrag = -_rb.angularVelocity * Time.fixedDeltaTime;
-            _rb.AddTorque(angDrag, ForceMode.VelocityChange);
+                Vector3 angDrag = -_rb.angularVelocity * Time.fixedDeltaTime;
+                _rb.AddTorque(angDrag, ForceMode.VelocityChange);
+            }
         }
         
         // void Update()
