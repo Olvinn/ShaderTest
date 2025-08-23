@@ -21,7 +21,7 @@ namespace Ocean_Demo.Scripts
 
         private void ChangeTemplate(int templateNum)
         {
-            _oceanWaveController.ChangeWater(_templates.templates[templateNum].Storm);
+            _oceanWaveController.ChangeWater(_templates.templates[templateNum].Storm, _templates.templates[templateNum].Foam);
             var skyMat = RenderSettings.skybox;
             skyMat.SetTexture("_Tex", _templates.templates[templateNum].Cubemap);
             RenderSettings.fogColor = _templates.templates[templateNum].FogColor;

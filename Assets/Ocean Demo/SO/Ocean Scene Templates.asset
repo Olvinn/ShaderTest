@@ -15,6 +15,7 @@ MonoBehaviour:
   templates:
   - Name: Calm water
     Storm: 0
+    Foam: 1
     Cubemap: {fileID: 8900000, guid: 1153dc89e66880c4eb7adc16ba588855, type: 3}
     FogColor: {r: 0.7568628, g: 1, b: 1, a: 0}
     DirLightDirection: {x: 22, y: 185, z: 0}
@@ -22,6 +23,7 @@ MonoBehaviour:
     DirLightColor: {r: 1, g: 1, b: 1, a: 0}
   - Name: Sea water
     Storm: 0.15
+    Foam: 0.1
     Cubemap: {fileID: 8900000, guid: 12c15a8e5a294be45819b1dd4b9b08d3, type: 3}
     FogColor: {r: 1, g: 1, b: 0.7490196, a: 0}
     DirLightDirection: {x: 30, y: 170, z: 0}
@@ -29,6 +31,7 @@ MonoBehaviour:
     DirLightColor: {r: 1, g: 1, b: 1, a: 0}
   - Name: Stormy ocean
     Storm: 1
+    Foam: 0.04
     Cubemap: {fileID: 8900000, guid: 762f22ba43541df4e95e0e7126e8d96c, type: 3}
     FogColor: {r: 0.1254902, g: 0.13333334, b: 0.14117648, a: 0}
     DirLightDirection: {x: 30, y: 180, z: 0}

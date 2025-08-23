@@ -94,7 +94,7 @@ Material:
     - _Displacement: 1
     - _DstBlend: 0
     - _EdgeLength: 20
-    - _FoamAmount: 0.5
+    - _FoamAmount: 0
     - _FoamStrength: 15
     - _Fresnel: 0.03
     - _GlossMapScale: 1
@@ -126,10 +126,10 @@ Material:
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
-    - _WaveLength: 7.35
+    - _WaveLength: 5
     - _WaveLengthDistribution: 1.12
-    - _WaveSteepness: 3.564
-    - _WaveStrength: 0.15006
+    - _WaveSteepness: 3
+    - _WaveStrength: 0.01
     - _WaveStrengthDistribution: 1.2
     - _ZWrite: 1
     m_Colors:

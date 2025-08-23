@@ -10,9 +10,6 @@ namespace Ocean_Demo.Scripts
         public Shader tesselationShader, noTesselationShader;
         
         public Material[] oceanMaterials;
-    
-        [Range(0, 1)]
-        public float stormy = 360;
         [Range(1, 360)]
         public float minAngle = 45;
     
@@ -22,6 +19,8 @@ namespace Ocean_Demo.Scripts
         public Vector4[] waveDirectionsReady = new Vector4[64];
     
         public float windDirection = 60;
+    
+        private float _storm, _foam;
         
         private void OnDestroy()
         {
@@ -29,9 +28,10 @@ namespace Ocean_Demo.Scripts
                 Settings.Instance.onSettingsChanged -= OnSettingsChanged;
         }
 
-        public void ChangeWater(float storm)
+        public void ChangeWater(float storm, float foam)
         {
-            stormy = storm;
+            _storm = storm;
+            _foam = foam;
             Reinitialize();
         }
 
@@ -96,7 +96,7 @@ namespace Ocean_Demo.Scripts
                 waveDirections[i] = new Vector4(x, y, 0f, 0f);
             }
 
-            WriteToMaterials(stormy, waveDirectionsReady);
+            WriteToMaterials(_storm, waveDirectionsReady);
         }
 
         private void Reinitialize()
@@ -112,7 +112,7 @@ namespace Ocean_Demo.Scripts
                 waveDirectionsReady[i] = new Vector4(x, y, 0f, 0f);
             }
         
-            WriteToMaterials(stormy, waveDirectionsReady);
+            WriteToMaterials(_storm, waveDirectionsReady);
         }
 
         private void WriteToMaterials(float storm, Vector4[] waves)
@@ -123,6 +123,7 @@ namespace Ocean_Demo.Scripts
                 mat.SetFloat("_WaveLength", Mathf.Lerp(5, 30, storm));
                 mat.SetFloat("_WaveStrength", Mathf.Lerp(.01f, 1.5f, storm));
                 mat.SetFloat("_WaveSteepness", Mathf.Lerp(3f, 9f, storm));
+                mat.SetFloat("_FoamAmount", _foam);
             }
             
             var material = oceanMaterials[0]; //I assume we've got LOD0 at first index
