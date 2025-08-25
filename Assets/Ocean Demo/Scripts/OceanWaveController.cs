@@ -51,6 +51,7 @@ namespace Ocean_Demo.Scripts
         private uint _tgx, _tgy, _tgz;
 
         private float _storm, _foam;
+        private Camera _camera;
 
         private void Awake()
         {
@@ -60,6 +61,7 @@ namespace Ocean_Demo.Scripts
 
         private void Start()
         {
+            _camera = Camera.main;
             if (Settings.Instance != null)
                 Settings.Instance.onSettingsChanged += OnSettingsChanged;
 
@@ -76,7 +78,7 @@ namespace Ocean_Demo.Scripts
 
         private void Update()
         {
-            LocalMapCenterWS = new Vector2(Camera.main.transform.position.x , Camera.main.transform.position.z);
+            LocalMapCenterWS = new Vector2(_camera.transform.position.x , _camera.transform.position.z);
             ProcessingWaterCalculations();
             WriteToMaterials(_storm, waveDirectionsReady);
         }
@@ -196,7 +198,6 @@ namespace Ocean_Demo.Scripts
             steepnessSuppression = material.GetFloat("_SteepnessSuppression");
         }
 
-        // === NEW: compute lifecycle ===
         private void InitLocalDetailsTargets()
         {
             if (LocalWaterDetails != null &&
@@ -243,12 +244,12 @@ namespace Ocean_Demo.Scripts
         {
             if (_sourcesBuffer == null) return;
 
-            // If empty, still upload a dummy to keep buffer valid
-            // if (Sources.Length == 0)
-            // {
-            //     Sources = new[] { new WaveSource { posWS = Vector2.zero, radius = 8, amplitude = 0.25f,
-            //         wavelength = 3.5f, speed = 2.0f, decay = 2.0f, type = 0, angleDeg = 0 } };
-            // }
+            if (Sources.Length == 0)
+            {
+                Sources = new[] { new WaveSource { posWS = Vector2.zero, radius = 0, amplitude = 0,
+                    wavelength = 3.5f, speed = 2.0f, decay = 2.0f, type = 0, angleDeg = 0 } };
+            }
+            
             _sourcesBuffer.SetData(Sources);
         }
 
@@ -274,12 +275,11 @@ namespace Ocean_Demo.Scripts
         {
             if (WaterDetailsCompute == null || LocalWaterDetails == null) return;
 
-            // Per-frame params
             WaterDetailsCompute.SetFloat("_Time", Time.time);
             WaterDetailsCompute.SetVector("_MapCenterWS", new Vector4(LocalMapCenterWS.x, 0, LocalMapCenterWS.y, 0));
             WaterDetailsCompute.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));
             WaterDetailsCompute.SetInt("_NumSources", Mathf.Max(0, Sources.Length));
-            WaterDetailsCompute.SetFloat("_Damping", 0.985f); // temporal fade for trails
+            WaterDetailsCompute.SetFloat("_Damping", 0.985f);
 
             WaterDetailsCompute.SetBuffer(_kernel, "_Sources", _sourcesBuffer);
             WaterDetailsCompute.SetTexture(_kernel, "_LocalDetailsRW", LocalWaterDetails);

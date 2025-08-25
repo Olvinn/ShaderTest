@@ -9,6 +9,8 @@ namespace Ocean_Demo.Scripts
         [SerializeField] private ParticleSystem _splash;
 
         public float Radius = .25f;
+        public float WaveAmplitude = .25f;
+        public float WaveLength = .5f;
 
         public float buoyancyForce;
         public bool torque = true;
@@ -23,11 +25,11 @@ namespace Ocean_Demo.Scripts
             
             var src = new OceanWaveController.WaveSource
             {
-                posWS     = new Vector2(10, 12),
+                posWS     = new Vector2(transform.position.x, transform.position.z),
                 radius    = Radius,
-                amplitude = 0.15f,
-                wavelength= .5f,
-                speed     = .5f,
+                amplitude = WaveAmplitude,
+                wavelength= WaveLength,
+                speed     = 0f,
                 decay     = 1.0f,
                 type      = 0f,        // radial
                 angleDeg  = 0f
@@ -81,16 +83,18 @@ namespace Ocean_Demo.Scripts
             else
                 _inAir = true;
             
-            _WaveController.UpdateSource(_waveSourceIndex, new OceanWaveController.WaveSource {
-                posWS = new Vector2(transform.position.x, transform.position.z),
-                radius = 25f,
-                amplitude = 0.18f,
-                wavelength = 3.5f,
-                speed = 3.0f,
-                decay = 1.7f,
-                type = 1f,          // directional
-                angleDeg = transform.eulerAngles.y
-            });
+            _WaveController.UpdateSource(_waveSourceIndex, 
+                new OceanWaveController.WaveSource
+                {
+                    posWS     = new Vector2(transform.position.x, transform.position.z),
+                    radius    = Radius,
+                    amplitude = WaveAmplitude,
+                    wavelength= WaveLength,
+                    speed = 2f,
+                    decay = 1.7f,
+                    type = 0f,          // directional
+                    angleDeg  = 1f
+                });
         }
         
         // void Update()

@@ -123,7 +123,7 @@ Shader "Custom/GerstnerOcean"
             fixed4 frag(v2t i) : SV_Target
             {
                 float2 localUV = (i.positionWS.xz - _MapCenterWS.xz) / _MapSizeWS.xz;
-                localUV += 0.5;
+                localUV += 0.5; 
                 float4 local = tex2D(_LocalWaterDetails, localUV);
 
                 // Add local slope into normal reconstruction (cheap hack):

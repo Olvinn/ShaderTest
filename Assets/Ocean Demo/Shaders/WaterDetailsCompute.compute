@@ -36,14 +36,12 @@ float2 PixelToWS(int2 pix)
 void CSMain(uint3 id : SV_DispatchThreadID)
 {
     if (id.x >= _Resolution.x || id.y >= _Resolution.y) return;
-    int2 pix = int2(id.xy);
+    int2 pix = int2(id.xy); 
     float2 P = PixelToWS(pix);
 
-    // Start with a gently damped previous value for persistence/wakes
     float4 prev = _LocalDetailsRW[pix];
     float4 acc  = prev * _Damping;
 
-    // Accumulate contributions from all sources
     for (int i = 0; i < _NumSources; i++)
     {
         WaveSource s = _Sources[i];
@@ -51,19 +49,15 @@ void CSMain(uint3 id : SV_DispatchThreadID)
         float2 toP = P - s.posWS;
         float dist = length(toP);
 
-        // Skip outside influence radius
         if (dist > s.radius) continue;
 
-        // Phase & envelope
         float k   = 2.0 * 3.14159265 / max(s.wavelength, 1e-3);
         float w   = s.speed * k; // crude deep water-ish
         float ph  = k * dist - w * _Time;
 
-        // Distance falloff
         float falloff = saturate(1.0 - dist / max(s.radius, 1e-3));
         falloff = pow(falloff, max(s.decay, 0.001)); // sharper if decay>1
 
-        // Directional wake shaping (optional)
         float dirMask = 1.0;
         if (s.type > 0.5)
         {
@@ -73,11 +67,8 @@ void CSMain(uint3 id : SV_DispatchThreadID)
 
         float A = s.amplitude * falloff * dirMask;
 
-        // Height-ish signal (we won’t store height, but use for gradients)
         float h = A * sin(ph);
 
-        // Lateral gradient → approximate surface offset (dx,dz)
-        // (central-difference on radial wave: gradient points outward)
         float dhdr = A * k * cos(ph);        // ∂h/∂r
         float2 n_r = (dist > 1e-4) ? (toP / dist) : float2(0,0);
         float2 grad = dhdr * n_r;
@@ -88,7 +79,6 @@ void CSMain(uint3 id : SV_DispatchThreadID)
         acc.a  += saturate(A);   // simple foam mask energy
     }
 
-    // Optional normalization or clamping
     acc.rg = clamp(acc.rg, -2.0, 2.0);
     acc.b  = clamp(acc.b,  -2.0, 2.0);
     acc.a  = saturate(acc.a);
