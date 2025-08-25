@@ -8,15 +8,31 @@ namespace Ocean_Demo.Scripts
         [SerializeField] OceanWaveController _WaveController;
         [SerializeField] private ParticleSystem _splash;
 
+        public float Radius = .25f;
+
         public float buoyancyForce;
         public bool torque = true;
 
         public bool _inAir = false;
         private Rigidbody _rb;
+        private int _waveSourceIndex;
     
         void Start()
         {
             _rb = GetComponent<Rigidbody>();
+            
+            var src = new OceanWaveController.WaveSource
+            {
+                posWS     = new Vector2(10, 12),
+                radius    = Radius,
+                amplitude = 0.15f,
+                wavelength= .5f,
+                speed     = .5f,
+                decay     = 1.0f,
+                type      = 0f,        // radial
+                angleDeg  = 0f
+            };
+            _waveSourceIndex = _WaveController.AddSource(src);
         }
 
         void FixedUpdate()
@@ -47,22 +63,34 @@ namespace Ocean_Demo.Scripts
                 Vector3 drag = -_rb.linearVelocity * Time.fixedDeltaTime;
                 _rb.AddForce(drag, ForceMode.VelocityChange);
 
-                if (!torque) return;
+                if (torque)
+                {
+                    Quaternion targetRotation =
+                        Quaternion.LookRotation(Vector3.Cross(transform.right, waveNormal), waveNormal);
+                    Quaternion delta = targetRotation * Quaternion.Inverse(_rb.rotation);
+                    delta.ToAngleAxis(out float angle, out Vector3 axis);
 
-                Quaternion targetRotation =
-                    Quaternion.LookRotation(Vector3.Cross(transform.right, waveNormal), waveNormal);
-                Quaternion delta = targetRotation * Quaternion.Inverse(_rb.rotation);
-                delta.ToAngleAxis(out float angle, out Vector3 axis);
+                    if (angle > 180f) angle -= 360f;
+                    if (Mathf.Abs(angle) > 0.01f)
+                        _rb.AddTorque(axis * angle);
 
-                if (angle > 180f) angle -= 360f;
-                if (Mathf.Abs(angle) > 0.01f)
-                    _rb.AddTorque(axis * angle);
-
-                Vector3 angDrag = -_rb.angularVelocity * Time.fixedDeltaTime;
-                _rb.AddTorque(angDrag, ForceMode.VelocityChange);
+                    Vector3 angDrag = -_rb.angularVelocity * Time.fixedDeltaTime;
+                    _rb.AddTorque(angDrag, ForceMode.VelocityChange);
+                }
             }
             else
                 _inAir = true;
+            
+            _WaveController.UpdateSource(_waveSourceIndex, new OceanWaveController.WaveSource {
+                posWS = new Vector2(transform.position.x, transform.position.z),
+                radius = 25f,
+                amplitude = 0.18f,
+                wavelength = 3.5f,
+                speed = 3.0f,
+                decay = 1.7f,
+                type = 1f,          // directional
+                angleDeg = transform.eulerAngles.y
+            });
         }
         
         // void Update()

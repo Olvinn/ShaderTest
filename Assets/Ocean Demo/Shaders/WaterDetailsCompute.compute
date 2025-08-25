@@ -1,0 +1,97 @@
+// WaterDetails.compute
+#pragma kernel CSMain
+
+struct WaveSource {
+    float2 posWS;
+    float  radius;
+    float  amplitude;
+    float  wavelength;
+    float  speed;
+    float  decay;
+    float  type;     // 0 radial, 1 directional
+    float  angleDeg; // for directional wake
+};
+
+RWTexture2D<float4> _LocalDetailsRW; // RG: displacement (dx, dz), B: extra amp, A: foam mask
+
+StructuredBuffer<WaveSource> _Sources;
+
+int2 _Resolution;
+float _Time;                 // seconds
+int _NumSources;
+float _Damping;              // 0..1 per-frame fade
+
+float4 _MapCenterWS;         // x,z used
+float4 _MapSizeWS;           // x,z used
+
+float2 PixelToWS(int2 pix)
+{
+    float2 uv = (pix + 0.5) / (float2)_Resolution;
+    float2 halfSize = _MapSizeWS.xz * 0.5;
+    float2 ws = _MapCenterWS.xz + (uv * 2.0 - 1.0) * halfSize; // [-1..1] → world span
+    return ws;
+}
+
+[numthreads(8,8,1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _Resolution.x || id.y >= _Resolution.y) return;
+    int2 pix = int2(id.xy);
+    float2 P = PixelToWS(pix);
+
+    // Start with a gently damped previous value for persistence/wakes
+    float4 prev = _LocalDetailsRW[pix];
+    float4 acc  = prev * _Damping;
+
+    // Accumulate contributions from all sources
+    for (int i = 0; i < _NumSources; i++)
+    {
+        WaveSource s = _Sources[i];
+
+        float2 toP = P - s.posWS;
+        float dist = length(toP);
+
+        // Skip outside influence radius
+        if (dist > s.radius) continue;
+
+        // Phase & envelope
+        float k   = 2.0 * 3.14159265 / max(s.wavelength, 1e-3);
+        float w   = s.speed * k; // crude deep water-ish
+        float ph  = k * dist - w * _Time;
+
+        // Distance falloff
+        float falloff = saturate(1.0 - dist / max(s.radius, 1e-3));
+        falloff = pow(falloff, max(s.decay, 0.001)); // sharper if decay>1
+
+        // Directional wake shaping (optional)
+        float dirMask = 1.0;
+        if (s.type > 0.5)
+        {
+            float2 dir = float2(cos(radians(s.angleDeg)), sin(radians(s.angleDeg)));
+            dirMask = saturate(dot(normalize(toP + 1e-5), dir) * 0.5 + 0.5); // front hemisphere
+        }
+
+        float A = s.amplitude * falloff * dirMask;
+
+        // Height-ish signal (we won’t store height, but use for gradients)
+        float h = A * sin(ph);
+
+        // Lateral gradient → approximate surface offset (dx,dz)
+        // (central-difference on radial wave: gradient points outward)
+        float dhdr = A * k * cos(ph);        // ∂h/∂r
+        float2 n_r = (dist > 1e-4) ? (toP / dist) : float2(0,0);
+        float2 grad = dhdr * n_r;
+
+        // Accumulate:
+        acc.rg += grad;          // local tangent offsets (dx,dz)
+        acc.b  += h;             // extra height contribution
+        acc.a  += saturate(A);   // simple foam mask energy
+    }
+
+    // Optional normalization or clamping
+    acc.rg = clamp(acc.rg, -2.0, 2.0);
+    acc.b  = clamp(acc.b,  -2.0, 2.0);
+    acc.a  = saturate(acc.a);
+
+    _LocalDetailsRW[pix] = acc;
+}

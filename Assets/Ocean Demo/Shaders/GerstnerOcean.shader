@@ -55,6 +55,11 @@ Shader "Custom/GerstnerOcean"
             sampler2D _LastFrameColor, _FoamTexture;
             sampler2D _CameraDepthTexture;
             half4 _FoamTexture_ST;
+            
+            sampler2D _LocalWaterDetails;
+            float4 _MapCenterWS;  
+            float4 _MapSizeWS;
+            
             #ifdef SSR
             half _SSRThickness, _SSRStepSize;
             int _SSRSteps;
@@ -116,7 +121,14 @@ Shader "Custom/GerstnerOcean"
             }
 
             fixed4 frag(v2t i) : SV_Target
-            {                
+            {
+                float2 localUV = (i.positionWS.xz - _MapCenterWS.xz) / _MapSizeWS.xz;
+                localUV += 0.5;
+                float4 local = tex2D(_LocalWaterDetails, localUV);
+
+                // Add local slope into normal reconstruction (cheap hack):
+                float3 nLocal = normalize(float3(-local.r, 1.0, -local.g));
+                
                 WaveDetails wd = GerstnerNormalsAndCurvature(
                     i.positionWS,
                     9.81,
@@ -130,6 +142,8 @@ Shader "Custom/GerstnerOcean"
                     _SteepnessSuppression);
                 
                 float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos);
+                wd.normal = normalize(lerp(wd.normal, nLocal, 0.35)); // blend factor to taste
+                //return float4(local);
                 
                 half shadow = SHADOW_ATTENUATION(i);
 

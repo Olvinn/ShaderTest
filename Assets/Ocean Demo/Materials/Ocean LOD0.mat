@@ -53,6 +53,10 @@ Material:
         m_Texture: {fileID: 2800000, guid: 32dd18e0c6e3b2b4cb9c3f3c8393580c, type: 3}
         m_Scale: {x: 100, y: 100}
         m_Offset: {x: 0, y: 0}
+    - _LocalWaterDetails:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _MainTex:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
