@@ -183,7 +183,7 @@ namespace Ocean_Demo.Scripts
                 mat.SetVectorArray("_WaveDirs", waves);
                 mat.SetFloat("_WaveLength", Mathf.Lerp(5, 30, storm));
                 mat.SetFloat("_WaveStrength", Mathf.Lerp(.01f, 1.5f, storm));
-                mat.SetFloat("_WaveSteepness", Mathf.Lerp(3f, 9f, storm));
+                mat.SetFloat("_WaveSteepness", Mathf.Lerp(10f, 9f, storm));
                 mat.SetFloat("_FoamAmount", _foam);
                 mat.SetVector("_MapCenterWS", new Vector4(LocalMapCenterWS.x, 0, LocalMapCenterWS.y, 0));
                 mat.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));
