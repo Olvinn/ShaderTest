@@ -29,6 +29,7 @@ float3 GerstnerDisplace(float3 posOS,float baseSpeed, int maxWaves, float2 waveD
 
     int max_waves = min(NAX_GERSTNER_WAVES, maxWaves);
                 
+    [loop]
     for (int i = 0; i < max_waves; i++)
     {
         float2 dir = waveDirections[i];
@@ -63,6 +64,7 @@ WaveDetails GerstnerNormalsAndCurvature(float3 posOS,float baseSpeed, int maxWav
     float3 tangentX = float3(1, 0, 0), tangentZ = float3(0, 0, 1);
     float laplacian = 0;
                 
+    [loop]
     for (int i = 0; i < max_waves; i++)
     {
         float2 dir = waveDirections[i];

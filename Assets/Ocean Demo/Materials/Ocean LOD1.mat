@@ -121,6 +121,7 @@ Material:
     - _SrcBlend: 1
     - _SteepnessSuppression: 0.95
     - _SteepnessSupression: 0.8
+    - _StepPropagation: 1.01
     - _Tess: 32
     - _TessFactor: 0.1
     - _Tessellation: 8
@@ -130,7 +131,7 @@ Material:
     - _WaveDistribution: 1.2
     - _WaveLength: 5
     - _WaveLengthDistribution: 1.12
-    - _WaveSteepness: 3
+    - _WaveSteepness: 10
     - _WaveStrength: 0.01
     - _WaveStrengthDistribution: 1.2
     - _ZWrite: 1

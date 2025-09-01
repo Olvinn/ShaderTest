@@ -58,62 +58,124 @@ float PBRSpecular(
     return specular;
 }
 
+inline float2 SSR_ProjectVSPosToUV(float3 vsPos)
+{
+    float4 clip = mul(UNITY_MATRIX_P, float4(vsPos, 1.0));
+    float2 uv   = clip.xy / max(clip.w, 1e-6);
+    uv = uv * 0.5 + 0.5;
+    #if UNITY_UV_STARTS_AT_TOP
+    uv.y = 1.0 - uv.y;
+    #endif
+    return uv;
+}
+
+inline float SSR_SampleRawDepth(sampler2D depthTex, float2 uv)
+{
+    return tex2D(depthTex, uv).r;
+}
 
 float3 RaymarchSSR_ViewSpace(
     float3 originWS,
     float3 normalWS,
-    int steps,
-    float stepSize,
-    float thickness,
-    sampler2D depth,
-    sampler2D lastFrame,
-    out bool hit
-)
+    int    steps,
+    float  stepSize,
+    float  thickness,
+    float  stepPropagation,
+    sampler2D depthTex,
+    sampler2D lastFrameTex,
+    out bool hit)
 {
     hit = false;
-    
-    if (steps <= 0) return float3(0, 0, 0);
-                
+    if (steps <= 0) return 0;
+
+    // View-space setup
     float3 originVS = mul(UNITY_MATRIX_V, float4(originWS, 1.0)).xyz;
-    float3 viewDirVS = normalize(-originVS); 
-    float3 normalVS = mul((float3x3)UNITY_MATRIX_V, normalWS);
+    float3 viewDirVS = normalize(originVS);                               // towards camera
+    float3 normalVS  = normalize(mul((float3x3)UNITY_MATRIX_V, normalWS)); // rotate normal to VS
+    float3 reflDirVS = normalize(reflect(viewDirVS, normalVS));            // reflection dir in VS
 
-    float3 reflDirVS = reflect(viewDirVS, normalVS) * .1;
+    // Nudge off the surface a tiny bit to avoid self-intersection
+    float  t = 1e-3; // meters
+    float3 currVS = originVS + reflDirVS * t;
 
-    float3 currVS = originVS + reflDirVS;
     int maxSteps = min(max(1, steps), SSR_MAX_STEPS);
 
-    //if (dot(viewDirVS, normalVS) > .8) return float3(0, 0, 0);
+    // Initialize previous dz at the starting point
+    float2 uv = SSR_ProjectVSPosToUV(currVS);
+    if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) return 0;
 
-    for (int i = 1; i < maxSteps; i++)
+    float rawDepth0 = SSR_SampleRawDepth(depthTex, uv);
+    if (rawDepth0 >= 0.9999) return 0;
+
+    float sceneLinearZ0 = LinearEyeDepth(rawDepth0); // uses _ZBufferParams
+    float currLinearZ0  = -currVS.z;                 // Unity VS: in front => negative z
+    float prevDz = currLinearZ0 - sceneLinearZ0;     // <0 means ray point is in front of scene
+
+    // March
+    [loop]
+    for (int i = 0; i < maxSteps; ++i)
     {
-        float4 clipPos = mul(UNITY_MATRIX_P, float4(currVS, 1.0));
-        float2 uv = (clipPos.xy / clipPos.w) * 0.5 + 0.5;
+        // Depth-aware step so density is ~constant in screen space
+        float depthScale = max(1.0, abs(currVS.z));
+        float thisStep   = stepSize * depthScale * (stepPropagation * i);
 
-        #if UNITY_UV_STARTS_AT_TOP
-        uv.y = 1.0 - uv.y;
-        #endif
+        t     += thisStep;
+        currVS = originVS + reflDirVS * t;
 
-        if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
-            break;
+        uv = SSR_ProjectVSPosToUV(currVS);
+        if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) break;
 
-        float rawDepth = SAMPLE_DEPTH_TEXTURE(depth, uv);
+        float rawDepth = SSR_SampleRawDepth(depthTex, uv);
+        if (rawDepth >= 0.9999) return 0; // hit sky
 
-        if (rawDepth >= 0.9999)
-            return float3(0, 0, 0);
-        
         float sceneLinearZ = LinearEyeDepth(rawDepth);
+        float currLinearZ  = -currVS.z;
+        float dz           = currLinearZ - sceneLinearZ; // crossing when prevDz < 0 && dz >= 0
 
-        float dz = -currVS.z - sceneLinearZ;
-        if (dz > 0 && dz < thickness)
+        if (dz >= 0 && prevDz < 0)
         {
-            hit = true;
-            return tex2D(lastFrame, uv).rgb;
+            // --- refine the hit with a small binary search along the last segment ---
+            float tLo = t - thisStep;
+            float tHi = t;
+            float bestT = tHi;
+
+            [unroll(6)]
+            for (int it = 0; it < 6; ++it)
+            {
+                float tMid = 0.5 * (tLo + tHi);
+                float3 vsMid = originVS + reflDirVS * tMid;
+
+                float2 uvMid = SSR_ProjectVSPosToUV(vsMid);
+                float rawMid = SSR_SampleRawDepth(depthTex, uvMid);
+                if (rawMid >= 0.9999) { tHi = tMid; continue; }
+
+                float sceneMid = LinearEyeDepth(rawMid);
+                float currMid  = -vsMid.z;
+                float dzMid    = currMid - sceneMid;
+
+                if (dzMid >= 0) { bestT = tMid; tHi = tMid; }
+                else            { tLo = tMid; }
+            }
+
+            float3 vsHit = originVS + reflDirVS * bestT;
+            float2 uvHit = SSR_ProjectVSPosToUV(vsHit);
+
+            float rawHit   = SSR_SampleRawDepth(depthTex, uvHit);
+            float sceneHit = LinearEyeDepth(rawHit);
+            float currHit  = -vsHit.z;
+
+            // Final thickness test in meters (view space)
+            if (abs(currHit - sceneHit) <= thickness)
+            {
+                hit = true;
+                return tex2D(lastFrameTex, uvHit).rgb;
+            }
         }
-        currVS += reflDirVS * (stepSize * (1 + abs(dz * .01)));
+
+        prevDz = dz;
     }
-    
-    return float3(0, 0, 0);
+
+    return 0;
 }
 
 inline float3 CubemapAmbient(float3 viewDir, float3 normal, float smooth)

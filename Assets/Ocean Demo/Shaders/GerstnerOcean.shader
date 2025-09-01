@@ -22,6 +22,7 @@ Shader "Custom/GerstnerOcean"
         
         _SSRSteps ("SSR Steps", Integer) = 32
         _SSRStepSize ("SSR Step Size", Range(0.01, 5)) = .5
+        _StepPropagation ("SSR Step Propagation", Range(0, 1)) = .01
         _SSRThickness ("SSR Thickness", Range(0.01, 1)) = .5
     }
 
@@ -61,7 +62,7 @@ Shader "Custom/GerstnerOcean"
             float4 _MapSizeWS;
             
             #ifdef SSR
-            half _SSRThickness, _SSRStepSize;
+            half _SSRThickness, _SSRStepSize, _StepPropagation;
             int _SSRSteps;
             #endif
 
@@ -126,7 +127,6 @@ Shader "Custom/GerstnerOcean"
                 localUV += 0.5; 
                 float4 local = tex2D(_LocalWaterDetails, localUV);
 
-                // Add local slope into normal reconstruction (cheap hack):
                 float3 nLocal = normalize(float3(-local.r, 1.0, -local.g));
                 
                 WaveDetails wd = GerstnerNormalsAndCurvature(
@@ -140,10 +140,11 @@ Shader "Custom/GerstnerOcean"
                     _WaveStrengthDistribution,
                     _WaveSteepness,
                     _SteepnessSuppression);
+
+                wd.normal = UnityObjectToWorldNormal(wd.normal);
                 
                 float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos);
-                wd.normal = normalize(lerp(wd.normal, nLocal, 0.35)); // blend factor to taste
-                //return float4(local);
+                wd.normal = normalize(lerp(wd.normal, nLocal, 0.35));
                 
                 half shadow = SHADOW_ATTENUATION(i);
 
@@ -173,17 +174,17 @@ Shader "Custom/GerstnerOcean"
                 specular *= 1 - foamAmount;
                 
                 float3 color = saturate(d * _Color * light * _LightColor0);
-                color *= lerp(1, .25, shadow);
                 half fresnelFactor = dot(fresnel, float3(0.333,0.333,0.333));
 
                 #ifdef SSR
                 bool ssrHit = false;
                 float3 ssrColor = RaymarchSSR_ViewSpace(
                     i.positionWS,
-                    reflection,
+                    wd.normal,
                     _SSRSteps,
                     _SSRStepSize,
                     _SSRThickness,
+                    _StepPropagation,
                     _CameraDepthTexture,
                     _LastFrameColor,
                     ssrHit
