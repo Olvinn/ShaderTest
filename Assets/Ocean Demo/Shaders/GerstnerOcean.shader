@@ -28,12 +28,12 @@ Shader "Custom/GerstnerOcean"
 
     SubShader
     {
-        Tags { "RenderType" = "Opaque" "RenderQueue" = "Opaque" "LightMode" = "ForwardBase" }
+        Tags { "RenderType" = "Transparent" "RenderPipeline" = "UniversalPipeline" "RenderQueue" = "Transparent" }
         //ZWrite On
         
         Pass
         {
-            CGPROGRAM
+            HLSLPROGRAM
             #pragma target 5.0
             #pragma vertex vert
             #pragma fragment frag
@@ -43,10 +43,8 @@ Shader "Custom/GerstnerOcean"
             #pragma multi_compile_fwdbase nolightmap nodirlightmap nodynlightmap novertexlight
             #pragma shader_feature SSR
 
-            #include "UnityCG.cginc"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             #include "Helper.cginc"
-            #include "UnityLightingCommon.cginc"
-            #include "AutoLight.cginc"
             #include "Gerstner.cginc"
 
             float4 _Color, _SSSColor;
@@ -70,28 +68,28 @@ Shader "Custom/GerstnerOcean"
             #define SSR_MAX_STEPS 64
             uniform float2 _WaveDirs[MAX_WAVES];
 
-            struct appdata
+            struct Attributes
             {
                 float4 vertex : POSITION;
-                half2 uv : TEXCOORD0;
+                half2 uv      : TEXCOORD0;
             };
 
-            struct v2t
+            struct Varyings
             {
-                float4 pos : SV_POSITION;
+                float4 positionCS   : SV_POSITION;
                 float3 positionWS   : TEXCOORD0;
-                UNITY_FOG_COORDS(1)
-                half lodFade : TEXCOORD2;
-                SHADOW_COORDS(3)
-                float4 screenPos : TEXCOORD4;
-                half2 uv : TEXCOORD5;
+                float3 fog          : TEXCOORD1;
+                half lodFade        : TEXCOORD2;
+                float4 positionSS   : TEXCOORD4;
+                half2 uv            : TEXCOORD5;
+                float3 shadow       : TEXCOORD6;
             };
 
-            v2t vert(appdata v)
+            Varyings vert(Attributes IN)
             {
-                v2t o;
+                Varyings OUT = (Varyings)0;
                 
-                float3 worldPos = mul(unity_ObjectToWorld, float4(v.vertex)).xyz;
+                float3 worldPos = mul(unity_ObjectToWorld, float4(IN.vertex)).xyz;
                 
                 float3 offset = GerstnerDisplace(
                     worldPos,
@@ -108,20 +106,19 @@ Shader "Custom/GerstnerOcean"
                 
                 worldPos += offset;
                 
-                UNITY_INITIALIZE_OUTPUT(v2t, o);
-                o.lodFade = unity_LODFade.y;
-                float4 clipPos = UnityWorldToClipPos(worldPos);
-                o.pos = clipPos;
-                o.screenPos = ComputeScreenPos(clipPos);
-                o.positionWS = worldPos;
-                UNITY_TRANSFER_FOG(o,o.pos);
-                TRANSFER_SHADOW_WPOS(o, worldPos);
-                o.uv = TRANSFORM_TEX(v.uv, _FoamTexture);
+                OUT.lodFade = unity_LODFade.y;
+                float4 clipPos = TransformWorldToHClip(worldPos);
+                OUT.positionCS = clipPos;
+                OUT.positionSS = ComputeScreenPos(clipPos);
+                OUT.positionWS = worldPos;
+                OUT.fog = ComputeFogFactor(OUT.positionCS.z);
+                OUT.shadow = TransformWorldToShadowCoord(OUT.positionWS);
+                OUT.uv = TRANSFORM_TEX(IN.uv, _FoamTexture);
                 
-                return o;
+                return OUT;
             }
 
-            fixed4 frag(v2t i) : SV_Target
+            half4 frag(Varyings i) : SV_Target
             {
                 float2 localUV = (i.positionWS.xz - _MapCenterWS.xz) / _MapSizeWS.xz;
                 localUV += 0.5; 
@@ -141,39 +138,39 @@ Shader "Custom/GerstnerOcean"
                     _WaveSteepness,
                     _SteepnessSuppression);
 
-                wd.normal = UnityObjectToWorldNormal(wd.normal);
+                wd.normal = TransformObjectToWorldNormal(wd.normal);
                 
                 float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos);
                 wd.normal = normalize(lerp(wd.normal, nLocal, 0.35));
                 
-                half shadow = SHADOW_ATTENUATION(i);
 
-                float3 lightDir = _WorldSpaceLightPos0.xyz;
+                Light mainLight = GetMainLight();
 
-                half ndotl = saturate(dot(wd.normal, lightDir));
-                half backSSS = saturate(dot(wd.normal, -lightDir)) * 0.4; 
+                half ndotl = saturate(dot(wd.normal, mainLight.direction));
+                half backSSS = saturate(dot(wd.normal, -mainLight.direction)) * 0.4; 
                 half wrap = ndotl * 0.5 + 0.5; 
                 half transmission = pow(1.0 - saturate(dot(wd.normal, viewDir)), 3.0);
                 
                 float3 reflection = reflect(viewDir, wd.normal);
-                float3 skyColor = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflection, 0);
+                float3 skyColor = CubemapAmbient(viewDir, reflection, 0);
 
-                half light = pow(saturate(dot(lightDir, float3(0,1,0))), .5);
-                float3 sss = (backSSS * transmission * wrap) * _SSSColor * _LightColor0 * light;
+                half light = pow(saturate(dot(mainLight.direction, float3(0,1,0))), .5);
+                float3 sss = (backSSS * transmission * wrap) * _SSSColor * mainLight.color * light;
                 
                 half NdotV = saturate(dot(wd.normal, -viewDir));
                 float3 F0 = lerp(float3(0.02, 0.02, 0.02), _Color, _Metallic);
                 float3 fresnel = FresnelSchlick(NdotV, F0);
-                float3 specular = PBRSpecular(wd.normal, -viewDir, lightDir, _Color, _Metallic, _Roughness) * _LightColor0 * shadow;
+                float3 specular = PBRSpecular(wd.normal, -viewDir, mainLight.direction, _Color, _Metallic, _Roughness) * 
+                    mainLight.color * mainLight.shadowAttenuation;
 
-                half d = dot(lightDir, wd.normal) * 0.5 + 0.5;
+                half d = dot(mainLight.direction, wd.normal) * 0.5 + 0.5;
                 
                 half foamAmount = saturate(wd.laplacian - _FoamAmount) * _FoamStrength;
                 float3 foamColor = float3(1,1,1) * d * light;
                 foamAmount *= saturate(tex2D(_FoamTexture, i.uv).r + tex2D(_FoamTexture, i.uv * .1).r);
                 specular *= 1 - foamAmount;
                 
-                float3 color = saturate(d * _Color * light * _LightColor0);
+                float3 color = saturate(d * _Color * light * mainLight.color);
                 half fresnelFactor = dot(fresnel, float3(0.333,0.333,0.333));
 
                 #ifdef SSR
@@ -202,76 +199,12 @@ Shader "Custom/GerstnerOcean"
                     transparency *= (sqrt(1-i.lodFade)); 
                 #endif
                 
-                float3 finalColor = saturate(specular + color);
-                UNITY_APPLY_FOG(i.fogCoord, finalColor);
+                half3 finalColor = saturate(specular + color);
+                finalColor.rgb = MixFog(finalColor.rgb, i.fog);
                 
-                return float4(finalColor, transparency);
+                return half4(finalColor, transparency);
             }
-            ENDCG
-        }
-
-        Pass //shadow casting
-        {
-            Tags{ "LightMode" = "ShadowCaster"  }
-            CGPROGRAM
-            
-            #pragma target 5.0
-            #pragma vertex vert
-            #pragma fragment frag
-
-            #include "UnityCG.cginc"
-            #include "Gerstner.cginc"
-
-            float _WaveStrength, _WaveLength, _WaveSteepness, _FoamStrength, _FoamAmount, _Transparency;
-            float _WaveStrengthDistribution, _WaveLengthDistribution, _MaxWaves, _SteepnessSuppression;
-
-            #define MAX_WAVES 64
-            #define UNITY_PASS_SHADOWCASTER
-            uniform float2 _WaveDirs[MAX_WAVES];
-
-            struct appdata
-            {
-                float4 vertex : POSITION;
-            };
-
-            struct v2t
-            {
-                float3 objectPos : INTERNALTESSPOS;
-                float4 pos : SV_POSITION;
-            };
-
-            v2t vert(appdata v)
-            {
-                v2t o;
-                
-                float3 worldPos = mul(unity_ObjectToWorld, float4(v.vertex)).xyz;
-                
-                float3 offset = GerstnerDisplace(
-                    worldPos,
-                    9.81,
-                    _MaxWaves,
-                    _WaveDirs,
-                    _WaveLength,
-                    _WaveLengthDistribution,
-                    _WaveStrength,
-                    _WaveStrengthDistribution,
-                    _WaveSteepness,
-                    _SteepnessSuppression
-                );
-
-                worldPos += offset;
-                
-                UNITY_INITIALIZE_OUTPUT(v2t, o);
-                o.pos = UnityWorldToClipPos(worldPos);
-                
-                return o;
-            }
-
-            fixed4 frag(v2t i) : SV_Target
-            {
-                SHADOW_CASTER_FRAGMENT(i)
-            }
-            ENDCG
+            ENDHLSL
         }
     }
 

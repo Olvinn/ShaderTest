@@ -36,7 +36,7 @@ float3 GerstnerDisplace(float3 posOS,float baseSpeed, int maxWaves, float2 waveD
         WaveData wd = WaveDistribution(i, waveLengthKoeff, waveLengthDistribution, waveAmplitudeKoeff, waveAmplitudeDistribution);
         float wavelength = wd.length;
         float amplitude = wd.amplitude;
-        float k = UNITY_PI / wavelength;
+        float k = PI / wavelength;
         float speed = sqrt(baseSpeed * k);
         float phase = k * dot(dir, posOS.xz) - speed * _Time.y;
 
@@ -71,7 +71,7 @@ WaveDetails GerstnerNormalsAndCurvature(float3 posOS,float baseSpeed, int maxWav
         WaveData wd = WaveDistribution(i, waveLengthKoeff, waveLengthDistribution, waveAmplitudeKoeff, waveAmplitudeDistribution);
         float wavelength = wd.length;
         float amplitude = wd.amplitude;
-        float k = UNITY_PI / wavelength;
+        float k = PI / wavelength;
         float speed = sqrt(baseSpeed * k);
         float phase = k * dot(dir, posOS.xz) - speed * _Time.y;
 

@@ -24,7 +24,7 @@ Shader "Unlit/SimpleLit"
             #include "UnityCG.cginc"
             #include "UnityLightingCommon.cginc"
 
-            struct appdata
+            struct Attributes
             {
                 float4 vertex : POSITION;
                 float3 normal : NORMAL;
@@ -44,7 +44,7 @@ Shader "Unlit/SimpleLit"
             float _SpecPow;
             float _SpecInt;
 
-            v2f vert (appdata v)
+            v2f vert (Attributes v)
             {
                 v2f o;
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);

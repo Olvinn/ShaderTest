@@ -24,7 +24,7 @@ Shader "Unlit/Hologram"
             #include "UnityCG.cginc"
             #include "UnityLightingCommon.cginc"
 
-            struct appdata
+            struct Attributes
             {
                 float4 vertex : POSITION;
                 float3 normal : NORMAL;
@@ -47,7 +47,7 @@ Shader "Unlit/Hologram"
                 return 1 - abs(dot(viewDir, normal));
             }
 
-            v2f vert (appdata v)
+            v2f vert (Attributes v)
             {
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);

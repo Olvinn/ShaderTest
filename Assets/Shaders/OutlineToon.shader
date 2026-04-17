@@ -46,7 +46,7 @@ Shader "Unlit/OutlineToon"
             #include "UnityLightingCommon.cginc"
             #include "AutoLight.cginc"
 
-            struct appdata
+            struct Attributes
             {
                 half4 vertex : POSITION;
                 half3 normal : NORMAL;
@@ -70,7 +70,7 @@ Shader "Unlit/OutlineToon"
             half4 _MainTex_ST;
             half _SpecPow,_SpecStr;
 
-            v2f vert (appdata v)
+            v2f vert (Attributes v)
             {
                 v2f o;
                 o.pos = UnityObjectToClipPos(v.vertex);
@@ -128,7 +128,7 @@ Shader "Unlit/OutlineToon"
             half _Outline;
             half4 _OutlineColor;
             
-            struct appdata
+            struct Attributes
             {
                 half4 vertex : POSITION;
                 half3 normal : NORMAL;
@@ -139,7 +139,7 @@ Shader "Unlit/OutlineToon"
                 half4 vertex : SV_POSITION;
             };
 
-            v2f vert (appdata v)
+            v2f vert (Attributes v)
             {
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex + float4(v.normal * _Outline * .1, 1));

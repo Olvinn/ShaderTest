@@ -19,7 +19,7 @@ Shader "Unlit/NewUnlitShader"
 
             #include "UnityCG.cginc"
 
-            struct appdata
+            struct Attributes
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
@@ -35,7 +35,7 @@ Shader "Unlit/NewUnlitShader"
             sampler2D _MainTex;
             float4 _MainTex_ST;
 
-            v2f vert (appdata v)
+            v2f vert (Attributes v)
             {
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);

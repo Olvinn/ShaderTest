@@ -1,5 +1,5 @@
-#include <UnityLightingCommon.cginc>
-#include "UnityCG.cginc"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
 #define SSR_MAX_STEPS 64
 
@@ -16,7 +16,7 @@ float DistributionGGX(float3 N, float3 H, float roughness)
     float NdotH2 = NdotH * NdotH;
 
     float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-    return a2 / (UNITY_PI * denom * denom);
+    return a2 / (PI * denom * denom);
 }
 
 float GeometrySchlickGGX(float NdotV, float roughness)
@@ -107,7 +107,7 @@ float3 RaymarchSSR_ViewSpace(
     float rawDepth0 = SSR_SampleRawDepth(depthTex, uv);
     if (rawDepth0 >= 0.9999) return 0;
 
-    float sceneLinearZ0 = LinearEyeDepth(rawDepth0); // uses _ZBufferParams
+    float sceneLinearZ0 = LinearEyeDepth(rawDepth0, _ZBufferParams);
     float currLinearZ0  = -currVS.z;                 // Unity VS: in front => negative z
     float prevDz = currLinearZ0 - sceneLinearZ0;     // <0 means ray point is in front of scene
 
@@ -128,7 +128,7 @@ float3 RaymarchSSR_ViewSpace(
         float rawDepth = SSR_SampleRawDepth(depthTex, uv);
         if (rawDepth >= 0.9999) return 0; // hit sky
 
-        float sceneLinearZ = LinearEyeDepth(rawDepth);
+        float sceneLinearZ = LinearEyeDepth(rawDepth, _ZBufferParams);
         float currLinearZ  = -currVS.z;
         float dz           = currLinearZ - sceneLinearZ; // crossing when prevDz < 0 && dz >= 0
 
@@ -149,7 +149,7 @@ float3 RaymarchSSR_ViewSpace(
                 float rawMid = SSR_SampleRawDepth(depthTex, uvMid);
                 if (rawMid >= 0.9999) { tHi = tMid; continue; }
 
-                float sceneMid = LinearEyeDepth(rawMid);
+                float sceneMid = LinearEyeDepth(rawMid, _ZBufferParams);
                 float currMid  = -vsMid.z;
                 float dzMid    = currMid - sceneMid;
 
@@ -161,7 +161,7 @@ float3 RaymarchSSR_ViewSpace(
             float2 uvHit = SSR_ProjectVSPosToUV(vsHit);
 
             float rawHit   = SSR_SampleRawDepth(depthTex, uvHit);
-            float sceneHit = LinearEyeDepth(rawHit);
+            float sceneHit = LinearEyeDepth(rawHit, _ZBufferParams);
             float currHit  = -vsHit.z;
 
             // Final thickness test in meters (view space)
@@ -181,19 +181,22 @@ float3 RaymarchSSR_ViewSpace(
 inline float3 CubemapAmbient(float3 viewDir, float3 normal, float smooth)
 {
     float3 refl = reflect(-viewDir, normal);
-    return UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, refl, smooth);
+    half4 encoded = SAMPLE_TEXTURECUBE_LOD(unity_SpecCube0, samplerunity_SpecCube0, refl, smooth);
+    half3 skyColor = DecodeHDREnvironment(encoded, unity_SpecCube0_HDR);
+    return skyColor;
 }
 
 inline float PhongDiffuse(float3 normal)
 {
-    float3 lightDir = _WorldSpaceLightPos0.xyz;
-    float pow = max(0, dot(float3(0, 1, 0), lightDir));
-    return max(0, dot(normalize(lightDir), normal)) * pow;
+    Light light = GetMainLight();
+    float pow = max(0, dot(float3(0, 1, 0), light.direction));
+    return max(0, dot(normalize(light.direction), normal)) * pow;
 }
 
 inline float3 PhongSpecular(float3 viewDir, float3 normal, float power)
 {
-    float3 h = normalize(_WorldSpaceLightPos0.xyz + viewDir);
-    float p = saturate(floor(dot(float3(0, 1, 0), _WorldSpaceLightPos0.xyz)) + 1);
-    return saturate(_LightColor0 * pow(max(0, dot(normal, h)), power) * p);
+    Light light = GetMainLight();
+    float3 h = normalize(light.direction + viewDir);
+    float p = saturate(floor(dot(float3(0, 1, 0), light.direction)) + 1);
+    return saturate(light.color * pow(max(0, dot(normal, h)), power) * p);
 }
