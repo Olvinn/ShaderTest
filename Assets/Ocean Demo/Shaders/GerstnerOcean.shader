@@ -51,8 +51,7 @@ Shader "Custom/GerstnerOcean"
             half _WaveStrength, _WaveLength, _WaveSteepness, _FoamStrength, _FoamAmount, _Transparency;
             half _Metallic, _Roughness, _WaveStrengthDistribution, _WaveLengthDistribution, _SteepnessSuppression;
             int _MaxWaves;
-            sampler2D _LastFrameColor, _FoamTexture;
-            sampler2D _CameraDepthTexture;
+            sampler2D _FoamTexture;
             half4 _FoamTexture_ST;
             
             sampler2D _LocalWaterDetails;
@@ -182,8 +181,6 @@ Shader "Custom/GerstnerOcean"
                     _SSRStepSize,
                     _SSRThickness,
                     _StepPropagation,
-                    _CameraDepthTexture,
-                    _LastFrameColor,
                     ssrHit
                 );
 

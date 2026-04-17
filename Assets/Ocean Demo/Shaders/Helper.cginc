@@ -1,6 +1,9 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
+sampler2D _CameraOpaqueTexture;
+sampler2D _CameraDepthTexture;
+
 #define SSR_MAX_STEPS 64
 
 float3 FresnelSchlick(float cosTheta, float3 F0)
@@ -81,8 +84,6 @@ float3 RaymarchSSR_ViewSpace(
     float  stepSize,
     float  thickness,
     float  stepPropagation,
-    sampler2D depthTex,
-    sampler2D lastFrameTex,
     out bool hit)
 {
     hit = false;
@@ -104,7 +105,7 @@ float3 RaymarchSSR_ViewSpace(
     float2 uv = SSR_ProjectVSPosToUV(currVS);
     if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) return 0;
 
-    float rawDepth0 = SSR_SampleRawDepth(depthTex, uv);
+    float rawDepth0 = SSR_SampleRawDepth(_CameraDepthTexture, uv);
     if (rawDepth0 >= 0.9999) return 0;
 
     float sceneLinearZ0 = LinearEyeDepth(rawDepth0, _ZBufferParams);
@@ -125,7 +126,7 @@ float3 RaymarchSSR_ViewSpace(
         uv = SSR_ProjectVSPosToUV(currVS);
         if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) break;
 
-        float rawDepth = SSR_SampleRawDepth(depthTex, uv);
+        float rawDepth = SSR_SampleRawDepth(_CameraDepthTexture, uv);
         if (rawDepth >= 0.9999) return 0; // hit sky
 
         float sceneLinearZ = LinearEyeDepth(rawDepth, _ZBufferParams);
@@ -146,7 +147,7 @@ float3 RaymarchSSR_ViewSpace(
                 float3 vsMid = originVS + reflDirVS * tMid;
 
                 float2 uvMid = SSR_ProjectVSPosToUV(vsMid);
-                float rawMid = SSR_SampleRawDepth(depthTex, uvMid);
+                float rawMid = SSR_SampleRawDepth(_CameraDepthTexture, uvMid);
                 if (rawMid >= 0.9999) { tHi = tMid; continue; }
 
                 float sceneMid = LinearEyeDepth(rawMid, _ZBufferParams);
@@ -160,7 +161,7 @@ float3 RaymarchSSR_ViewSpace(
             float3 vsHit = originVS + reflDirVS * bestT;
             float2 uvHit = SSR_ProjectVSPosToUV(vsHit);
 
-            float rawHit   = SSR_SampleRawDepth(depthTex, uvHit);
+            float rawHit   = SSR_SampleRawDepth(_CameraDepthTexture, uvHit);
             float sceneHit = LinearEyeDepth(rawHit, _ZBufferParams);
             float currHit  = -vsHit.z;
 
@@ -168,7 +169,7 @@ float3 RaymarchSSR_ViewSpace(
             if (abs(currHit - sceneHit) <= thickness)
             {
                 hit = true;
-                return tex2D(lastFrameTex, uvHit).rgb;
+                return tex2D(_CameraOpaqueTexture, uvHit).rgb;
             }
         }
 
