@@ -4,6 +4,7 @@ Shader "Custom/GerstnerOcean"
     {
         _Color ("Color", Color) = (0, 0.5, 1, 1)
         _SSSColor ("SSS Color", Color) = (0, 0.5, 1, 1)
+        _Transparency ("Transparency", Range(0, 1)) = 0
         
         _WaveStrength ("Wave Amplitude", Float) = 0.2
         _WaveLength ("Wave Length", Float) = 2
@@ -47,12 +48,17 @@ Shader "Custom/GerstnerOcean"
             #include "Helper.cginc"
             #include "Gerstner.cginc"
 
+            CBUFFER_START(UnityPerMaterial)
             float4 _Color, _SSSColor;
             half _WaveStrength, _WaveLength, _WaveSteepness, _FoamStrength, _FoamAmount, _Transparency;
             half _Metallic, _Roughness, _WaveStrengthDistribution, _WaveLengthDistribution, _SteepnessSuppression;
             int _MaxWaves;
             sampler2D _FoamTexture;
             half4 _FoamTexture_ST;
+            CBUFFER_END
+
+            TEXTURE2D_X(_CameraOpaqueTexture);      SAMPLER(sampler_CameraOpaqueTexture);
+            TEXTURE2D_X_FLOAT(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
             
             sampler2D _LocalWaterDetails;
             float4 _MapCenterWS;  
@@ -181,6 +187,10 @@ Shader "Custom/GerstnerOcean"
                     _SSRStepSize,
                     _SSRThickness,
                     _StepPropagation,
+                    _CameraOpaqueTexture,
+                    sampler_CameraOpaqueTexture,
+                    _CameraDepthTexture,
+                    sampler_CameraDepthTexture,
                     ssrHit
                 );
 
@@ -188,18 +198,23 @@ Shader "Custom/GerstnerOcean"
                 skyColor = lerp(skyColor, ssrColor, blend);
                 #endif
                 
+                float2 underUV = i.positionSS / max(i.positionCS.w, 1e-6) + wd.normal.xz * .1;
+                half depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, sampler_CameraDepthTexture, underUV);
+                
+                float3 underWS = ComputeWorldSpacePosition(underUV, depth, UNITY_MATRIX_I_VP);
+                half depthWS = length(i.positionWS - underWS) / 10;
+                half3 underColor = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, underUV).rgb;
                 color = lerp(lerp(sss + color, skyColor, fresnelFactor), foamColor, saturate(foamAmount));
+                underColor = lerp(underColor,  color, saturate(depthWS));
 
-                half transparency = dot(specular, float3(0.333,0.333,0.333));
-                transparency = lerp(saturate(max(transparency, fresnelFactor) * _Transparency), 1, saturate(foamAmount));
-                #ifdef LOD_FADE_CROSSFADE
-                    transparency *= (sqrt(1-i.lodFade)); 
-                #endif
+                half transparency = saturate(1-fresnelFactor) * _Transparency;
                 
                 half3 finalColor = saturate(specular + color);
                 finalColor.rgb = MixFog(finalColor.rgb, i.fog);
+                finalColor.rgb = lerp(finalColor, underColor, transparency);
+                //finalColor.rgb = half3(depth,depth,depth);
                 
-                return half4(finalColor, transparency);
+                return half4(finalColor, 1);
             }
             ENDHLSL
         }

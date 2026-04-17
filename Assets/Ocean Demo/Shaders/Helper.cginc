@@ -1,9 +1,6 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
-sampler2D _CameraOpaqueTexture;
-sampler2D _CameraDepthTexture;
-
 #define SSR_MAX_STEPS 64
 
 float3 FresnelSchlick(float cosTheta, float3 F0)
@@ -72,9 +69,9 @@ inline float2 SSR_ProjectVSPosToUV(float3 vsPos)
     return uv;
 }
 
-inline float SSR_SampleRawDepth(sampler2D depthTex, float2 uv)
+inline float SSR_SampleRawDepth(Texture2D depthTex, SamplerState samp, float2 uv)
 {
-    return tex2D(depthTex, uv).r;
+    return SAMPLE_DEPTH_TEXTURE(depthTex, samp, uv);
 }
 
 float3 RaymarchSSR_ViewSpace(
@@ -84,6 +81,10 @@ float3 RaymarchSSR_ViewSpace(
     float  stepSize,
     float  thickness,
     float  stepPropagation,
+    Texture2D opaque,
+    SamplerState sampler_opaque,
+    Texture2D depth,
+    SamplerState sampler_depth,
     out bool hit)
 {
     hit = false;
@@ -105,7 +106,7 @@ float3 RaymarchSSR_ViewSpace(
     float2 uv = SSR_ProjectVSPosToUV(currVS);
     if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) return 0;
 
-    float rawDepth0 = SSR_SampleRawDepth(_CameraDepthTexture, uv);
+    float rawDepth0 = SSR_SampleRawDepth(depth, sampler_depth, uv);
     if (rawDepth0 >= 0.9999) return 0;
 
     float sceneLinearZ0 = LinearEyeDepth(rawDepth0, _ZBufferParams);
@@ -126,7 +127,7 @@ float3 RaymarchSSR_ViewSpace(
         uv = SSR_ProjectVSPosToUV(currVS);
         if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) break;
 
-        float rawDepth = SSR_SampleRawDepth(_CameraDepthTexture, uv);
+        float rawDepth = SSR_SampleRawDepth(depth, sampler_depth, uv);
         if (rawDepth >= 0.9999) return 0; // hit sky
 
         float sceneLinearZ = LinearEyeDepth(rawDepth, _ZBufferParams);
@@ -147,7 +148,7 @@ float3 RaymarchSSR_ViewSpace(
                 float3 vsMid = originVS + reflDirVS * tMid;
 
                 float2 uvMid = SSR_ProjectVSPosToUV(vsMid);
-                float rawMid = SSR_SampleRawDepth(_CameraDepthTexture, uvMid);
+                float rawMid = SSR_SampleRawDepth(depth, sampler_depth, uvMid);
                 if (rawMid >= 0.9999) { tHi = tMid; continue; }
 
                 float sceneMid = LinearEyeDepth(rawMid, _ZBufferParams);
@@ -161,7 +162,7 @@ float3 RaymarchSSR_ViewSpace(
             float3 vsHit = originVS + reflDirVS * bestT;
             float2 uvHit = SSR_ProjectVSPosToUV(vsHit);
 
-            float rawHit   = SSR_SampleRawDepth(_CameraDepthTexture, uvHit);
+            float rawHit   = SSR_SampleRawDepth(depth, sampler_depth, uvHit);
             float sceneHit = LinearEyeDepth(rawHit, _ZBufferParams);
             float currHit  = -vsHit.z;
 
@@ -169,7 +170,7 @@ float3 RaymarchSSR_ViewSpace(
             if (abs(currHit - sceneHit) <= thickness)
             {
                 hit = true;
-                return tex2D(_CameraOpaqueTexture, uvHit).rgb;
+                return SAMPLE_TEXTURE2D(opaque, sampler_opaque, uvHit).rgb;
             }
         }
 
