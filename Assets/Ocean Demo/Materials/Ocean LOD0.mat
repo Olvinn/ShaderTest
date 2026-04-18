@@ -51,7 +51,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _FoamTexture:
         m_Texture: {fileID: 2800000, guid: 32dd18e0c6e3b2b4cb9c3f3c8393580c, type: 3}
-        m_Scale: {x: 100, y: 100}
+        m_Scale: {x: 20, y: 20}
         m_Offset: {x: 0, y: 0}
     - _LocalWaterDetails:
         m_Texture: {fileID: 0}
@@ -99,7 +99,7 @@ Material:
     - _DstBlend: 0
     - _EdgeLength: 20
     - _FoamAmount: 0
-    - _FoamStrength: 15
+    - _FoamStrength: 10
     - _Fresnel: 0.03
     - _GlossMapScale: 1
     - _Glossiness: 0.5
@@ -121,26 +121,26 @@ Material:
     - _Specular: 32
     - _SpecularHighlights: 1
     - _SrcBlend: 1
-    - _SteepnessSuppression: 0.95
+    - _SteepnessSuppression: 0.01
     - _SteepnessSupression: 0.8
     - _StepPropagation: 0.1
     - _Tess: 32
     - _TessFactor: 3
     - _Tessellation: 8
-    - _Transparency: 30
+    - _Transparency: 0.12
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
-    - _WaveLength: 5
-    - _WaveLengthDistribution: 1.12
-    - _WaveSteepness: 10
-    - _WaveStrength: 0.01
-    - _WaveStrengthDistribution: 1.2
+    - _WaveLength: 0.75
+    - _WaveLengthDistribution: 1.55
+    - _WaveSteepness: 0
+    - _WaveStrength: 0.001
+    - _WaveStrengthDistribution: 1.66
     - _ZWrite: 1
     m_Colors:
-    - _Color: {r: 0.05882352, g: 0.19206133, b: 0.34901962, a: 1}
+    - _Color: {r: 0.126691, g: 0.33713806, b: 0.6886792, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _SSSColor: {r: 0.18823528, g: 0.9263938, b: 0.93333334, a: 1}
+    - _SSSColor: {r: 0.20465466, g: 0.6886792, b: 0.67868614, a: 1}
     - _SpecColor: {r: 0.46226418, g: 0.46226418, b: 0.46226418, a: 0.5}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

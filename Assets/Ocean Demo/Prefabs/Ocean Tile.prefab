@@ -104,7 +104,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _showGizmos: 0
-  _detalization: 64
+  _detalization: 128
   _size: 100
   _meshFilter: {fileID: 1066539756678047066}
 --- !u!1 &2417828423085911550

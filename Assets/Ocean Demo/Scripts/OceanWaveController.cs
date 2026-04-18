@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 namespace Ocean_Demo.Scripts
 {
@@ -14,8 +13,8 @@ namespace Ocean_Demo.Scripts
 
         [Range(1, 360)] public float minAngle = 45;
 
-        [HideInInspector] public float waveLength, waveStrength, waveLengthDistribution, waveStrengthDistribution, waveSteepness, steepnessSuppression;
-        public Vector4[] waveDirections = new Vector4[64];
+        public float waveLength, waveStrength, waveLengthDistribution, waveStrengthDistribution, waveSteepness, steepnessSuppression;
+        public Vector3[] waveDirections = new Vector3[64];
         public Vector4[] waveDirectionsReady = new Vector4[64];
         public float windDirection = 60;
 
@@ -55,6 +54,85 @@ namespace Ocean_Demo.Scripts
 
         private void Awake()
         {
+            waveDirections = new Vector3[]
+            {
+                // ── Primary swell ────────────────────────────────────────────
+                // Long wavelength, tight angular spread, most visual energy
+                new Vector3( 0.00f, 1.40f, 78.0f),
+                new Vector3( 0.05f, 1.20f, 72.0f),
+                new Vector3(-0.04f, 1.10f, 68.0f),
+                new Vector3( 0.09f, 1.30f, 65.0f),
+                new Vector3(-0.07f, 0.95f, 60.0f),
+                new Vector3( 0.03f, 1.05f, 57.0f),
+                new Vector3(-0.11f, 0.85f, 52.0f),
+                new Vector3( 0.13f, 0.90f, 48.0f),
+                new Vector3(-0.06f, 0.75f, 45.0f),
+                new Vector3( 0.08f, 0.80f, 43.0f),
+                new Vector3(-0.15f, 0.70f, 40.0f),
+                new Vector3( 0.10f, 0.65f, 38.0f),
+                new Vector3(-0.09f, 0.60f, 36.0f),
+                new Vector3( 0.14f, 0.55f, 34.0f),
+                new Vector3(-0.12f, 0.50f, 32.0f),
+                new Vector3( 0.07f, 0.45f, 30.0f),
+
+                // ── Wind waves ───────────────────────────────────────────────
+                // Medium wavelength, widening directional cone as size drops
+                new Vector3( 0.22f, 0.42f, 28.0f),
+                new Vector3(-0.18f, 0.38f, 26.0f),
+                new Vector3( 0.30f, 0.35f, 24.0f),
+                new Vector3(-0.25f, 0.32f, 22.0f),
+                new Vector3( 0.17f, 0.30f, 20.0f),
+                new Vector3(-0.20f, 0.28f, 19.0f),
+                new Vector3( 0.35f, 0.25f, 18.0f),
+                new Vector3(-0.28f, 0.24f, 17.0f),
+                new Vector3( 0.15f, 0.22f, 16.0f),
+                new Vector3(-0.32f, 0.20f, 15.0f),
+                new Vector3( 0.40f, 0.18f, 14.0f),
+                new Vector3(-0.22f, 0.17f, 13.5f),
+                new Vector3( 0.28f, 0.15f, 13.0f),
+                new Vector3(-0.35f, 0.14f, 12.0f),
+                new Vector3( 0.19f, 0.13f, 11.0f),
+                new Vector3(-0.42f, 0.12f, 10.5f),
+                new Vector3( 0.45f, 0.11f, 10.0f),
+                new Vector3(-0.38f, 0.10f,  9.5f),
+                new Vector3( 0.33f, 0.09f,  9.0f),
+                new Vector3(-0.47f, 0.09f,  8.5f),
+                new Vector3( 0.50f, 0.08f,  8.0f),
+                new Vector3(-0.43f, 0.08f,  7.5f),
+                new Vector3( 0.38f, 0.07f,  7.0f),
+                new Vector3(-0.50f, 0.07f,  6.5f),
+
+                // ── Cross swell ──────────────────────────────────────────────
+                // Secondary swell system ~90° off-wind, longer & calmer
+                new Vector3( 0.90f, 0.55f, 55.0f),
+                new Vector3( 0.95f, 0.45f, 50.0f),
+                new Vector3( 0.85f, 0.40f, 45.0f),
+                new Vector3( 1.00f, 0.35f, 40.0f),
+                new Vector3( 0.80f, 0.30f, 35.0f),
+                new Vector3( 1.05f, 0.25f, 32.0f),
+                new Vector3( 0.92f, 0.22f, 30.0f),
+                new Vector3( 1.10f, 0.20f, 28.0f),
+
+                // ── Chop ─────────────────────────────────────────────────────
+                // Short wavelength, fully spread, tiny amplitude — surface texture
+                new Vector3( 0.55f, 0.06f,  6.0f),
+                new Vector3(-0.60f, 0.05f,  5.5f),
+                new Vector3( 0.70f, 0.05f,  5.0f),
+                new Vector3(-0.65f, 0.04f,  4.5f),
+                new Vector3( 0.80f, 0.04f,  4.0f),
+                new Vector3(-0.75f, 0.04f,  3.8f),
+                new Vector3( 0.90f, 0.03f,  3.5f),
+                new Vector3(-0.85f, 0.03f,  3.2f),
+                new Vector3( 0.60f, 0.03f,  3.0f),
+                new Vector3(-0.70f, 0.03f,  2.8f),
+                new Vector3( 0.95f, 0.02f,  2.5f),
+                new Vector3(-0.80f, 0.02f,  2.3f),
+                new Vector3( 0.50f, 0.02f,  2.1f),
+                new Vector3(-0.55f, 0.02f,  2.0f),
+                new Vector3( 0.75f, 0.02f,  1.8f),
+                new Vector3(-0.90f, 0.02f,  1.6f),
+            };
+            
             InitLocalDetailsTargets();
             InitCompute();
         }
@@ -64,8 +142,6 @@ namespace Ocean_Demo.Scripts
             _camera = Camera.main;
             if (Settings.Instance != null)
                 Settings.Instance.onSettingsChanged += OnSettingsChanged;
-
-            Initialize();
 
             var mat = oceanMaterials[0];
             waveLength = mat.GetFloat("_WaveLength");
@@ -146,33 +222,15 @@ namespace Ocean_Demo.Scripts
             UpdateWaves();
         }
 
-        private void Initialize()
-        {
-            float angle = minAngle;
-            float initDir = windDirection * Mathf.Deg2Rad;
-            waveDirectionsReady = new Vector4[waveDirections.Length];
-            for (int i = 0; i < waveDirections.Length; i++)
-            {
-                float a = Random.Range(0f, Mathf.PI * angle) + initDir;
-                float x = Mathf.Cos(a);
-                float y = Mathf.Sin(a);
-                waveDirectionsReady[i] = new Vector4(x, y, 0f, 0f);
-                waveDirections[i] = new Vector4(x, y, 0f, 0f);
-            }
-            WriteToMaterials(_storm, waveDirectionsReady);
-        }
-
         private void UpdateWaves()
         {
-            float angle = minAngle;
-            float initDir = windDirection * Mathf.Deg2Rad;
             waveDirectionsReady = new Vector4[waveDirections.Length];
             for (int i = 0; i < waveDirections.Length; i++)
             {
-                float a = Mathf.Acos(waveDirections[i].x) * angle + initDir;
+                float a = Mathf.Acos(waveDirections[i].x % 1);
                 float x = Mathf.Cos(a);
                 float y = Mathf.Sin(a);
-                waveDirectionsReady[i] = new Vector4(x, y, 0f, 0f);
+                waveDirectionsReady[i] = new Vector4(x, y, waveDirections[i].y, waveDirections[i].z);
             }
         }
 
@@ -181,9 +239,9 @@ namespace Ocean_Demo.Scripts
             foreach (var mat in oceanMaterials)
             {
                 mat.SetVectorArray("_WaveDirs", waves);
-                mat.SetFloat("_WaveLength", Mathf.Lerp(5, 30, storm));
-                mat.SetFloat("_WaveStrength", Mathf.Lerp(.01f, 1.5f, storm));
-                mat.SetFloat("_WaveSteepness", Mathf.Lerp(10f, 9f, storm));
+                mat.SetFloat("_WaveLength", Mathf.Lerp(.75f, 10, storm));
+                mat.SetFloat("_WaveStrength", Mathf.Lerp(0.001f, 1f, storm));
+                mat.SetFloat("_WaveSteepness", waveSteepness);
                 mat.SetFloat("_FoamAmount", _foam);
                 mat.SetVector("_MapCenterWS", new Vector4(LocalMapCenterWS.x, 0, LocalMapCenterWS.y, 0));
                 mat.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));

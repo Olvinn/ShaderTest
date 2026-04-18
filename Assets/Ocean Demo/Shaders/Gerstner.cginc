@@ -1,108 +1,73 @@
-#define NAX_GERSTNER_WAVES 64
-#pragma exclude_renderers d3d11 gles
+#define MAX_WAVES 64
+#define G 9.81
+#define TWO_PI 6.28318530718
 
-struct WaveData
+void GetWaveParams(float waveLength, out float k, out float omega)
 {
-    float length;
-    float amplitude;
-};
-
-struct WaveDetails
-{
-    float3 normal;
-    float3 laplacian;
-};
-
-WaveData WaveDistribution(int i, float waveLengthKoeff, float waveLengthDistribution, float waveAmplitudeKoeff, float waveAmplitudeDistribution)
-{
-    WaveData r;
-    r.length = waveLengthKoeff / pow(waveLengthDistribution, i);
-    r.amplitude = waveAmplitudeKoeff / pow(waveAmplitudeDistribution, i);
-    return r;
+    k     = TWO_PI / waveLength;
+    omega = sqrt(G * k);
 }
 
-float3 GerstnerDisplace(float3 posOS,float baseSpeed, int maxWaves, float2 waveDirections[64],
-    float waveLengthKoeff, float waveLengthDistribution, float waveAmplitudeKoeff, float waveAmplitudeDistribution,
-    float waveSteepness, float steepnessSuppression)
+float3 GerstnerWave(float2 pos, float2 dir, float k, float amp,
+                    float steepness, float speed, float time)
 {
-    float3 totalOffset = float3(0, 0, 0);
+    float phase = k * dot(dir, pos) - speed * time;
+    float sinP  = sin(phase);
+    float cosP  = cos(phase);
 
-    int max_waves = min(NAX_GERSTNER_WAVES, maxWaves);
-                
-    [loop]
-    for (int i = 0; i < max_waves; i++)
-    {
-        float2 dir = waveDirections[i];
-        WaveData wd = WaveDistribution(i, waveLengthKoeff, waveLengthDistribution, waveAmplitudeKoeff, waveAmplitudeDistribution);
-        float wavelength = wd.length;
-        float amplitude = wd.amplitude;
-        float k = PI / wavelength;
-        float speed = sqrt(baseSpeed * k);
-        float phase = k * dot(dir, posOS.xz) - speed * _Time.y;
-
-        float sinP = sin(phase);
-        float cosP = cos(phase);
-
-        float Qi = waveSteepness * pow(steepnessSuppression, i) / (k * amplitude * NAX_GERSTNER_WAVES);
-
-        totalOffset.x += Qi * dir.x * amplitude * cosP;
-        totalOffset.z += Qi * dir.y * amplitude * cosP;
-        totalOffset.y += amplitude * sinP;
-    }
-                
-    return totalOffset;
+    return float3(
+        steepness * amp * dir.x * cosP,
+        amp * sinP,
+        steepness * amp * dir.y * cosP
+    );
 }
 
-WaveDetails GerstnerNormalsAndCurvature(float3 posOS,float baseSpeed, int maxWaves, float2 waveDirections[64],
-    float waveLengthKoeff, float waveLengthDistribution, float waveAmplitudeKoeff, float waveAmplitudeDistribution,
-    float waveSteepness, float steepnessSuppression)
+void GerstnerWaveNormal(float2 pos, float2 dir, float k, float amp,
+                        float steepness, float speed, float time,
+                        inout float3 normal, inout float laplacian)
 {
-    WaveDetails r;
+    float phase = k * dot(dir, pos) - speed * time;
+    float sinP  = sin(phase);
+    float cosP  = cos(phase);
 
-    int max_waves = min(NAX_GERSTNER_WAVES, maxWaves);
+    normal.x += -dir.x * k * amp * cosP;
+    normal.y -= steepness * amp * k * sinP;
+    normal.z += -dir.y * k * amp * cosP;
 
-    float3 tangentX = float3(1, 0, 0), tangentZ = float3(0, 0, 1);
-    float laplacian = 0;
-                
-    [loop]
-    for (int i = 0; i < max_waves; i++)
+    laplacian += amp * k * sinP * (1.0 - steepness * amp * k * sinP);
+}
+
+float3 GetGerstnerOffset(float2 worldXZ, float time, float4 _WaveDirs[MAX_WAVES],
+                         int count, float initSteepness)
+{
+    float3 offset = float3(0, 0, 0);
+
+    for (int i = 0; i < count; i++)
     {
-        float2 dir = waveDirections[i];
-        WaveData wd = WaveDistribution(i, waveLengthKoeff, waveLengthDistribution, waveAmplitudeKoeff, waveAmplitudeDistribution);
-        float wavelength = wd.length;
-        float amplitude = wd.amplitude;
-        float k = PI / wavelength;
-        float speed = sqrt(baseSpeed * k);
-        float phase = k * dot(dir, posOS.xz) - speed * _Time.y;
+        float k, speed, steepness = clamp(_WaveDirs[i].w,0,.5);
+        GetWaveParams(_WaveDirs[i].w, k, speed);
 
-        float sinP = sin(phase);
-        float cosP = cos(phase);
-
-        float scale = pow(k, 2);
-        float suppression = pow(.9, i);
-        laplacian += amplitude * sin(phase) * scale * suppression;
-
-        float Qi = waveSteepness * pow(steepnessSuppression, i) / (k * amplitude * NAX_GERSTNER_WAVES);
-                    
-        float2 dPhase_dXZ = k * dir;
-
-        float dYdX = amplitude * cosP * dPhase_dXZ.x;
-        float dYdZ = amplitude * cosP * dPhase_dXZ.y;
-
-        float dXdX = -Qi * dir.x * amplitude * sinP * dPhase_dXZ.x;
-        float dZdX = -Qi * dir.y * amplitude * sinP * dPhase_dXZ.x;
-
-        float dXdZ = -Qi * dir.x * amplitude * sinP * dPhase_dXZ.y;
-        float dZdZ = -Qi * dir.y * amplitude * sinP * dPhase_dXZ.y;
-
-        tangentX += float3(dXdX, dYdX, dZdX);
-        tangentZ += float3(dXdZ, dYdZ, dZdZ);
+        float2 dir = normalize(_WaveDirs[i].xy);
+        offset += GerstnerWave(worldXZ, dir, k, _WaveDirs[i].z, steepness, speed, time);
     }
-    
-    float3 normalOS = normalize(cross(tangentZ, tangentX));
 
-    r.normal = normalOS;
-    r.laplacian = laplacian;
-    
-    return r;
+    return offset;
+}
+
+void GetGerstnerNormalLaplacian(float2 worldXZ, float time, int count,
+                                float4 _WaveDirs[MAX_WAVES], float initSteepness,
+                                out float3 normal, out float laplacian)
+{
+    normal    = float3(0, 1, 0); 
+    laplacian = 0.0;              
+
+    for (int i = 0; i < count; i++)
+    {
+        float k, speed, steepness = clamp(_WaveDirs[i].w,0,.5);
+        GetWaveParams(_WaveDirs[i].w, k, speed);
+        float2 dir = normalize(_WaveDirs[i].xy);
+        GerstnerWaveNormal(worldXZ, dir, k, _WaveDirs[i].z, steepness, speed, time,
+                           normal, laplacian);
+    }
+    normal = normalize(normal);
 }
