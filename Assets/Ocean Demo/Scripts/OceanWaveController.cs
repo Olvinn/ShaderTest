@@ -32,7 +32,7 @@ namespace Ocean_Demo.Scripts
         public int LocalDetailsResolution = 512;
         [Tooltip("World-space quad that the local map covers (center + size).")]
         public Vector2 LocalMapCenterWS = Vector2.zero;
-        public Vector2 LocalMapSizeWS = new Vector2(128, 128); // meters
+        public Vector2 LocalMapSizeWS = new Vector2(64, 64); // meters
 
         public RenderTexture LocalWaterDetails;
 

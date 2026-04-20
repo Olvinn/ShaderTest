@@ -55,9 +55,8 @@ float3 GetGerstnerOffset(float2 worldXZ, float time, float4 _WaveDirs[MAX_WAVES]
 
 void GetGerstnerNormalLaplacian(float2 worldXZ, float time, int count,
                                 float4 _WaveDirs[MAX_WAVES],
-                                out float3 normal, out float laplacian)
+                                inout float3 normal, out float laplacian)
 {
-    normal    = float3(0, 1, 0); 
     laplacian = 0.0;              
 
     for (int i = 0; i < count; i++)

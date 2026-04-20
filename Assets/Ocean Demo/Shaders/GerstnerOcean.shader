@@ -52,10 +52,10 @@ Shader "Custom/GerstnerOcean"
             CBUFFER_END
 
             TEXTURE2D_X(_FoamTexture);              SAMPLER(sampler_FoamTexture);
+            TEXTURE2D_X(_LocalWaterDetails);        SAMPLER(sampler_LocalWaterDetails);
             TEXTURE2D_X(_CameraOpaqueTexture);      SAMPLER(sampler_CameraOpaqueTexture);
             TEXTURE2D_X_FLOAT(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
             
-            sampler2D _LocalWaterDetails;
             float4 _MapCenterWS;  
             float4 _MapSizeWS;
             
@@ -109,7 +109,13 @@ Shader "Custom/GerstnerOcean"
 
             half4 frag(Varyings i) : SV_Target
             {                
-                float3 normal = 0;
+                float2 localUV = (i.positionWS.xz - _MapCenterWS.xz) / _MapSizeWS.xz;
+                localUV += 0.5; 
+                float4 local = SAMPLE_TEXTURE2D(_LocalWaterDetails, sampler_LocalWaterDetails, localUV);
+
+                float3 nLocal = normalize(float3(-local.r, 1.0, -local.g));
+                float3 normal = nLocal;
+                
                 float laplacian = 0;
                 
                 GetGerstnerNormalLaplacian(i.initialWS.xz, _Time.y, _MaxWaves, _WaveDirs, normal, laplacian);
