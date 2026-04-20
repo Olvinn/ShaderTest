@@ -5,17 +5,25 @@ using UnityEngine;
 
 namespace Ocean_Demo.Scripts
 {
+    [Serializable]
+    public struct WavesParams
+    {
+        public float longWavesA, longWavesL;
+        public float mediumWavesA, mediumWavesL;
+        public float secondaryWavesA, secondaryWavesL;
+        public float shortWavesA, shortWavesL;
+    }
+    
     [ExecuteInEditMode]
     public class OceanWaveController : MonoBehaviour
     {
-        public Shader tesselationShader, noTesselationShader;
         public Material[] oceanMaterials;
 
         [Range(1, 360)] public float minAngle = 45;
 
-        public float waveLength, waveStrength, waveLengthDistribution, waveStrengthDistribution, waveSteepness, steepnessSuppression;
+        public WavesParams wavesParams;
         public Vector3[] waveDirections = new Vector3[64];
-        public Vector4[] waveDirectionsReady = new Vector4[64];
+        private Vector4[] waveDirectionsReady = new Vector4[64];
         public float windDirection = 60;
 
         // === NEW: compute-based local details ===
@@ -144,10 +152,6 @@ namespace Ocean_Demo.Scripts
                 Settings.Instance.onSettingsChanged += OnSettingsChanged;
 
             var mat = oceanMaterials[0];
-            waveLength = mat.GetFloat("_WaveLength");
-            waveStrength = mat.GetFloat("_WaveStrength");
-            waveLengthDistribution = mat.GetFloat("_WaveLengthDistribution");
-            waveStrengthDistribution = mat.GetFloat("_WaveStrengthDistribution");
 
             BindLocalDetailsToMaterials();
         }
@@ -209,12 +213,7 @@ namespace Ocean_Demo.Scripts
 
         private void OnSettingsChanged(SettingsProperty data)
         {
-            if (data.Name == "Tesselation")
-            {
-                if (data.BoolValue) oceanMaterials[0].shader = tesselationShader;
-                else oceanMaterials[0].shader = noTesselationShader;
-            }
-            else if (data.Name == "SSR")
+            if (data.Name == "SSR")
             {
                 if (data.BoolValue) oceanMaterials[0].EnableKeyword("SSR");
                 else oceanMaterials[0].DisableKeyword("SSR");
@@ -226,12 +225,34 @@ namespace Ocean_Demo.Scripts
         {
             waveDirectionsReady = new Vector4[waveDirections.Length];
             for (int i = 0; i < waveDirections.Length; i++)
+                waveDirectionsReady[i] = LerpWave(i);
+        }
+
+        private Vector4 LerpWave(int i)
+        {
+            float a = Mathf.Acos(waveDirections[i].x % 1);
+            float x = Mathf.Cos(a);
+            float y = Mathf.Sin(a);
+            switch (i)
             {
-                float a = Mathf.Acos(waveDirections[i].x % 1);
-                float x = Mathf.Cos(a);
-                float y = Mathf.Sin(a);
-                waveDirectionsReady[i] = new Vector4(x, y, waveDirections[i].y, waveDirections[i].z);
+                case < 16:
+                    return new Vector4(x, y, 
+                        waveDirections[i].y * wavesParams.longWavesA, 
+                        waveDirections[i].z * wavesParams.longWavesL);
+                case < (16 + 24):
+                    return new Vector4(x, y, 
+                        waveDirections[i].y * wavesParams.mediumWavesA, 
+                        waveDirections[i].z * wavesParams.mediumWavesL);
+                case < (16 + 24 + 8):
+                    return new Vector4(x, y, 
+                        waveDirections[i].y * wavesParams.secondaryWavesA, 
+                        waveDirections[i].z * wavesParams.secondaryWavesL);
+                case < (64):
+                    return new Vector4(x, y,
+                        waveDirections[i].y * wavesParams.shortWavesA, 
+                        waveDirections[i].z * wavesParams.shortWavesL);
             }
+            return new Vector4(x, y, waveDirections[i].y, waveDirections[i].z);
         }
 
         private void WriteToMaterials(float storm, Vector4[] waves)
@@ -241,19 +262,11 @@ namespace Ocean_Demo.Scripts
                 mat.SetVectorArray("_WaveDirs", waves);
                 mat.SetFloat("_WaveLength", Mathf.Lerp(.75f, 10, storm));
                 mat.SetFloat("_WaveStrength", Mathf.Lerp(0.001f, 1f, storm));
-                mat.SetFloat("_WaveSteepness", waveSteepness);
                 mat.SetFloat("_FoamAmount", _foam);
                 mat.SetVector("_MapCenterWS", new Vector4(LocalMapCenterWS.x, 0, LocalMapCenterWS.y, 0));
                 mat.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));
                 mat.SetTexture("_LocalWaterDetails", LocalWaterDetails);
             }
-
-            var material = oceanMaterials[0]; // LOD0
-            waveLength = material.GetFloat("_WaveLength");
-            waveStrength = material.GetFloat("_WaveStrength");
-            waveLengthDistribution = material.GetFloat("_WaveLengthDistribution");
-            waveStrengthDistribution = material.GetFloat("_WaveStrengthDistribution");
-            steepnessSuppression = material.GetFloat("_SteepnessSuppression");
         }
 
         private void InitLocalDetailsTargets()

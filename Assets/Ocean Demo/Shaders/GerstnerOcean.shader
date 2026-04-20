@@ -6,13 +6,7 @@ Shader "Custom/GerstnerOcean"
         _SSSColor ("SSS Color", Color) = (0, 0.5, 1, 1)
         _Transparency ("Transparency", Range(0, 1)) = 0
         
-        _WaveStrength ("Wave Amplitude", Float) = 0.2
-        _WaveLength ("Wave Length", Float) = 2
-        _WaveSteepness ("Wave Steepness", Float) = .8
-        _SteepnessSuppression ("Steepness Suppression", Range(0, 1)) = .95
         _MaxWaves ("Max Waves", Range(1, 64)) = 64
-        _WaveStrengthDistribution ("Wave Strength Distribution", Range(1, 2)) = 1.2
-        _WaveLengthDistribution ("Wave Length Distribution", Range(1, 2)) = 1.2
         
         _FoamTexture ("Foam Texture", 2D) = "white" {}
         _FoamAmount ("Foam Amount", Float) = 1
@@ -50,13 +44,12 @@ Shader "Custom/GerstnerOcean"
 
             CBUFFER_START(UnityPerMaterial)
             float4 _Color, _SSSColor;
-            half _WaveStrength, _WaveLength, _WaveSteepness, _FoamStrength, _FoamAmount, _Transparency;
-            half _Metallic, _Roughness, _WaveStrengthDistribution, _WaveLengthDistribution, _SteepnessSuppression;
+            half FoamStrength, _FoamAmount, _FoamStrength, _Transparency;
+            half _Metallic, _Roughness;
             int _MaxWaves;
-            sampler2D _FoamTexture;
-            half4 _FoamTexture_ST;
             CBUFFER_END
 
+            TEXTURE2D_X(_FoamTexture);              SAMPLER(sampler_FoamTexture);
             TEXTURE2D_X(_CameraOpaqueTexture);      SAMPLER(sampler_CameraOpaqueTexture);
             TEXTURE2D_X_FLOAT(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
             
@@ -98,7 +91,7 @@ Shader "Custom/GerstnerOcean"
                 float3 worldPos = mul(unity_ObjectToWorld, float4(IN.vertex)).xyz;
                 OUT.initialWS = worldPos;
                 
-                float3 offset = GetGerstnerOffset(worldPos.xz, _Time.y, _WaveDirs, _MaxWaves,  _WaveSteepness);
+                float3 offset = GetGerstnerOffset(worldPos.xz, _Time.y, _WaveDirs, _MaxWaves);
                 
                 worldPos += offset;
                 
@@ -109,7 +102,7 @@ Shader "Custom/GerstnerOcean"
                 OUT.positionWS = worldPos;
                 OUT.fog = ComputeFogFactor(OUT.positionCS.z);
                 OUT.shadow = TransformWorldToShadowCoord(OUT.positionWS);
-                OUT.uv = TRANSFORM_TEX(IN.uv, _FoamTexture);
+                OUT.uv = IN.uv;
                 
                 return OUT;
             }
@@ -119,7 +112,7 @@ Shader "Custom/GerstnerOcean"
                 float3 normal = 0;
                 float laplacian = 0;
                 
-                GetGerstnerNormalLaplacian(i.initialWS.xz, _Time.y, _MaxWaves, _WaveDirs, _WaveSteepness, normal, laplacian);
+                GetGerstnerNormalLaplacian(i.initialWS.xz, _Time.y, _MaxWaves, _WaveDirs, normal, laplacian);
                 
                 float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos);                
 
@@ -144,9 +137,9 @@ Shader "Custom/GerstnerOcean"
 
                 half d = dot(mainLight.direction, normal) * 0.5 + 0.5;
                 
-                half foamAmount = saturate(laplacian - _FoamAmount) * _FoamStrength;
+                half foamAmount = saturate(smoothstep(0,1,laplacian) - _FoamAmount) * _FoamStrength;
                 float3 foamColor = d * light;
-                foamAmount = saturate(tex2D(_FoamTexture, i.uv).r * foamAmount);
+                foamAmount = saturate(SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.uv).r * foamAmount);
                 specular *= 1 - foamAmount;
                 
                 float3 color = d * _Color * light * mainLight.color;

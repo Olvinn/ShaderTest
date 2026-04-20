@@ -1,6 +1,5 @@
 #define MAX_WAVES 64
 #define G 9.81
-#define TWO_PI 6.28318530718
 
 void GetWaveParams(float waveLength, out float k, out float omega)
 {
@@ -38,7 +37,7 @@ void GerstnerWaveNormal(float2 pos, float2 dir, float k, float amp,
 }
 
 float3 GetGerstnerOffset(float2 worldXZ, float time, float4 _WaveDirs[MAX_WAVES],
-                         int count, float initSteepness)
+                         int count)
 {
     float3 offset = float3(0, 0, 0);
 
@@ -55,7 +54,7 @@ float3 GetGerstnerOffset(float2 worldXZ, float time, float4 _WaveDirs[MAX_WAVES]
 }
 
 void GetGerstnerNormalLaplacian(float2 worldXZ, float time, int count,
-                                float4 _WaveDirs[MAX_WAVES], float initSteepness,
+                                float4 _WaveDirs[MAX_WAVES],
                                 out float3 normal, out float laplacian)
 {
     normal    = float3(0, 1, 0); 
