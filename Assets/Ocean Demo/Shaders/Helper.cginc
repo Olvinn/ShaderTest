@@ -221,11 +221,11 @@ inline half3 Overlay(half3 a, half3 b, half t)
 inline half3 GetDepthTint(float3 posWS, float3 underWaterPosWS, half3 color, half4 shallowColor, half4 deepColor, half falloff)
 {
     half depthDifWS = length(underWaterPosWS - posWS);
-    half shallow = saturate(depthDifWS * falloff * .5);
-    half deep = saturate(depthDifWS / falloff);
-    shallowColor.rgb = lerp(color, shallowColor.rgb, shallow * shallowColor.a);
+    half d = (falloff * .01);
+    half shallow = saturate(depthDifWS / d);
+    half deep = saturate((depthDifWS - d) / (falloff - d));
+    shallowColor.rgb = Overlay(color, shallowColor.rgb, shallow * shallowColor.a);
     //return shallowColor;
     deepColor.rgb = lerp(color, deepColor.rgb, deep * deepColor.a);
-    half t = deep;
-    return lerp(shallowColor, deepColor, t);
+    return lerp(shallowColor, deepColor, deep);
 }

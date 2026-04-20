@@ -57,7 +57,7 @@ namespace Ocean_Demo.Scripts
         private int _kernel;
         private uint _tgx, _tgy, _tgz;
 
-        private float _storm, _foam, _transparency;
+        private float _storm = .1f, _foam, _transparency = 100;
         private Camera _camera;
 
         private void Awake()

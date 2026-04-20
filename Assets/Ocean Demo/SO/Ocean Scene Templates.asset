@@ -13,25 +13,37 @@ MonoBehaviour:
   m_Name: Ocean Scene Templates
   m_EditorClassIdentifier: 
   templates:
+  - Name: Realistic
+    Storm: 0.05
+    Foam: 0.04
+    Transparency: 10
+    Cubemap: {fileID: 2100000, guid: 03902d0b450add74fa144e9510fd0f85, type: 2}
+    FogColor: {r: 0.227451, g: 0.31764707, b: 0.4666667, a: 0}
+    DirLightDirection: {x: 70, y: 90, z: 0}
+    DirLightIntensity: 1
+    DirLightColor: {r: 1, g: 1, b: 1, a: 0}
   - Name: Calm water
     Storm: 0.05
     Foam: 1
+    Transparency: 1000
     Cubemap: {fileID: 2100000, guid: 85cf0b004bc4a654b9e501efcce47902, type: 2}
-    FogColor: {r: 0.7568628, g: 1, b: 1, a: 0}
+    FogColor: {r: 0.5137255, g: 0.7019608, b: 0.8862746, a: 0}
     DirLightDirection: {x: 22, y: 185, z: 0}
-    DirLightIntensity: 1
+    DirLightIntensity: 0.75
     DirLightColor: {r: 1, g: 1, b: 1, a: 0}
   - Name: Sea water
     Storm: 0.5
     Foam: 0.1
+    Transparency: 10
     Cubemap: {fileID: 2100000, guid: e391f00234292cc4f935308c11cf0e54, type: 2}
-    FogColor: {r: 1, g: 1, b: 0.7490196, a: 0}
+    FogColor: {r: 0.21960786, g: 0.18823531, b: 0.16078432, a: 0}
     DirLightDirection: {x: 30, y: 170, z: 0}
-    DirLightIntensity: 0.1
+    DirLightIntensity: 1
     DirLightColor: {r: 1, g: 1, b: 1, a: 0}
   - Name: Stormy ocean
     Storm: 1
     Foam: 0.04
+    Transparency: 3
     Cubemap: {fileID: 2100000, guid: 2039a0ad0a9d05549928b70362f54902, type: 2}
     FogColor: {r: 0.1254902, g: 0.13333334, b: 0.14117648, a: 0}
     DirLightDirection: {x: 30, y: 180, z: 0}

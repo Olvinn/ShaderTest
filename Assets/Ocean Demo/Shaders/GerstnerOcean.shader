@@ -35,8 +35,10 @@ Shader "Custom/GerstnerOcean"
 
             #pragma multi_compile _ LOD_FADE_CROSSFADE
             #pragma multi_compile_fog
-            #pragma multi_compile_fwdbase nolightmap nodirlightmap nodynlightmap novertexlight
             #pragma shader_feature SSR
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma multi_compile _ _SHADOWS_SOFT
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
             #include "Helper.cginc"
@@ -77,11 +79,11 @@ Shader "Custom/GerstnerOcean"
                 float4 positionCS   : SV_POSITION;
                 float3 positionWS   : TEXCOORD0;
                 float3 fog          : TEXCOORD1;
-                half lodFade        : TEXCOORD2;
+                DECLARE_LIGHTMAP_OR_SH(lightmapUV, vertexSH, 2);
                 float4 positionSS   : TEXCOORD4;
                 half2 uv            : TEXCOORD5;
-                float3 shadow       : TEXCOORD6;
-                float3 initialWS   : TEXCOORD7;
+                float4 shadow       : TEXCOORD6;
+                float3 initialWS    : TEXCOORD7;
             };
 
             Varyings vert(Attributes IN)
@@ -92,16 +94,14 @@ Shader "Custom/GerstnerOcean"
                 OUT.initialWS = worldPos;
                 
                 float3 offset = GetGerstnerOffset(worldPos.xz, _Time.y, _WaveDirs, _MaxWaves);
-                
                 worldPos += offset;
                 
-                OUT.lodFade = unity_LODFade.y;
                 float4 clipPos = TransformWorldToHClip(worldPos);
                 OUT.positionCS = clipPos;
                 OUT.positionSS = ComputeScreenPos(clipPos);
                 OUT.positionWS = worldPos;
                 OUT.fog = ComputeFogFactor(OUT.positionCS.z);
-                OUT.shadow = TransformWorldToShadowCoord(OUT.positionWS);
+                OUT.shadow = TransformWorldToShadowCoord(worldPos);
                 OUT.uv = IN.uv;
                 
                 return OUT;
@@ -114,9 +114,15 @@ Shader "Custom/GerstnerOcean"
                 
                 GetGerstnerNormalLaplacian(i.initialWS.xz, _Time.y, _MaxWaves, _WaveDirs, normal, laplacian);
                 
-                float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos);                
+                float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos);  
+                
+                #ifdef _MAIN_LIGHT_SHADOWS_SCREEN
+                    float4 shadowCoord = ComputeScreenPos(i.positionCS);
+                #else
+                    float4 shadowCoord = TransformWorldToShadowCoord(i.positionWS);
+                #endif
 
-                Light mainLight = GetMainLight();
+                Light mainLight = GetMainLight(shadowCoord);
 
                 half ndotl = saturate(dot(normal, mainLight.direction));
                 half backSSS = saturate(dot(normal, -mainLight.direction)) * 0.4; 
@@ -125,27 +131,27 @@ Shader "Custom/GerstnerOcean"
                 
                 float4 skyColor = 1;
                 skyColor.rgb = CubemapAmbient(viewDir, normal, 0);
-                //skyColor = reflect(viewDir, normal).y < 0 ? _Color : skyColor;
 
-                half light = dot(mainLight.direction, normal) *.5 + .5;
-                float3 sss = (backSSS * transmission * wrap) * _SSSColor * mainLight.color * light;
+                half light = dot(mainLight.direction, normal) *.5 + .5; //magic around sun position
+                float3 sss = backSSS * transmission * wrap * _SSSColor * mainLight.color * light;
+                
+                half d = dot(mainLight.direction, normal) * 0.5 + 0.5;
+                float4 color = 1;
+                color.rgb = d * _Color * light * mainLight.color;
                 
                 half NdotV = saturate(dot(normal, -viewDir));
-                float3 F0 = lerp(float3(0.02, 0.02, 0.02), _Color, _Metallic);
+                float3 F0 = lerp(float3(0.02, 0.02, 0.02), color, _Metallic);
                 float3 fresnel = FresnelSchlick(NdotV, F0);
                 float3 specular = PBRSpecular(normal, -viewDir, mainLight.direction, _Color, _Metallic, _Roughness) * 
                     mainLight.color * mainLight.shadowAttenuation;
 
-                half d = dot(mainLight.direction, normal) * 0.5 + 0.5;
                 
                 half foamAmount = saturate(smoothstep(0,1,laplacian) - _FoamAmount) * _FoamStrength;
                 float3 foamColor = d * light + sss;
                 foamAmount = saturate(SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.uv).r * foamAmount);
                 specular *= 1 - foamAmount;
                 
-                float4 color = 1;
-                color.rgb = d * _Color * light * mainLight.color;
-                half fresnelFactor = fresnel;
+                half fresnelFactor = length(fresnel);
 
                 #ifdef SSR
                 bool ssrHit = false;
@@ -167,23 +173,21 @@ Shader "Custom/GerstnerOcean"
                 skyColor.rgb = lerp(skyColor, ssrColor, blend);
                 #endif
                   
-                float2 underUV = i.positionSS / max(i.positionCS.w, 1e-6) + normal.xz * .05;
+                float2 underUV = i.positionSS / max(i.positionCS.w, 1e-6) + normal.xz * .07;
                 
                 half depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, sampler_CameraDepthTexture, underUV);         
                 float3 underWS = ComputeWorldSpacePosition(underUV, depth, UNITY_MATRIX_I_VP);
-                half depthWS = length(i.positionWS - underWS) / 20;
+                half depthWS = length(i.positionWS - underWS) / _Transparency;
                 half3 underColor = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, underUV).rgb;
-                half3 tint = GetDepthTint(i.positionWS, underWS, underColor, _SSSColor, color, _Transparency);
-                underColor = lerp(tint, underColor, saturate(_Transparency / 1000));
+                underColor = saturate(GetDepthTint(i.positionWS, underWS, underColor, _SSSColor, color, _Transparency));
                 
-                color.rgb = lerp(lerp(sss + color, skyColor, fresnelFactor), foamColor, saturate(foamAmount));
-                underColor = lerp(underColor,  color, saturate(depthWS) * fresnelFactor);
-
-                half transparency = saturate(1-fresnelFactor);
+                color.rgb += sss;
+                color.rgb = lerp(underColor, color, saturate(depthWS) * fresnelFactor);
+                color.rgb = color + skyColor * fresnelFactor;
+                color.rgb = lerp(color, foamColor, saturate(foamAmount));
                 
-                half3 finalColor = specular + color;
-                finalColor.rgb = MixFog(finalColor.rgb, i.fog);
-                finalColor.rgb = finalColor + underColor * transparency;
+                half3 finalColor = color + specular;
+                finalColor = MixFog(finalColor, i.fog);
                 
                 return half4(finalColor, 1);
             }
@@ -203,56 +207,25 @@ Shader "Custom/GerstnerOcean"
 //            #pragma vertex vert
 //            #pragma fragment frag
 //
-//            #pragma multi_compile _ LOD_FADE_CROSSFADE
-//            #pragma multi_compile_fog
-//            #pragma multi_compile_fwdbase nolightmap nodirlightmap nodynlightmap novertexlight
-//            #pragma shader_feature SSR
-//            
 //            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
 //            #include "Helper.cginc"
 //            #include "Gerstner.cginc"
 //
 //            CBUFFER_START(UnityPerMaterial)
-//            float4 _Color, _SSSColor;
-//            half _WaveStrength, _WaveLength, _WaveSteepness, _FoamStrength, _FoamAmount, _Transparency;
-//            half _Metallic, _Roughness, _WaveStrengthDistribution, _WaveLengthDistribution, _SteepnessSuppression;
 //            int _MaxWaves;
-//            sampler2D _FoamTexture;
-//            half4 _FoamTexture_ST;
 //            CBUFFER_END
 //
-//            TEXTURE2D_X(_CameraOpaqueTexture);      SAMPLER(sampler_CameraOpaqueTexture);
-//            TEXTURE2D_X_FLOAT(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
-//            
-//            sampler2D _LocalWaterDetails;
-//            float4 _MapCenterWS;  
-//            float4 _MapSizeWS;
-//            
-//            #ifdef SSR
-//            half _SSRThickness, _SSRStepSize, _StepPropagation;
-//            int _SSRSteps;
-//            #endif
-//
 //            #define MAX_WAVES 64
-//            #define SSR_MAX_STEPS 64
-//            uniform float2 _WaveDirs[MAX_WAVES];
+//            uniform float4 _WaveDirs[MAX_WAVES];
 //
 //            struct Attributes
 //            {
 //                float4 vertex : POSITION;
-//                half2 uv      : TEXCOORD0;
 //            };
 //
 //            struct Varyings
 //            {
 //                float4 positionCS   : SV_POSITION;
-//                float3 positionWS   : TEXCOORD0;
-//                float3 fog          : TEXCOORD1;
-//                half lodFade        : TEXCOORD2;
-//                float4 positionSS   : TEXCOORD4;
-//                half2 uv            : TEXCOORD5;
-//                float3 shadow       : TEXCOORD6;
-//                float3 initialWS   : TEXCOORD7;
 //            };
 //
 //            Varyings vert(Attributes IN)
@@ -260,104 +233,19 @@ Shader "Custom/GerstnerOcean"
 //                Varyings OUT = (Varyings)0;
 //                
 //                float3 worldPos = mul(unity_ObjectToWorld, float4(IN.vertex)).xyz;
-//                OUT.initialWS = worldPos;
 //                
-//                float3 offset = GetGerstnerOffset(worldPos.xz, _Time.y, _WaveDirs, _MaxWaves, _WaveLength,_WaveStrength,  _WaveSteepness);
-//                
+//                float3 offset = GetGerstnerOffset(worldPos.xz, _Time.y, _WaveDirs, _MaxWaves);
 //                worldPos += offset;
 //                
-//                OUT.lodFade = unity_LODFade.y;
 //                float4 clipPos = TransformWorldToHClip(worldPos);
 //                OUT.positionCS = clipPos;
-//                OUT.positionSS = ComputeScreenPos(clipPos);
-//                OUT.positionWS = worldPos;
-//                OUT.fog = ComputeFogFactor(OUT.positionCS.z);
-//                OUT.shadow = TransformWorldToShadowCoord(OUT.positionWS);
-//                OUT.uv = TRANSFORM_TEX(IN.uv, _FoamTexture);
 //                
 //                return OUT;
 //            }
 //
 //            half4 frag(Varyings i) : SV_Target
 //            {
-//                float2 localUV = (i.positionWS.xz - _MapCenterWS.xz) / _MapSizeWS.xz;
-//                localUV += 0.5; 
-//                
-//                float3 normal = 0;
-//                float laplacian = 0;
-//                
-//                GetGerstnerNormalLaplacian(i.initialWS.xz, _Time.y, _MaxWaves, _WaveDirs, _WaveLength, _WaveStrength, _WaveSteepness, normal, laplacian);
-//
-//                //normal = TransformObjectToWorldNormal(normal);
-//                
-//                float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos);                
-//
-//                Light mainLight = GetMainLight();
-//
-//                half ndotl = saturate(dot(normal, mainLight.direction));
-//                half backSSS = saturate(dot(normal, -mainLight.direction)) * 0.4; 
-//                half wrap = ndotl * 0.5 + 0.5; 
-//                half transmission = pow(1.0 - saturate(dot(normal, viewDir)), 3.0);
-//                
-//                float3 reflection = reflect(viewDir, normal);
-//                float3 skyColor = CubemapAmbient(viewDir, reflection, 0);
-//
-//                half light = pow(saturate(dot(mainLight.direction, float3(0,1,0))), .5);
-//                float3 sss = (backSSS * transmission * wrap) * _SSSColor * mainLight.color * light;
-//                
-//                half NdotV = saturate(dot(normal, -viewDir));
-//                float3 F0 = lerp(float3(0.02, 0.02, 0.02), _Color, _Metallic);
-//                float3 fresnel = FresnelSchlick(NdotV, F0);
-//                float3 specular = PBRSpecular(normal, -viewDir, mainLight.direction, _Color, _Metallic, _Roughness) * 
-//                    mainLight.color * mainLight.shadowAttenuation;
-//
-//                half d = dot(mainLight.direction, normal) * 0.5 + 0.5;
-//                
-//                half foamAmount = saturate(laplacian - _FoamAmount) * _FoamStrength;
-//                float3 foamColor = d * light;
-//                foamAmount *= saturate(tex2D(_FoamTexture, i.uv).r);
-//                specular *= 1 - foamAmount;
-//                
-//                float3 color = d * _Color * light * mainLight.color;
-//                half fresnelFactor = dot(fresnel, float3(0.333,0.333,0.333));
-//
-//                #ifdef SSR
-//                bool ssrHit = false;
-//                float3 ssrColor = RaymarchSSR_ViewSpace(
-//                    i.positionWS,
-//                    normal,
-//                    _SSRSteps,
-//                    _SSRStepSize,
-//                    _SSRThickness,
-//                    _StepPropagation,
-//                    _CameraOpaqueTexture,
-//                    sampler_CameraOpaqueTexture,
-//                    _CameraDepthTexture,
-//                    sampler_CameraDepthTexture,
-//                    ssrHit
-//                );
-//
-//                half blend = ssrHit ? 1.0 : 0.0;
-//                skyColor = lerp(skyColor, ssrColor, blend);
-//                #endif
-//                  
-//                float2 underUV = i.positionSS / max(i.positionCS.w, 1e-6) + normal.xz * .05;
-//                
-//                half depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, sampler_CameraDepthTexture, underUV);         
-//                float3 underWS = ComputeWorldSpacePosition(underUV, depth, UNITY_MATRIX_I_VP);
-//                half depthWS = length(i.positionWS - underWS) / 20;
-//                half3 underColor = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, underUV).rgb;
-//                color = lerp(lerp(sss + color, skyColor, fresnelFactor), foamColor, saturate(foamAmount));
-//                underColor = lerp(underColor,  color, saturate(depthWS));
-//
-//                half transparency = saturate(1-fresnelFactor) * _Transparency;
-//                
-//                half3 finalColor = specular + color;
-//                finalColor.rgb = MixFog(finalColor.rgb, i.fog);
-//                finalColor.rgb = finalColor + underColor * transparency;
-//                //finalColor.rgb = half3(mainLight.shadowAttenuation,mainLight.shadowAttenuation,mainLight.shadowAttenuation);
-//                
-//                return half4(finalColor, 1);
+//                return 1;
 //            }
 //            ENDHLSL
 //        }

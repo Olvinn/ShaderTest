@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Ocean_Demo.Scripts
 {
@@ -21,8 +22,8 @@ namespace Ocean_Demo.Scripts
 
         private void ChangeTemplate(int templateNum)
         {
-            _oceanWaveController.ChangeWater(_templates.templates[templateNum].Storm, _templates.templates[templateNum].Foam, _templates.templates[templateNum].Transparency);
-            RenderSettings.skybox =  _templates.templates[templateNum].Cubemap;
+             _oceanWaveController.ChangeWater(_templates.templates[templateNum].Storm, _templates.templates[templateNum].Foam, _templates.templates[templateNum].Transparency);
+            RenderSettings.skybox =  _templates.templates[templateNum].Cubemap; 
             RenderSettings.fogColor = _templates.templates[templateNum].FogColor;
             RenderSettings.defaultReflectionMode = UnityEngine.Rendering.DefaultReflectionMode.Custom;
             RenderSettings.customReflectionTexture = _templates.templates[templateNum].Cubemap.GetTexture("_Tex");

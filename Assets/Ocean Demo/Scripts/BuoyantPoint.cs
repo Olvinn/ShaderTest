@@ -5,37 +5,37 @@ namespace Ocean_Demo.Scripts
     [RequireComponent(typeof(Rigidbody))]
     public class BuoyantPoint : MonoBehaviour
     {
-        // [SerializeField] OceanWaveController _WaveController;
-        // [SerializeField] private ParticleSystem _splash;
-        //
-        // public float Radius = .25f;
-        // public float WaveAmplitude = .25f;
-        // public float WaveLength = .5f;
+        [SerializeField] OceanWaveController _WaveController;
+        [SerializeField] private ParticleSystem _splash;
+        
+        public float Radius = .25f;
+        public float WaveAmplitude = .25f;
+        public float WaveLength = .5f;
         //
         // public float buoyancyForce;
         // public bool torque = true;
         //
         // public bool _inAir = false;
-        // private Rigidbody _rb;
-        // private int _waveSourceIndex;
+        private Rigidbody _rb;
+        private int _waveSourceIndex;
         //
-        // void Start()
-        // {
-        //     _rb = GetComponent<Rigidbody>();
-        //     
-        //     var src = new OceanWaveController.WaveSource
-        //     {
-        //         posWS     = new Vector2(transform.position.x, transform.position.z),
-        //         radius    = Radius,
-        //         amplitude = WaveAmplitude,
-        //         wavelength= WaveLength,
-        //         speed     = 0f,
-        //         decay     = 1.0f,
-        //         type      = 0f,        // radial
-        //         angleDeg  = 0f
-        //     };
-        //     _waveSourceIndex = _WaveController.AddSource(src);
-        // }
+        void Start()
+        {
+            _rb = GetComponent<Rigidbody>();
+            
+            var src = new OceanWaveController.WaveSource
+            {
+                posWS     = new Vector2(transform.position.x, transform.position.z),
+                radius    = Radius,
+                amplitude = WaveAmplitude,
+                wavelength= WaveLength,
+                speed     = 0f,
+                decay     = 1.0f,
+                type      = 0f,        // radial
+                angleDeg  = 0f
+            };
+            _waveSourceIndex = _WaveController.AddSource(src);
+        }
         //
         // void FixedUpdate()
         // {
