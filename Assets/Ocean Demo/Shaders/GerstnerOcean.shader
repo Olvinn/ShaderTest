@@ -195,61 +195,68 @@ Shader "Custom/GerstnerOcean"
         }
     }
 
-//SubShader
-//    {
-//        Name "ShadowCaster"
-//        Tags { "LightMode" = "ShadowCaster" }
-//        
-//        Pass
-//        {
-//            HLSLPROGRAM
-//            #pragma target 5.0
-//            #pragma vertex vert
-//            #pragma fragment frag
-//
-//            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
-//            #include "Helper.cginc"
-//            #include "Gerstner.cginc"
-//
-//            CBUFFER_START(UnityPerMaterial)
-//            int _MaxWaves;
-//            CBUFFER_END
-//
-//            #define MAX_WAVES 64
-//            uniform float4 _WaveDirs[MAX_WAVES];
-//
-//            struct Attributes
-//            {
-//                float4 vertex : POSITION;
-//            };
-//
-//            struct Varyings
-//            {
-//                float4 positionCS   : SV_POSITION;
-//            };
-//
-//            Varyings vert(Attributes IN)
-//            {
-//                Varyings OUT = (Varyings)0;
-//                
-//                float3 worldPos = mul(unity_ObjectToWorld, float4(IN.vertex)).xyz;
-//                
-//                float3 offset = GetGerstnerOffset(worldPos.xz, _Time.y, _WaveDirs, _MaxWaves);
-//                worldPos += offset;
-//                
-//                float4 clipPos = TransformWorldToHClip(worldPos);
-//                OUT.positionCS = clipPos;
-//                
-//                return OUT;
-//            }
-//
-//            half4 frag(Varyings i) : SV_Target
-//            {
-//                return 1;
-//            }
-//            ENDHLSL
-//        }
-//    }
+SubShader
+    {
+        Name "ShadowCaster"
+        Tags { "LightMode" = "ShadowCaster" }
+
+        ZWrite On
+        ZTest LEqual
+        Cull Front
+        ColorMask 0
+            
+        Pass
+        {
+            HLSLPROGRAM
+            #pragma target 5.0
+            #pragma vertex vert
+            #pragma fragment frag
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+            #include "Helper.cginc"
+            #include "Gerstner.cginc"
+
+            CBUFFER_START(UnityPerMaterial)
+            int _MaxWaves;
+            CBUFFER_END
+
+            #define MAX_WAVES 64
+            uniform float4 _WaveDirs[MAX_WAVES];
+
+            struct Attributes
+            {
+                float4 vertex : POSITION;
+            };
+
+            struct Varyings
+            {
+                float4 positionCS   : SV_POSITION;
+                float3 initialWS   : TEXCOORD0;
+            };
+
+            Varyings vert(Attributes IN)
+            {
+                Varyings OUT = (Varyings)0;
+                
+                float3 worldPos = mul(unity_ObjectToWorld, float4(IN.vertex)).xyz;
+                OUT.initialWS = worldPos;
+                
+                float3 offset = GetGerstnerOffset(worldPos.xz, _Time.y, _WaveDirs, _MaxWaves);
+                worldPos += offset;
+                
+                float4 clipPos = TransformWorldToHClip(worldPos);
+                OUT.positionCS = clipPos;
+                
+                return OUT;
+            }
+
+            half4 frag(Varyings i) : SV_Target
+            {                
+                return 0;
+            }
+            ENDHLSL
+        }
+    }
 
     CustomEditor "GerstnerOceanInspector"
     

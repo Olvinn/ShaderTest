@@ -23,7 +23,7 @@ namespace Ocean_Demo.Scripts
 
         public WavesParams wavesParams;
         public Vector3[] waveDirections = new Vector3[64];
-        private Vector4[] waveDirectionsReady = new Vector4[64];
+        public Vector4[] waveDirectionsReady = new Vector4[64];
         public float windDirection = 60;
 
         // === NEW: compute-based local details ===
