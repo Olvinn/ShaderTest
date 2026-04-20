@@ -11,8 +11,10 @@ Material:
   m_Shader: {fileID: 4800000, guid: 0595cbe020c1c654f918cdbd368ccf6d, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_ValidKeywords:
+  - SSR
+  m_InvalidKeywords:
+  - TESSELATION
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -48,7 +50,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _FoamTexture:
-        m_Texture: {fileID: 10307, guid: 0000000000000000f000000000000000, type: 0}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 20, y: 20}
         m_Offset: {x: 0, y: 0}
     - _LocalWaterDetails:
@@ -84,9 +86,9 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints:
-    - _SSRSteps: 0
+    - _SSRSteps: 64
     m_Floats:
-    - _A: 0.21
+    - _A: 0.1
     - _Ambient: 0
     - _B: -3.3
     - _BumpScale: 1
@@ -97,12 +99,12 @@ Material:
     - _DstBlend: 0
     - _EdgeLength: 20
     - _FoamAmount: 0
-    - _FoamStrength: 0
+    - _FoamStrength: 1
     - _Fresnel: 0.03
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _MaxWaves: 4
+    - _MaxWaves: 64
     - _Metallic: 0
     - _Mode: 0
     - _NoiseScale: 0.08
@@ -112,20 +114,20 @@ Material:
     - _PartialNormals: 1
     - _Phong: 0.5
     - _Roughness: 0.1
-    - _SSRStepSize: 0.5
-    - _SSRSteps: 4
-    - _SSRThickness: 0.5
+    - _SSRStepSize: 0.02
+    - _SSRSteps: 32
+    - _SSRThickness: 1
     - _SmoothnessTextureChannel: 0
     - _Specular: 32
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SteepnessSuppression: 0.01
     - _SteepnessSupression: 0.8
-    - _StepPropagation: 1.01
+    - _StepPropagation: 0.1
     - _Tess: 32
-    - _TessFactor: 0.001
+    - _TessFactor: 3
     - _Tessellation: 8
-    - _Transparency: 0.12
+    - _Transparency: 10
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
@@ -136,9 +138,9 @@ Material:
     - _WaveStrengthDistribution: 1.66
     - _ZWrite: 1
     m_Colors:
-    - _Color: {r: 0.126691, g: 0.33713806, b: 0.6886792, a: 1}
+    - _Color: {r: 0.039215695, g: 0.20522615, b: 0.37647045, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _SSSColor: {r: 0.20465466, g: 0.6886792, b: 0.67868614, a: 1}
+    - _SSSColor: {r: 0.20392147, g: 0.68086386, b: 0.6901961, a: 0.4117647}
     - _SpecColor: {r: 0.46226418, g: 0.46226418, b: 0.46226418, a: 0.5}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -57,7 +57,7 @@ namespace Ocean_Demo.Scripts
         private int _kernel;
         private uint _tgx, _tgy, _tgz;
 
-        private float _storm, _foam;
+        private float _storm, _foam, _transparency;
         private Camera _camera;
 
         private void Awake()
@@ -204,10 +204,11 @@ namespace Ocean_Demo.Scripts
             RecreateSourcesBuffer();
         }
 
-        public void ChangeWater(float storm, float foam)
+        public void ChangeWater(float storm, float foam, float transparency)
         {
             _storm = storm;
             _foam = foam;
+            _transparency = transparency;
             UpdateWaves();
         }
 
@@ -237,19 +238,19 @@ namespace Ocean_Demo.Scripts
             {
                 case < 16:
                     return new Vector4(x, y, 
-                        waveDirections[i].y * wavesParams.longWavesA, 
+                        waveDirections[i].y * wavesParams.longWavesA * _storm, 
                         waveDirections[i].z * wavesParams.longWavesL);
                 case < (16 + 24):
                     return new Vector4(x, y, 
-                        waveDirections[i].y * wavesParams.mediumWavesA, 
+                        waveDirections[i].y * wavesParams.mediumWavesA * _storm, 
                         waveDirections[i].z * wavesParams.mediumWavesL);
                 case < (16 + 24 + 8):
                     return new Vector4(x, y, 
-                        waveDirections[i].y * wavesParams.secondaryWavesA, 
+                        waveDirections[i].y * wavesParams.secondaryWavesA * _storm, 
                         waveDirections[i].z * wavesParams.secondaryWavesL);
                 case < (64):
                     return new Vector4(x, y,
-                        waveDirections[i].y * wavesParams.shortWavesA, 
+                        waveDirections[i].y * wavesParams.shortWavesA * _storm, 
                         waveDirections[i].z * wavesParams.shortWavesL);
             }
             return new Vector4(x, y, waveDirections[i].y, waveDirections[i].z);
@@ -260,9 +261,8 @@ namespace Ocean_Demo.Scripts
             foreach (var mat in oceanMaterials)
             {
                 mat.SetVectorArray("_WaveDirs", waves);
-                mat.SetFloat("_WaveLength", Mathf.Lerp(.75f, 10, storm));
-                mat.SetFloat("_WaveStrength", Mathf.Lerp(0.001f, 1f, storm));
                 mat.SetFloat("_FoamAmount", _foam);
+                mat.SetFloat("_Transparency", _transparency);
                 mat.SetVector("_MapCenterWS", new Vector4(LocalMapCenterWS.x, 0, LocalMapCenterWS.y, 0));
                 mat.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));
                 mat.SetTexture("_LocalWaterDetails", LocalWaterDetails);
