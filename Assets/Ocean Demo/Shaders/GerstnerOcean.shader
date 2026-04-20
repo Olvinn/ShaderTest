@@ -24,7 +24,7 @@ Shader "Custom/GerstnerOcean"
     SubShader
     {
         Tags { "RenderType" = "Transparent" "RenderPipeline" = "UniversalPipeline" "RenderQueue" = "Transparent" }
-        //ZWrite On
+        Cull Off
         
         Pass
         {
@@ -124,9 +124,9 @@ Shader "Custom/GerstnerOcean"
                 half transmission = pow(1.0 - saturate(dot(normal, viewDir)), 3.0);
                 
                 float3 reflection = reflect(viewDir, normal);
-                float3 skyColor = CubemapAmbient(viewDir, reflection, 0);
+                float3 skyColor = CubemapAmbient(viewDir, normal, 0);
 
-                half light = pow(saturate(dot(mainLight.direction, float3(0,1,0))), .5);
+                half light = dot(mainLight.direction, normal) *.5 + .5;
                 float3 sss = (backSSS * transmission * wrap) * _SSSColor * mainLight.color * light;
                 
                 half NdotV = saturate(dot(normal, -viewDir));
@@ -143,7 +143,7 @@ Shader "Custom/GerstnerOcean"
                 specular *= 1 - foamAmount;
                 
                 float3 color = d * _Color * light * mainLight.color;
-                half fresnelFactor = dot(fresnel, float3(0.333,0.333,0.333));
+                half fresnelFactor = fresnel;
 
                 #ifdef SSR
                 bool ssrHit = false;
@@ -172,7 +172,7 @@ Shader "Custom/GerstnerOcean"
                 half depthWS = length(i.positionWS - underWS) / 20;
                 half3 underColor = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, underUV).rgb;
                 color = lerp(lerp(sss + color, skyColor, fresnelFactor), foamColor, saturate(foamAmount));
-                underColor = lerp(underColor,  color, saturate(depthWS));
+                underColor = lerp(underColor,  color, saturate(depthWS) * fresnelFactor);
 
                 half transparency = saturate(1-fresnelFactor) * _Transparency;
                 

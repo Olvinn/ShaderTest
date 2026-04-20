@@ -182,7 +182,7 @@ float3 RaymarchSSR_ViewSpace(
 
 inline float3 CubemapAmbient(float3 viewDir, float3 normal, float smooth)
 {
-    float3 refl = reflect(-viewDir, normal);
+    float3 refl = reflect(viewDir, normal);
     half4 encoded = SAMPLE_TEXTURECUBE_LOD(unity_SpecCube0, samplerunity_SpecCube0, refl, smooth);
     half3 skyColor = DecodeHDREnvironment(encoded, unity_SpecCube0_HDR);
     return skyColor;

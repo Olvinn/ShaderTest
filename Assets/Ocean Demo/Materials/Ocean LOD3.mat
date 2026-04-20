@@ -97,7 +97,7 @@ Material:
     - _DstBlend: 0
     - _EdgeLength: 20
     - _FoamAmount: 0
-    - _FoamStrength: 10
+    - _FoamStrength: 0
     - _Fresnel: 0.03
     - _GlossMapScale: 1
     - _Glossiness: 0.5
