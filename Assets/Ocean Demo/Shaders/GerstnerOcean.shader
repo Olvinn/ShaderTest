@@ -45,7 +45,7 @@ Shader "Custom/GerstnerOcean"
             #include "Gerstner.cginc"
 
             CBUFFER_START(UnityPerMaterial)
-            float4 _Color, _SSSColor;
+            float4 _Color, _SSSColor, _FoamTexture_ST;
             half FoamStrength, _FoamAmount, _FoamStrength, _Transparency;
             half _Metallic, _Roughness;
             int _MaxWaves;
@@ -135,30 +135,26 @@ Shader "Custom/GerstnerOcean"
                 half wrap = ndotl * 0.5 + 0.5; 
                 half transmission = pow(1.0 - saturate(dot(normal, viewDir)), 3.0);
                 
+                float fresnel = FresnelSchlickWater(viewDir, normal);
+                
                 float4 skyColor = 1;
                 skyColor.rgb = CubemapAmbient(viewDir, normal, 0);
+                //skyColor.rgb = lerp(skyColor.rgb, CubemapAmbient(-viewDir, normal, 0), 1 - fresnel);
 
-                half light = dot(mainLight.direction, normal) *.5 + .5; //magic around sun position
-                float3 sss = backSSS * transmission * wrap * _SSSColor * mainLight.color * light;
+                float3 sss = backSSS * transmission * wrap * _SSSColor * mainLight.color;
                 
                 half d = dot(mainLight.direction, normal) * 0.5 + 0.5;
                 float4 color = 1;
-                color.rgb = d * _Color * light * mainLight.color;
+                color.rgb = d * _Color * mainLight.color;
                 
-                half NdotV = saturate(dot(normal, -viewDir));
-                float3 F0 = lerp(float3(0.02, 0.02, 0.02), color, _Metallic);
-                float3 fresnel = FresnelSchlick(NdotV, F0);
                 float3 specular = PBRSpecular(normal, -viewDir, mainLight.direction, _Color, _Metallic, _Roughness) * 
                     mainLight.color * mainLight.shadowAttenuation;
-
                 
                 half foamAmount = saturate(smoothstep(0,1,laplacian) - _FoamAmount) * _FoamStrength;
-                float3 foamColor = d * light + sss;
-                foamAmount = saturate(SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.uv).r * foamAmount);
+                float3 foamColor = d + sss;
+                foamAmount = saturate(SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.uv * _FoamTexture_ST.xy + _FoamTexture_ST.zw).r * foamAmount);
                 specular *= 1 - foamAmount;
                 
-                half fresnelFactor = length(fresnel);
-
                 #ifdef SSR
                 bool ssrHit = false;
                 float3 ssrColor = RaymarchSSR_ViewSpace(
@@ -183,13 +179,14 @@ Shader "Custom/GerstnerOcean"
                 
                 half depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, sampler_CameraDepthTexture, underUV);         
                 float3 underWS = ComputeWorldSpacePosition(underUV, depth, UNITY_MATRIX_I_VP);
-                half depthWS = length(i.positionWS - underWS) / _Transparency;
                 half3 underColor = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, underUV).rgb;
-                underColor = saturate(GetDepthTint(i.positionWS, underWS, underColor, _SSSColor, color, _Transparency));
+                if (dot(-viewDir, normal) > 0)
+                    underColor = saturate(GetDepthTint(i.positionWS, underWS, underColor, _SSSColor, color, _Transparency));
                 
+                color.rgb += lerp(underColor, skyColor, fresnel);
                 color.rgb += sss;
-                color.rgb = lerp(underColor, color, saturate(depthWS) * fresnelFactor);
-                color.rgb = color + skyColor * fresnelFactor;
+                //color.rgb = lerp(underColor, color, fresnel);
+                //color.rgb = color + skyColor * fresnel;
                 color.rgb = lerp(color, foamColor, saturate(foamAmount));
                 
                 half3 finalColor = color + specular;

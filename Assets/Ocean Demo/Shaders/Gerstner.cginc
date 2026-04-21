@@ -43,7 +43,7 @@ float3 GetGerstnerOffset(float2 worldXZ, float time, float4 _WaveDirs[MAX_WAVES]
 
     for (int i = 0; i < count; i++)
     {
-        float k, speed, steepness = clamp(_WaveDirs[i].w,0,.5);
+        float k, speed, steepness = clamp(_WaveDirs[i].w,0,.7);
         GetWaveParams(_WaveDirs[i].w, k, speed);
 
         float2 dir = normalize(_WaveDirs[i].xy);
