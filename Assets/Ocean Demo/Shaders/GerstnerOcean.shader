@@ -114,8 +114,8 @@ Shader "Custom/GerstnerOcean"
                 float4 local = SAMPLE_TEXTURE2D(_LocalWaterDetails, sampler_LocalWaterDetails, localUV);
 
                 float3 nLocal = normalize(float3(-local.r, 1.0, -local.g));
-                float3 normal = nLocal;
                 
+                float3 normal = nLocal;
                 float laplacian = 0;
                 
                 GetGerstnerNormalLaplacian(i.initialWS.xz, _Time.y, _MaxWaves, _WaveDirs, normal, laplacian);
@@ -138,7 +138,9 @@ Shader "Custom/GerstnerOcean"
                 float fresnel = FresnelSchlickWater(viewDir, normal);
                 
                 float4 skyColor = 1;
-                skyColor.rgb = CubemapAmbient(viewDir, normal, 0);
+                float3 redlectionDir = reflect(viewDir, normal);
+                float3 refractionDir = refract(viewDir, -normal, .75);
+                skyColor.rgb = CubemapAmbient(redlectionDir, 0);
                 //skyColor.rgb = lerp(skyColor.rgb, CubemapAmbient(-viewDir, normal, 0), 1 - fresnel);
 
                 float3 sss = backSSS * transmission * wrap * _SSSColor * mainLight.color;
@@ -175,11 +177,18 @@ Shader "Custom/GerstnerOcean"
                 skyColor.rgb = lerp(skyColor, ssrColor, blend);
                 #endif
                   
+                
                 float2 underUV = i.positionSS / max(i.positionCS.w, 1e-6) + normal.xz * .07;
                 
-                half depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, sampler_CameraDepthTexture, underUV);         
+                half depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, sampler_CameraDepthTexture, underUV);     
+                #if UNITY_REVERSED_Z
+                    bool isSky = depth < 0.0001;
+                #else
+                    bool isSky = depth > 0.9999;
+                #endif
                 float3 underWS = ComputeWorldSpacePosition(underUV, depth, UNITY_MATRIX_I_VP);
                 half3 underColor = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, underUV).rgb;
+                underColor = lerp(underColor, CubemapAmbient(refractionDir, 0), isSky);
                 if (dot(-viewDir, normal) > 0)
                     underColor = saturate(GetDepthTint(i.positionWS, underWS, underColor, _SSSColor, color, _Transparency));
                 
