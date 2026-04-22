@@ -8,10 +8,10 @@ namespace Ocean_Demo.Scripts
     [Serializable]
     public struct WavesParams
     {
-        public float longWavesA, longWavesL;
-        public float mediumWavesA, mediumWavesL;
-        public float secondaryWavesA, secondaryWavesL;
-        public float shortWavesA, shortWavesL;
+        public float longWavesA, longWavesL, longWavesS;
+        public float mediumWavesA, mediumWavesL, mediumWavesS;
+        public float secondaryWavesA, secondaryWavesL, secondaryWavesS;
+        public float shortWavesA, shortWavesL, shortWavesS;
     }
     
     [ExecuteInEditMode]
@@ -22,7 +22,7 @@ namespace Ocean_Demo.Scripts
         [Range(1, 360)] public float minAngle = 45;
 
         public WavesParams wavesParams;
-        public Vector3[] waveDirections = new Vector3[64];
+        public Vector4[] waveDirections = new Vector4[64];
         public Vector4[] waveDirectionsReady = new Vector4[64];
         public float windDirection = 60;
 
@@ -62,83 +62,83 @@ namespace Ocean_Demo.Scripts
 
         private void Awake()
         {
-            waveDirections = new Vector3[]
+            waveDirections = new Vector4[]
             {
                 // ── Primary swell ────────────────────────────────────────────
                 // Long wavelength, tight angular spread, most visual energy
-                new Vector3( 0.00f, 1.40f, 78.0f),
-                new Vector3( 0.05f, 1.20f, 72.0f),
-                new Vector3(-0.04f, 1.10f, 68.0f),
-                new Vector3( 0.09f, 1.30f, 65.0f),
-                new Vector3(-0.07f, 0.95f, 60.0f),
-                new Vector3( 0.03f, 1.05f, 57.0f),
-                new Vector3(-0.11f, 0.85f, 52.0f),
-                new Vector3( 0.13f, 0.90f, 48.0f),
-                new Vector3(-0.06f, 0.75f, 45.0f),
-                new Vector3( 0.08f, 0.80f, 43.0f),
-                new Vector3(-0.15f, 0.70f, 40.0f),
-                new Vector3( 0.10f, 0.65f, 38.0f),
-                new Vector3(-0.09f, 0.60f, 36.0f),
-                new Vector3( 0.14f, 0.55f, 34.0f),
-                new Vector3(-0.12f, 0.50f, 32.0f),
-                new Vector3( 0.07f, 0.45f, 30.0f),
+                new Vector4( 0.00f, 1.40f, 78.0f, 1),
+                new Vector4( 0.05f, 1.20f, 72.0f, 1),
+                new Vector4(-0.04f, 1.10f, 68.0f, 1),
+                new Vector4( 0.09f, 1.30f, 65.0f, 1),
+                new Vector4(-0.07f, 0.95f, 60.0f, 1),
+                new Vector4( 0.03f, 1.05f, 57.0f, 1),
+                new Vector4(-0.11f, 0.85f, 52.0f, 1),
+                new Vector4( 0.13f, 0.90f, 48.0f, 1),
+                new Vector4(-0.06f, 0.75f, 45.0f, 1),
+                new Vector4( 0.08f, 0.80f, 43.0f, 1),
+                new Vector4(-0.15f, 0.70f, 40.0f, 1),
+                new Vector4( 0.10f, 0.65f, 38.0f, 1),
+                new Vector4(-0.09f, 0.60f, 36.0f, 1),
+                new Vector4( 0.14f, 0.55f, 34.0f, 1),
+                new Vector4(-0.12f, 0.50f, 32.0f, 1),
+                new Vector4( 0.07f, 0.45f, 30.0f, 1),
 
                 // ── Wind waves ───────────────────────────────────────────────
                 // Medium wavelength, widening directional cone as size drops
-                new Vector3( 0.22f, 0.42f, 28.0f),
-                new Vector3(-0.18f, 0.38f, 26.0f),
-                new Vector3( 0.30f, 0.35f, 24.0f),
-                new Vector3(-0.25f, 0.32f, 22.0f),
-                new Vector3( 0.17f, 0.30f, 20.0f),
-                new Vector3(-0.20f, 0.28f, 19.0f),
-                new Vector3( 0.35f, 0.25f, 18.0f),
-                new Vector3(-0.28f, 0.24f, 17.0f),
-                new Vector3( 0.15f, 0.22f, 16.0f),
-                new Vector3(-0.32f, 0.20f, 15.0f),
-                new Vector3( 0.40f, 0.18f, 14.0f),
-                new Vector3(-0.22f, 0.17f, 13.5f),
-                new Vector3( 0.28f, 0.15f, 13.0f),
-                new Vector3(-0.35f, 0.14f, 12.0f),
-                new Vector3( 0.19f, 0.13f, 11.0f),
-                new Vector3(-0.42f, 0.12f, 10.5f),
-                new Vector3( 0.45f, 0.11f, 10.0f),
-                new Vector3(-0.38f, 0.10f,  9.5f),
-                new Vector3( 0.33f, 0.09f,  9.0f),
-                new Vector3(-0.47f, 0.09f,  8.5f),
-                new Vector3( 0.50f, 0.08f,  8.0f),
-                new Vector3(-0.43f, 0.08f,  7.5f),
-                new Vector3( 0.38f, 0.07f,  7.0f),
-                new Vector3(-0.50f, 0.07f,  6.5f),
+                new Vector4( 0.22f, 0.42f, 28.0f, 1),
+                new Vector4(-0.18f, 0.38f, 26.0f, 1),
+                new Vector4( 0.30f, 0.35f, 24.0f, 1),
+                new Vector4(-0.25f, 0.32f, 22.0f, 1),
+                new Vector4( 0.17f, 0.30f, 20.0f, 1),
+                new Vector4(-0.20f, 0.28f, 19.0f, 1),
+                new Vector4( 0.35f, 0.25f, 18.0f, 1),
+                new Vector4(-0.28f, 0.24f, 17.0f, 1),
+                new Vector4( 0.15f, 0.22f, 16.0f, 1),
+                new Vector4(-0.32f, 0.20f, 15.0f, 1),
+                new Vector4( 0.40f, 0.18f, 14.0f, 1),
+                new Vector4(-0.22f, 0.17f, 13.5f, 1),
+                new Vector4( 0.28f, 0.15f, 13.0f, 1),
+                new Vector4(-0.35f, 0.14f, 12.0f, 1),
+                new Vector4( 0.19f, 0.13f, 11.0f, 1),
+                new Vector4(-0.42f, 0.12f, 10.5f, 1),
+                new Vector4( 0.45f, 0.11f, 10.0f, 1),
+                new Vector4(-0.38f, 0.10f,  9.5f, 1),
+                new Vector4( 0.33f, 0.09f,  9.0f, 1),
+                new Vector4(-0.47f, 0.09f,  8.5f, 1),
+                new Vector4( 0.50f, 0.08f,  8.0f, 1),
+                new Vector4(-0.43f, 0.08f,  7.5f, 1),
+                new Vector4( 0.38f, 0.07f,  7.0f, 1),
+                new Vector4(-0.50f, 0.07f,  6.5f, 1),
 
                 // ── Cross swell ──────────────────────────────────────────────
                 // Secondary swell system ~90° off-wind, longer & calmer
-                new Vector3( 0.90f, 0.55f, 55.0f),
-                new Vector3( 0.95f, 0.45f, 50.0f),
-                new Vector3( 0.85f, 0.40f, 45.0f),
-                new Vector3( 1.00f, 0.35f, 40.0f),
-                new Vector3( 0.80f, 0.30f, 35.0f),
-                new Vector3( 1.05f, 0.25f, 32.0f),
-                new Vector3( 0.92f, 0.22f, 30.0f),
-                new Vector3( 1.10f, 0.20f, 28.0f),
+                new Vector4( 0.90f, 0.55f, 55.0f, 1),
+                new Vector4( 0.95f, 0.45f, 50.0f, 1),
+                new Vector4( 0.85f, 0.40f, 45.0f, 1),
+                new Vector4( 1.00f, 0.35f, 40.0f, 1),
+                new Vector4( 0.80f, 0.30f, 35.0f, 1),
+                new Vector4( 1.05f, 0.25f, 32.0f, 1),
+                new Vector4( 0.92f, 0.22f, 30.0f, 1),
+                new Vector4( 1.10f, 0.20f, 28.0f, 1),
 
                 // ── Chop ─────────────────────────────────────────────────────
                 // Short wavelength, fully spread, tiny amplitude — surface texture
-                new Vector3( 0.55f, 0.06f,  6.0f),
-                new Vector3(-0.60f, 0.05f,  5.5f),
-                new Vector3( 0.70f, 0.05f,  5.0f),
-                new Vector3(-0.65f, 0.04f,  4.5f),
-                new Vector3( 0.80f, 0.04f,  4.0f),
-                new Vector3(-0.75f, 0.04f,  3.8f),
-                new Vector3( 0.90f, 0.03f,  3.5f),
-                new Vector3(-0.85f, 0.03f,  3.2f),
-                new Vector3( 0.60f, 0.03f,  3.0f),
-                new Vector3(-0.70f, 0.03f,  2.8f),
-                new Vector3( 0.95f, 0.02f,  2.5f),
-                new Vector3(-0.80f, 0.02f,  2.3f),
-                new Vector3( 0.50f, 0.02f,  2.1f),
-                new Vector3(-0.55f, 0.02f,  2.0f),
-                new Vector3( 0.75f, 0.02f,  1.8f),
-                new Vector3(-0.90f, 0.02f,  1.6f),
+                new Vector4( 0.55f, 0.06f,  6.0f, 1),
+                new Vector4(-0.60f, 0.05f,  5.5f, 1),
+                new Vector4( 0.70f, 0.05f,  5.0f, 1),
+                new Vector4(-0.65f, 0.04f,  4.5f, 1),
+                new Vector4( 0.80f, 0.04f,  4.0f, 1),
+                new Vector4(-0.75f, 0.04f,  3.8f, 1),
+                new Vector4( 0.90f, 0.03f,  3.5f, 1),
+                new Vector4(-0.85f, 0.03f,  3.2f, 1),
+                new Vector4( 0.60f, 0.03f,  3.0f, 1),
+                new Vector4(-0.70f, 0.03f,  2.8f, 1),
+                new Vector4( 0.95f, 0.02f,  2.5f, 1),
+                new Vector4(-0.80f, 0.02f,  2.3f, 1),
+                new Vector4( 0.50f, 0.02f,  2.1f, 1),
+                new Vector4(-0.55f, 0.02f,  2.0f, 1),
+                new Vector4( 0.75f, 0.02f,  1.8f, 1),
+                new Vector4(-0.90f, 0.02f,  1.6f, 1),
             };
             
             InitLocalDetailsTargets();
@@ -231,29 +231,30 @@ namespace Ocean_Demo.Scripts
 
         private Vector4 LerpWave(int i)
         {
-            float a = Mathf.Acos(waveDirections[i].x % 1);
-            float x = Mathf.Cos(a);
-            float y = Mathf.Sin(a);
             switch (i)
             {
                 case < 16:
-                    return new Vector4(x, y, 
+                    return new Vector4(waveDirections[i].x,
                         waveDirections[i].y * wavesParams.longWavesA * _storm, 
-                        waveDirections[i].z * wavesParams.longWavesL);
+                        waveDirections[i].z * wavesParams.longWavesL,
+                        waveDirections[i].w * wavesParams.longWavesS);
                 case < (16 + 24):
-                    return new Vector4(x, y, 
+                    return new Vector4(waveDirections[i].x,
                         waveDirections[i].y * wavesParams.mediumWavesA * _storm, 
-                        waveDirections[i].z * wavesParams.mediumWavesL);
+                        waveDirections[i].z * wavesParams.mediumWavesL,
+                        waveDirections[i].w * wavesParams.mediumWavesS);
                 case < (16 + 24 + 8):
-                    return new Vector4(x, y, 
+                    return new Vector4(waveDirections[i].x,
                         waveDirections[i].y * wavesParams.secondaryWavesA * _storm, 
-                        waveDirections[i].z * wavesParams.secondaryWavesL);
+                        waveDirections[i].z * wavesParams.secondaryWavesL,
+                        waveDirections[i].w * wavesParams.secondaryWavesS);
                 case < (64):
-                    return new Vector4(x, y,
+                    return new Vector4(waveDirections[i].x,
                         waveDirections[i].y * wavesParams.shortWavesA * _storm, 
-                        waveDirections[i].z * wavesParams.shortWavesL);
+                        waveDirections[i].z * wavesParams.shortWavesL,
+                        waveDirections[i].w *  wavesParams.shortWavesS);
             }
-            return new Vector4(x, y, waveDirections[i].y, waveDirections[i].z);
+            return new Vector4(waveDirections[i].x, waveDirections[i].y, waveDirections[i].z, waveDirections[i].w);
         }
 
         private void WriteToMaterials(float storm, Vector4[] waves)

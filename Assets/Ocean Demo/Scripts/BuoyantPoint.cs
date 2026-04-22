@@ -43,7 +43,7 @@ namespace Ocean_Demo.Scripts
                 new Vector2(_rb.position.x,  _rb.position.z),
                 Time.time,
                 _WaveController.waveDirectionsReady,
-            64);
+            32);
             Vector3 waveOffset = GetGerstnerOffset(
                 new Vector2(_rb.position.x,  _rb.position.z),
                 Time.time,
@@ -155,11 +155,14 @@ namespace Ocean_Demo.Scripts
 
             for (int i = 0; i < count; i++)
             {
-                float k, speed, steepness = Mathf.Clamp(_WaveDirs[i].w,.25f,.75f);
-                GetWaveParams(_WaveDirs[i].w, out k, out speed);
+                float k, speed, steepness = _WaveDirs[i].w;
+                GetWaveParams(_WaveDirs[i].z, out k, out speed);
 
-                Vector2 dir = Vector2.Normalize(_WaveDirs[i]);
-                offset += GerstnerWave(worldXZ, dir, k, _WaveDirs[i].z, steepness, speed, time);
+                float a = Mathf.Acos(_WaveDirs[i].x % 1);
+                float x = Mathf.Cos(a);
+                float y = Mathf.Sin(a);
+                Vector2 dir = (new Vector2(x, y)).normalized;
+                offset += GerstnerWave(worldXZ, dir, k, _WaveDirs[i].y, steepness, speed, time);
             }
 
             return offset;
@@ -171,10 +174,14 @@ namespace Ocean_Demo.Scripts
 
             for (int i = 0; i < count; i++)
             {
-                float k, speed, steepness = Mathf.Clamp(_WaveDirs[i].w,.25f,.75f);
-                GetWaveParams(_WaveDirs[i].w, out k, out speed);
-                Vector2 dir = Vector2.Normalize(_WaveDirs[i]);
-                GerstnerWaveNormal(worldXZ, dir, k, _WaveDirs[i].z, steepness, speed, time);
+                float k, speed, steepness = _WaveDirs[i].w;
+                GetWaveParams(_WaveDirs[i].z, out k, out speed);
+
+                float a = Mathf.Acos(_WaveDirs[i].x % 1);
+                float x = Mathf.Cos(a);
+                float y = Mathf.Sin(a);
+                Vector2 dir = (new Vector2(x, y)).normalized;
+                GerstnerWaveNormal(worldXZ, dir, k, _WaveDirs[i].y, steepness, speed, time);
             }
             
             return normal.normalized;

@@ -43,11 +43,13 @@ float3 GetGerstnerOffset(float2 worldXZ, float time, float4 _WaveDirs[MAX_WAVES]
 
     for (int i = 0; i < count; i++)
     {
-        float k, speed, steepness = clamp(_WaveDirs[i].w,0,.7);
-        GetWaveParams(_WaveDirs[i].w, k, speed);
-
-        float2 dir = normalize(_WaveDirs[i].xy);
-        offset += GerstnerWave(worldXZ, dir, k, _WaveDirs[i].z, steepness, speed, time);
+        float k, speed, steepness = _WaveDirs[i].w;
+        GetWaveParams(_WaveDirs[i].z, k, speed);
+        float a = acos(_WaveDirs[i].x % 1);
+        float x = cos(a);
+        float y = sin(a);
+        float2 dir = normalize(float2(x, y));
+        offset += GerstnerWave(worldXZ, dir, k, _WaveDirs[i].y, steepness, speed, time);
     }
 
     return offset;
@@ -61,10 +63,13 @@ void GetGerstnerNormalLaplacian(float2 worldXZ, float time, int count,
 
     for (int i = 0; i < count; i++)
     {
-        float k, speed, steepness = clamp(_WaveDirs[i].w,.25,1);
-        GetWaveParams(_WaveDirs[i].w, k, speed);
-        float2 dir = normalize(_WaveDirs[i].xy);
-        GerstnerWaveNormal(worldXZ, dir, k, _WaveDirs[i].z, steepness, speed, time,
+        float k, speed, steepness = _WaveDirs[i].w;
+        GetWaveParams(_WaveDirs[i].z, k, speed);
+        float a = acos(_WaveDirs[i].x % 1);
+        float x = cos(a);
+        float y = sin(a);
+        float2 dir = normalize(float2(x, y));
+        GerstnerWaveNormal(worldXZ, dir, k, _WaveDirs[i].y, steepness, speed, time,
                            normal, laplacian);
     }
     normal = normalize(normal);
