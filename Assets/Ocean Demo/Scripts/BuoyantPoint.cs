@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Ocean_Demo.Scripts
@@ -65,25 +66,27 @@ namespace Ocean_Demo.Scripts
                     _inAir = false;
                 }
                 
-                depth = Mathf.Clamp01(depth);
+                depth = Mathf.Clamp01(depth * .5f);
         
                 Vector3 force = Vector3.up * (depth * buoyancyForce);
                 _rb.AddForce(force, ForceMode.Force);
         
-                Vector3 drag = -_rb.linearVelocity * Time.fixedDeltaTime;
+                Vector3 drag = -_rb.linearVelocity * (Time.fixedDeltaTime * 2);
                 _rb.AddForce(drag, ForceMode.VelocityChange);
         
                 if (torque)
                 {
+                    //transform.up = waveNormal;
+
                     Quaternion targetRotation =
                         Quaternion.LookRotation(Vector3.Cross(transform.right, waveNormal), waveNormal);
                     Quaternion delta = targetRotation * Quaternion.Inverse(_rb.rotation);
                     delta.ToAngleAxis(out float angle, out Vector3 axis);
-        
+                    
                     if (angle > 180f) angle -= 360f;
                     if (Mathf.Abs(angle) > 0.01f)
                         _rb.AddTorque(axis * angle);
-        
+                    
                     Vector3 angDrag = -_rb.angularVelocity * Time.fixedDeltaTime;
                     _rb.AddTorque(angDrag, ForceMode.VelocityChange);
                 }
@@ -144,7 +147,6 @@ namespace Ocean_Demo.Scripts
             normal.x += -dir.x * k * amp * cosP;
             normal.y -= steepness * amp * k * sinP;
             normal.z += -dir.y * k * amp * cosP;
-            
             return normal;
         }
         
@@ -180,8 +182,8 @@ namespace Ocean_Demo.Scripts
                 float a = Mathf.Acos(_WaveDirs[i].x % 1);
                 float x = Mathf.Cos(a);
                 float y = Mathf.Sin(a);
-                Vector2 dir = (new Vector2(x, y)).normalized;
-                GerstnerWaveNormal(worldXZ, dir, k, _WaveDirs[i].y, steepness, speed, time);
+                Vector2 dir = new Vector2(x, y).normalized;
+                normal += GerstnerWaveNormal(worldXZ, dir, k, _WaveDirs[i].y, steepness, speed, time);
             }
             
             return normal.normalized;
