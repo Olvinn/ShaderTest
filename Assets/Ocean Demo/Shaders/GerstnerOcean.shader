@@ -163,7 +163,7 @@ Shader "Custom/GerstnerOcean"
 
                 Light mainLight = GetMainLight(shadowCoord);
 
-                half fakeThickness = saturate((i.positionWS.y + 1) * clamp(jacobianCoeff, 0, 1));
+                half fakeThickness = saturate((i.positionWS.y * .1 +  jacobianCoeff * .1) * 5);
                 float3 sss = GO_GetScattering(normal, mainLight, viewDir, fakeThickness);
                 
                 float fresnel = H_FresnelSchlickWater(viewDir, normal);
@@ -181,8 +181,11 @@ Shader "Custom/GerstnerOcean"
                     mainLight.color * mainLight.shadowAttenuation;
                 
                 half foamAmount = saturate(jacobianCoeff - _FoamAmount) * _FoamStrength;
-                float3 foamColor = d + sss;
-                foamAmount = saturate(SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.uv * _FoamTexture_ST.xy + _FoamTexture_ST.zw).r * foamAmount);
+                float3 foamColor = d;
+                half foamMask = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.uv * _FoamTexture_ST.xy + _FoamTexture_ST.zw).r;
+                foamMask += SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.uv * _FoamTexture_ST.xy * 2 + _FoamTexture_ST.zw).r;
+                foamMask *= .5;
+                foamAmount = (foamAmount + foamMask) - 1;
                 specular *= 1 - foamAmount;
                 
                 #ifdef SSR
@@ -217,7 +220,7 @@ Shader "Custom/GerstnerOcean"
                 half3 underColor = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, underUV).rgb;
                 underColor = lerp(underColor, CubemapAmbient(refractionDir, 0), isSky);
                 if (dot(-viewDir, normal) > 0)
-                    underColor = saturate(GetDepthTint(i.positionWS, underWS, underColor, _SSSColor, color, _Transparency));
+                    underColor = saturate(GetDepthTint(i.positionWS, underWS, underColor, 1 - _SSSColor, color, _Transparency));
                 
                 color.rgb += lerp(underColor, cubemapReflection, fresnel);
                 color.rgb += sss;
