@@ -41,7 +41,7 @@ MonoBehaviour:
     DirLightIntensity: 1
     DirLightColor: {r: 1, g: 1, b: 1, a: 0}
   - Name: Stormy ocean
-    Storm: 1
+    Storm: 0.9
     Foam: 0.04
     Transparency: 3
     Cubemap: {fileID: 2100000, guid: 2039a0ad0a9d05549928b70362f54902, type: 2}

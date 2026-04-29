@@ -160,7 +160,7 @@ namespace Ocean_Demo.Scripts
                 float k, speed, steepness = _WaveDirs[i].w;
                 GetWaveParams(_WaveDirs[i].z, out k, out speed);
 
-                float a = Mathf.Acos(_WaveDirs[i].x % 1);
+                float a = _WaveDirs[i].x * Mathf.PI * 2;
                 float x = Mathf.Cos(a);
                 float y = Mathf.Sin(a);
                 Vector2 dir = (new Vector2(x, y)).normalized;
@@ -179,7 +179,7 @@ namespace Ocean_Demo.Scripts
                 float k, speed, steepness = _WaveDirs[i].w;
                 GetWaveParams(_WaveDirs[i].z, out k, out speed);
 
-                float a = Mathf.Acos(_WaveDirs[i].x % 1);
+                float a = _WaveDirs[i].x * Mathf.PI * 2;
                 float x = Mathf.Cos(a);
                 float y = Mathf.Sin(a);
                 Vector2 dir = new Vector2(x, y).normalized;

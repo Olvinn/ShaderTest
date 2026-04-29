@@ -163,7 +163,7 @@ Shader "Custom/GerstnerOcean"
 
                 Light mainLight = GetMainLight(shadowCoord);
 
-                half fakeThickness = saturate((i.positionWS.y * .1 +  jacobianCoeff * .1) * 5);
+                half fakeThickness = saturate((i.positionWS.y * .01 +  jacobianCoeff));
                 float3 sss = GO_GetScattering(normal, mainLight, viewDir, fakeThickness);
                 
                 float fresnel = H_FresnelSchlickWater(viewDir, normal);
@@ -173,7 +173,7 @@ Shader "Custom/GerstnerOcean"
                 float3 refractionDir = refract(viewDir, -normal, 1.01);
                 cubemapReflection.rgb = CubemapAmbient(redlectionDir, 0);
                 
-                half d = dot(mainLight.direction, normal) * 0.5 + 0.5;
+                half d = saturate(dot(mainLight.direction, normal));
                 float4 color = 1;
                 color.rgb = d * _Color * mainLight.color * min(0.75, mainLight.shadowAttenuation);
                 
@@ -181,10 +181,10 @@ Shader "Custom/GerstnerOcean"
                     mainLight.color * mainLight.shadowAttenuation;
                 
                 half foamAmount = saturate(jacobianCoeff - _FoamAmount) * _FoamStrength;
-                float3 foamColor = d;
+                float3 foamColor = d * mainLight.color * max(0.25, mainLight.shadowAttenuation);
                 half foamMask = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.uv * _FoamTexture_ST.xy + _FoamTexture_ST.zw);
                 //foamMask = max(foamMask, SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.positionWS.xz * .5 + _FoamTexture_ST.xy * _Time.y * .01));
-                foamAmount = (foamAmount + foamMask) - 1;
+                foamAmount = foamAmount * (foamMask - .5) * 2;
                 specular *= 1 - foamAmount;
                 
                 #ifdef SSR

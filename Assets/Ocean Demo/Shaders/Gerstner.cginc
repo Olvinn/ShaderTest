@@ -50,7 +50,7 @@ float3 GetGerstnerOffset(float2 worldXZ, float time, float4 _WaveDirs[MAX_WAVES]
     {
         float k, speed, steepness = _WaveDirs[i].w;
         GetWaveParams(_WaveDirs[i].z, k, speed);
-        float a = acos(_WaveDirs[i].x % 1);
+        float a = _WaveDirs[i].x * TWO_PI;
         float x = cos(a);
         float y = sin(a);
         float2 dir = normalize(float2(x, y));
@@ -74,7 +74,7 @@ void G_GetNormalLaplacian(float2 worldXZ, float time, int count,
     {
         float k, speed, steepness = _WaveDirs[i].w;
         GetWaveParams(_WaveDirs[i].z, k, speed);
-        float a = acos(_WaveDirs[i].x % 1);
+        float a = _WaveDirs[i].x * TWO_PI;
         float x = cos(a);
         float y = sin(a);
         float2 dir = normalize(float2(x, y));
