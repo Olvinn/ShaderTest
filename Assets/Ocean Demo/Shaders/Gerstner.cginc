@@ -23,8 +23,8 @@ float3 GerstnerWave(float2 pos, float2 dir, float k, float amp,
 
 void GerstnerWaveNormal(float2 pos, float2 dir, float k, float amp,
                         float steepness, float speed, float time,
-                        inout float3 normal, inout float laplacian)
-{
+                        inout float3 normal, inout float2x2 J)
+{    
     float phase = k * dot(dir, pos) - speed * time;
     float sinP  = sin(phase);
     float cosP  = cos(phase);
@@ -32,8 +32,13 @@ void GerstnerWaveNormal(float2 pos, float2 dir, float k, float amp,
     normal.x += -dir.x * k * amp * cosP;
     normal.y -= steepness * amp * k * sinP;
     normal.z += -dir.y * k * amp * cosP;
+    
+    float common = -steepness * amp * k * sinP;
 
-    laplacian += amp * k * sinP * (1.0 - steepness * amp * k * sinP);
+    J[0][0] += common * dir.x * dir.x; // dX'/dx
+    J[0][1] += common * dir.x * dir.y; // dX'/dz
+    J[1][0] += common * dir.y * dir.x; // dZ'/dx
+    J[1][1] += common * dir.y * dir.y; // dZ'/dz
 }
 
 float3 GetGerstnerOffset(float2 worldXZ, float time, float4 _WaveDirs[MAX_WAVES],
@@ -55,12 +60,16 @@ float3 GetGerstnerOffset(float2 worldXZ, float time, float4 _WaveDirs[MAX_WAVES]
     return offset;
 }
 
-void GetGerstnerNormalLaplacian(float2 worldXZ, float time, int count,
+void G_GetNormalLaplacian(float2 worldXZ, float time, int count,
                                 float4 _WaveDirs[MAX_WAVES],
-                                inout float3 normal, out float laplacian)
-{
-    laplacian = 0.0;              
-
+                                inout float3 normal, out float jacobianCoeff)
+{   
+    float2x2 J = float2x2(
+        1.0, 0.0,
+        0.0, 1.0
+    );
+    
+    [loop]
     for (int i = 0; i < count; i++)
     {
         float k, speed, steepness = _WaveDirs[i].w;
@@ -70,7 +79,10 @@ void GetGerstnerNormalLaplacian(float2 worldXZ, float time, int count,
         float y = sin(a);
         float2 dir = normalize(float2(x, y));
         GerstnerWaveNormal(worldXZ, dir, k, _WaveDirs[i].y, steepness, speed, time,
-                           normal, laplacian);
+                           normal, J);
     }
+    
     normal = normalize(normal);
+    float det = J[0][0] * J[1][1] - J[0][1] * J[1][0];
+    jacobianCoeff = saturate(1.0 - det);
 }

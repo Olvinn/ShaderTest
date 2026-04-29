@@ -3,7 +3,7 @@
 
 #define SSR_MAX_STEPS 64
 
-float FresnelSchlickWater(float3 viewDir, float3 normal)
+float H_FresnelSchlickWater(float3 viewDir, float3 normal)
 {
     const float R0 = 0.02;
     float cosTheta = saturate(abs(dot(-viewDir, normal)));
@@ -37,7 +37,7 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
     return ggx1 * ggx2;
 }
 
-float PBRSpecular(
+float H_PBRSpecular(
     float3 normal,          
     float3 viewDir,         
     float3 lightDir,         
@@ -50,7 +50,7 @@ float PBRSpecular(
     float3 F0 = lerp(float3(0.04, 0.04, 0.04), albedo, metallic);
 
     float D =  DistributionGGX(normal, H, roughness);
-    float3 F = FresnelSchlickWater(saturate(dot(normal, viewDir)), F0);
+    float3 F = H_FresnelSchlickWater(saturate(dot(normal, viewDir)), F0);
     float G = GeometrySmith(normal, viewDir, lightDir, roughness);
 
     float NdotL =  max(dot(normal, lightDir), 0.0);

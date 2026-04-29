@@ -106,60 +106,88 @@ Shader "Custom/GerstnerOcean"
                 
                 return OUT;
             }
+            
+            float3 GO_ReadDetailsNormal(float2 uv)
+            {
+                uv += 0.5; 
+                float4 local = SAMPLE_TEXTURE2D(_LocalWaterDetails, sampler_LocalWaterDetails, uv);
+                return normalize(float3(-local.r, 1.0, -local.g));
+            }
+            
+            float GO_HenyeyGreenstein(float cosTheta, float g)
+            {
+                float g2 = g * g;
+                float denom = 1.0 + g2 - 2.0 * g * cosTheta;
+                return (1.0 - g2) / (4.0 * PI * pow(denom, 1.5));
+            }
+            
+            half3 GO_GetScattering(float3 normal, Light mainLight, float3 viewDir, float depth)
+            {
+                float cosTheta = dot(mainLight.direction, viewDir);
+                float phase = GO_HenyeyGreenstein(cosTheta, .5);
+                float3 sigmaA = _SSSColor; // color loss
+                float3 sigmaS = float3(0.02, 0.05, 0.08); // scattered light
+                float3 sigmaT = sigmaA + sigmaS;
+                
+                float NdotL = abs(dot(normal, mainLight.direction));
+                float NdotV = abs(dot(normal, viewDir));
+
+                float rawDepth = saturate(depth * 2);
+                float lightPath = rawDepth / max(NdotL, 0.1);
+                float viewPath  = rawDepth / max(NdotV, 0.1);
+
+                float opticalDepth = min(lightPath + viewPath, 8);
+
+                depth = opticalDepth;
+                float3 T = exp(-sigmaT * depth);
+                float3 singleScatter = mainLight.color.rgb * sigmaS * phase * (1.0 - T) / max(sigmaT, 0.0001);
+
+                return singleScatter * .8;
+            }
 
             half4 frag(Varyings i) : SV_Target
             {                
-                float2 localUV = (i.positionWS.xz - _MapCenterWS.xz) / _MapSizeWS.xz;
-                localUV += 0.5; 
-                float4 local = SAMPLE_TEXTURE2D(_LocalWaterDetails, sampler_LocalWaterDetails, localUV);
-
-                float3 nLocal = normalize(float3(-local.r, 1.0, -local.g));
+                float3 normal = GO_ReadDetailsNormal((i.positionWS.xz - _MapCenterWS.xz) / _MapSizeWS.xz);
+                float jacobianCoeff = 0;
                 
-                float3 normal = nLocal;
-                float laplacian = 0;
+                G_GetNormalLaplacian(i.initialWS.xz, _Time.y, _MaxWaves, _WaveDirs, normal, jacobianCoeff);
                 
-                GetGerstnerNormalLaplacian(i.initialWS.xz, _Time.y, _MaxWaves, _WaveDirs, normal, laplacian);
+                float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos); 
                 
-                float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos);  
-                
+                float4 shadowCoord;
                 #ifdef _MAIN_LIGHT_SHADOWS_SCREEN
-                    float4 shadowCoord = ComputeScreenPos(i.positionCS);
+                    shadowCoord = ComputeScreenPos(i.positionCS);
                 #else
-                    float4 shadowCoord = TransformWorldToShadowCoord(i.positionWS);
+                    shadowCoord = TransformWorldToShadowCoord(i.positionWS);
                 #endif
 
                 Light mainLight = GetMainLight(shadowCoord);
 
-                half ndotl = saturate(dot(normal, mainLight.direction));
-                half backSSS = saturate(dot(normal, -mainLight.direction)) * 0.4; 
-                half wrap = ndotl * 0.5 + 0.5; 
-                half transmission = pow(1.0 - saturate(dot(normal, viewDir)), 3.0);
+                half fakeThickness = saturate((i.positionWS.y + 1) * clamp(jacobianCoeff, 0, 1));
+                float3 sss = GO_GetScattering(normal, mainLight, viewDir, fakeThickness);
                 
-                float fresnel = FresnelSchlickWater(viewDir, normal);
+                float fresnel = H_FresnelSchlickWater(viewDir, normal);
                 
-                float4 skyColor = 1;
+                float4 cubemapReflection = 1;
                 float3 redlectionDir = reflect(viewDir, normal);
-                float3 refractionDir = refract(viewDir, -normal, .75);
-                skyColor.rgb = CubemapAmbient(redlectionDir, 0);
-                //skyColor.rgb = lerp(skyColor.rgb, CubemapAmbient(-viewDir, normal, 0), 1 - fresnel);
-
-                float3 sss = backSSS * transmission * wrap * _SSSColor * mainLight.color;
+                float3 refractionDir = refract(viewDir, -normal, 1.01);
+                cubemapReflection.rgb = CubemapAmbient(redlectionDir, 0);
                 
                 half d = dot(mainLight.direction, normal) * 0.5 + 0.5;
                 float4 color = 1;
-                color.rgb = d * _Color * mainLight.color;
+                color.rgb = d * _Color * mainLight.color * min(0.75, mainLight.shadowAttenuation);
                 
-                float3 specular = PBRSpecular(normal, -viewDir, mainLight.direction, _Color, _Metallic, _Roughness) * 
+                float3 specular = H_PBRSpecular(normal, -viewDir, mainLight.direction, _Color, _Metallic, _Roughness) * 
                     mainLight.color * mainLight.shadowAttenuation;
                 
-                half foamAmount = saturate(smoothstep(0,1,laplacian) - _FoamAmount) * _FoamStrength;
+                half foamAmount = saturate(jacobianCoeff - _FoamAmount) * _FoamStrength;
                 float3 foamColor = d + sss;
                 foamAmount = saturate(SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.uv * _FoamTexture_ST.xy + _FoamTexture_ST.zw).r * foamAmount);
                 specular *= 1 - foamAmount;
                 
                 #ifdef SSR
                 bool ssrHit = false;
-                float3 ssrColor = RaymarchSSR_ViewSpace(
+                float3 ssrReflection = RaymarchSSR_ViewSpace(
                     i.positionWS,
                     normal,
                     _SSRSteps,
@@ -174,9 +202,8 @@ Shader "Custom/GerstnerOcean"
                 );
 
                 half blend = ssrHit ? 1.0 : 0.0;
-                skyColor.rgb = lerp(skyColor, ssrColor, blend);
+                cubemapReflection.rgb = lerp(cubemapReflection, ssrReflection, blend);
                 #endif
-                  
                 
                 float2 underUV = i.positionSS / max(i.positionCS.w, 1e-6) + normal.xz * .07;
                 
@@ -192,7 +219,7 @@ Shader "Custom/GerstnerOcean"
                 if (dot(-viewDir, normal) > 0)
                     underColor = saturate(GetDepthTint(i.positionWS, underWS, underColor, _SSSColor, color, _Transparency));
                 
-                color.rgb += lerp(underColor, skyColor, fresnel);
+                color.rgb += lerp(underColor, cubemapReflection, fresnel);
                 color.rgb += sss;
                 //color.rgb = lerp(underColor, color, fresnel);
                 //color.rgb = color + skyColor * fresnel;

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace Ocean_Demo.Scripts
 {
@@ -140,6 +141,9 @@ namespace Ocean_Demo.Scripts
                 new Vector4( 0.75f, 0.02f,  1.8f, 1),
                 new Vector4(-0.90f, 0.02f,  1.6f, 1),
             };
+
+            for (int i = 0; i < waveDirections.Length; i++)
+                waveDirections[i].x = Random.value * .5f + .5f;
             
             InitLocalDetailsTargets();
             InitCompute();
@@ -151,9 +155,8 @@ namespace Ocean_Demo.Scripts
             if (Settings.Instance != null)
                 Settings.Instance.onSettingsChanged += OnSettingsChanged;
 
-            var mat = oceanMaterials[0];
-
             BindLocalDetailsToMaterials();
+            UpdateWaves();
         }
 
         private void Update()
@@ -226,10 +229,10 @@ namespace Ocean_Demo.Scripts
         {
             waveDirectionsReady = new Vector4[waveDirections.Length];
             for (int i = 0; i < waveDirections.Length; i++)
-                waveDirectionsReady[i] = LerpWave(i);
+                waveDirectionsReady[i] = ScaleWave(i);
         }
 
-        private Vector4 LerpWave(int i)
+        private Vector4 ScaleWave(int i)
         {
             switch (i)
             {
@@ -262,7 +265,7 @@ namespace Ocean_Demo.Scripts
             foreach (var mat in oceanMaterials)
             {
                 mat.SetVectorArray("_WaveDirs", waves);
-                mat.SetFloat("_FoamAmount", _foam);
+                //mat.SetFloat("_FoamAmount", _foam);
                 mat.SetFloat("_Transparency", _transparency);
                 mat.SetVector("_MapCenterWS", new Vector4(LocalMapCenterWS.x, 0, LocalMapCenterWS.y, 0));
                 mat.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));
