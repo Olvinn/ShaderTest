@@ -183,7 +183,7 @@ Shader "Custom/GerstnerOcean"
                 half foamAmount = saturate(jacobianCoeff - _FoamAmount) * _FoamStrength;
                 float3 foamColor = d;
                 half foamMask = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.uv * _FoamTexture_ST.xy + _FoamTexture_ST.zw).r;
-                foamMask += SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.uv * _FoamTexture_ST.xy * 2 + _FoamTexture_ST.zw).r;
+                foamMask *= SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.uv * _FoamTexture_ST.xy * .5 + float2(.05,.05) * _Time.y).r;
                 foamMask *= .5;
                 foamAmount = (foamAmount + foamMask) - 1;
                 specular *= 1 - foamAmount;
