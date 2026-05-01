@@ -50,8 +50,8 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _FoamTexture:
-        m_Texture: {fileID: 2800000, guid: f95c1d3b47815e64dbc6358876741e92, type: 3}
-        m_Scale: {x: 30, y: 20}
+        m_Texture: {fileID: 2800000, guid: b58daac2a7f67d94f83649cfc20ff14e, type: 3}
+        m_Scale: {x: 0.1, y: 0.1}
         m_Offset: {x: 0, y: 0}
     - _LocalWaterDetails:
         m_Texture: {fileID: 0}
@@ -98,8 +98,8 @@ Material:
     - _Displacement: 1
     - _DstBlend: 0
     - _EdgeLength: 20
-    - _FoamAmount: 0
-    - _FoamStrength: 3
+    - _FoamAmount: 0.05
+    - _FoamStrength: 1
     - _Fresnel: 0.03
     - _GlossMapScale: 1
     - _Glossiness: 0.5

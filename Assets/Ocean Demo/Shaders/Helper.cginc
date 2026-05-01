@@ -76,7 +76,7 @@ inline float SSR_SampleRawDepth(Texture2D depthTex, SamplerState samp, float2 uv
     return SAMPLE_DEPTH_TEXTURE(depthTex, samp, uv);
 }
 
-float3 RaymarchSSR_ViewSpace(
+float3 H_RaymarchSSR_ViewSpace(
     float3 originWS,
     float3 normalWS,
     int    steps,

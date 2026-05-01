@@ -164,7 +164,7 @@ Shader "Custom/GerstnerOcean"
                 Light mainLight = GetMainLight(shadowCoord);
 
                 half fakeThickness = saturate((i.positionWS.y * .01 +  jacobianCoeff));
-                float3 sss = GO_GetScattering(normal, mainLight, viewDir, fakeThickness);
+                half3 sss = GO_GetScattering(normal, mainLight, viewDir, fakeThickness);
                 
                 float fresnel = H_FresnelSchlickWater(viewDir, normal);
                 
@@ -174,22 +174,23 @@ Shader "Custom/GerstnerOcean"
                 cubemapReflection.rgb = CubemapAmbient(redlectionDir, 0);
                 
                 half d = saturate(dot(mainLight.direction, normal));
-                float4 color = 1;
-                color.rgb = d * _Color * mainLight.color * min(0.75, mainLight.shadowAttenuation);
+                half4 color = 1;
                 
-                float3 specular = H_PBRSpecular(normal, -viewDir, mainLight.direction, _Color, _Metallic, _Roughness) * 
+                half3 specular = H_PBRSpecular(normal, -viewDir, mainLight.direction, _Color, _Metallic, _Roughness) * 
                     mainLight.color * mainLight.shadowAttenuation;
                 
                 half foamAmount = saturate(jacobianCoeff - _FoamAmount) * _FoamStrength;
-                float3 foamColor = d * mainLight.color * max(0.25, mainLight.shadowAttenuation);
-                half foamMask = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.uv * _FoamTexture_ST.xy + _FoamTexture_ST.zw);
-                //foamMask = max(foamMask, SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.positionWS.xz * .5 + _FoamTexture_ST.xy * _Time.y * .01));
-                foamAmount = foamAmount * (foamMask - .5) * 2;
+                half3 foamColor = 1;
+                half foamMask = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.positionWS.xz * _FoamTexture_ST.xy + _FoamTexture_ST.zw);
+                foamAmount = saturate(foamAmount + foamMask - .9);
+                
+                color.rgb = lerp(_Color, foamColor, foamAmount);
+                color.rgb = color * d * mainLight.color * min(.75, mainLight.shadowAttenuation);
                 specular *= 1 - foamAmount;
                 
                 #ifdef SSR
                 bool ssrHit = false;
-                float3 ssrReflection = RaymarchSSR_ViewSpace(
+                half3 ssrReflection = H_RaymarchSSR_ViewSpace(
                     i.positionWS,
                     normal,
                     _SSRSteps,
@@ -221,11 +222,9 @@ Shader "Custom/GerstnerOcean"
                 if (dot(-viewDir, normal) > 0)
                     underColor = saturate(GetDepthTint(i.positionWS, underWS, underColor, 1 - _SSSColor, color, _Transparency));
                 
-                color.rgb += lerp(underColor, cubemapReflection, fresnel);
-                color.rgb += sss;
-                //color.rgb = lerp(underColor, color, fresnel);
-                //color.rgb = color + skyColor * fresnel;
-                color.rgb = lerp(color, foamColor, saturate(foamAmount));
+                color.rgb += lerp(underColor,  color.rgb, fresnel) * (1 - foamAmount);
+                color.rgb += cubemapReflection * fresnel * (1 - foamAmount);
+                color.rgb += sss * (1 - foamAmount);
                 
                 half3 finalColor = color + specular;
                 finalColor = MixFog(finalColor, i.fog);
