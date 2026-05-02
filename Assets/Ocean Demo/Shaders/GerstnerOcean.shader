@@ -2,6 +2,8 @@ Shader "Custom/GerstnerOcean"
 {
     Properties
     {
+        _Noise ("Noise", 2D) = "white" {}
+        
         _Color ("Color", Color) = (0, 0.5, 1, 1)
         _SSSColor ("SSS Color", Color) = (0, 0.5, 1, 1)
         _Transparency ("Transparency", Range(0, 1000)) = 0
@@ -49,15 +51,15 @@ Shader "Custom/GerstnerOcean"
             half FoamStrength, _FoamAmount, _FoamStrength, _Transparency;
             half _Metallic, _Roughness;
             int _MaxWaves;
+            float4 _MapCenterWS;  
+            float4 _MapSizeWS;
             CBUFFER_END
 
             TEXTURE2D_X(_FoamTexture);              SAMPLER(sampler_FoamTexture);
             TEXTURE2D_X(_LocalWaterDetails);        SAMPLER(sampler_LocalWaterDetails);
             TEXTURE2D_X(_CameraOpaqueTexture);      SAMPLER(sampler_CameraOpaqueTexture);
             TEXTURE2D_X_FLOAT(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
-            
-            float4 _MapCenterWS;  
-            float4 _MapSizeWS;
+            TEXTURE2D_X_FLOAT(_Noise);              SAMPLER(sampler_Noise);
             
             #ifdef SSR
             half _SSRThickness, _SSRStepSize, _StepPropagation;
@@ -150,7 +152,10 @@ Shader "Custom/GerstnerOcean"
                 float3 normal = GO_ReadDetailsNormal((i.positionWS.xz - _MapCenterWS.xz) / _MapSizeWS.xz);
                 float jacobianCoeff = 0;
                 
-                G_GetNormalLaplacian(i.initialWS.xz, _Time.y, _MaxWaves, _WaveDirs, normal, jacobianCoeff);
+                half noise = smoothstep(0,1,SAMPLE_TEXTURE2D(_Noise, sampler_Noise, (i.positionWS.xz + _Time.y * 5) * .001));
+               // return half4(noise, noise, noise, 1);
+                
+                G_GetNormalLaplacian(i.initialWS.xz, _Time.y, _MaxWaves, _WaveDirs, normal, jacobianCoeff, noise);
                 
                 float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos); 
                 
@@ -174,19 +179,15 @@ Shader "Custom/GerstnerOcean"
                 cubemapReflection.rgb = CubemapAmbient(redlectionDir, 0);
                 
                 half d = saturate(dot(mainLight.direction, normal));
-                half4 color = 1;
+                half3 color = 0;
                 
                 half3 specular = H_PBRSpecular(normal, -viewDir, mainLight.direction, _Color, _Metallic, _Roughness) * 
                     mainLight.color * mainLight.shadowAttenuation;
                 
                 half foamAmount = saturate(jacobianCoeff - _FoamAmount) * _FoamStrength;
-                half3 foamColor = 1;
+                half3 foamColor = half3(1,1,1);
                 half foamMask = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture, i.positionWS.xz * _FoamTexture_ST.xy + _FoamTexture_ST.zw);
-                foamAmount = saturate(foamAmount + foamMask - .9);
-                
-                color.rgb = lerp(_Color, foamColor, foamAmount);
-                color.rgb = color * d * mainLight.color * min(.75, mainLight.shadowAttenuation);
-                specular *= 1 - foamAmount;
+                foamAmount = foamAmount * foamMask;
                 
                 #ifdef SSR
                 bool ssrHit = false;
@@ -220,11 +221,14 @@ Shader "Custom/GerstnerOcean"
                 half3 underColor = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, underUV).rgb;
                 underColor = lerp(underColor, CubemapAmbient(refractionDir, 0), isSky);
                 if (dot(-viewDir, normal) > 0)
-                    underColor = saturate(GetDepthTint(i.positionWS, underWS, underColor, 1 - _SSSColor, color, _Transparency));
+                    underColor = saturate(GetDepthTint(i.positionWS, underWS, underColor, 1 - _SSSColor, _Color, _Transparency));
                 
-                color.rgb += lerp(underColor,  color.rgb, fresnel) * (1 - foamAmount);
-                color.rgb += cubemapReflection * fresnel * (1 - foamAmount);
-                color.rgb += sss * (1 - foamAmount);
+                color = lerp(underColor,  color, fresnel) * (1 - foamAmount);
+                color = lerp(color.rgb, foamColor, foamAmount);
+                color = color * d * mainLight.color * max(.5, mainLight.shadowAttenuation);
+                specular *= 1 - foamAmount;
+                color += cubemapReflection * fresnel * (1 - foamAmount);
+                color += sss;
                 
                 half3 finalColor = color + specular;
                 finalColor = MixFog(finalColor, i.fog);

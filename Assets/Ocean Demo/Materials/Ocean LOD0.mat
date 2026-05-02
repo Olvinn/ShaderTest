@@ -98,8 +98,8 @@ Material:
     - _Displacement: 1
     - _DstBlend: 0
     - _EdgeLength: 20
-    - _FoamAmount: 0.05
-    - _FoamStrength: 1
+    - _FoamAmount: 0
+    - _FoamStrength: 5
     - _Fresnel: 0.03
     - _GlossMapScale: 1
     - _Glossiness: 0.5
