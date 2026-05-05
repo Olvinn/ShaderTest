@@ -211,7 +211,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _showGizmos: 0
-  _detalization: 4
+  _detalization: 32
   _size: 100
   _meshFilter: {fileID: 8505840171936079024}
 --- !u!1 &3439342945834868959
@@ -318,7 +318,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _showGizmos: 0
-  _detalization: 8
+  _detalization: 64
   _size: 100
   _meshFilter: {fileID: 5861870969620722490}
 --- !u!1 &6413592935630730212
@@ -375,7 +375,7 @@ LODGroup:
     fadeTransitionWidth: 0.25
     renderers:
     - renderer: {fileID: 8340242655895501134}
-  - screenRelativeHeight: 0.8
+  - screenRelativeHeight: 0.95
     fadeTransitionWidth: 1
     renderers:
     - renderer: {fileID: 643513889315536821}
@@ -492,6 +492,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _showGizmos: 0
-  _detalization: 2
+  _detalization: 16
   _size: 100
   _meshFilter: {fileID: 2477864231445435759}

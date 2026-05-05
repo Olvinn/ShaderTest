@@ -98,7 +98,7 @@ Material:
     - _Displacement: 1
     - _DstBlend: 0
     - _EdgeLength: 20
-    - _FoamAmount: 0
+    - _FoamAmount: 0.1
     - _FoamStrength: 5
     - _Fresnel: 0.03
     - _GlossMapScale: 1
@@ -116,7 +116,7 @@ Material:
     - _Roughness: 0.1
     - _SSRStepSize: 0.02
     - _SSRSteps: 32
-    - _SSRThickness: 0.1
+    - _SSRThickness: 0.5
     - _SmoothnessTextureChannel: 0
     - _Specular: 32
     - _SpecularHighlights: 1
@@ -140,7 +140,7 @@ Material:
     m_Colors:
     - _Color: {r: 0, g: 0.02793434, b: 0.1792453, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _SSSColor: {r: 0.5957988, g: 0.09803921, b: 0.8784314, a: 1}
+    - _SSSColor: {r: 0.6581524, g: 0.9622642, b: 0.93548197, a: 1}
     - _SpecColor: {r: 0.46226418, g: 0.46226418, b: 0.46226418, a: 0.5}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

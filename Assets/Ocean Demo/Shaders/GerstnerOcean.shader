@@ -6,7 +6,7 @@ Shader "Custom/GerstnerOcean"
         
         _Color ("Color", Color) = (0, 0.5, 1, 1)
         _SSSColor ("SSS Color", Color) = (0, 0.5, 1, 1)
-        _Transparency ("Transparency", Range(0, 1000)) = 0
+        _Transparency ("Transparency", Range(0, 1)) = 0
         
         _MaxWaves ("Max Waves", Range(1, 64)) = 64
         
@@ -127,7 +127,7 @@ Shader "Custom/GerstnerOcean"
             {
                 float cosTheta = dot(mainLight.direction, viewDir);
                 float phase = GO_HenyeyGreenstein(cosTheta, .5);
-                float3 sigmaA = _SSSColor; // color loss
+                float3 sigmaA = 1 - _SSSColor; // color loss
                 float3 sigmaS = float3(0.02, 0.05, 0.08); // scattered light
                 float3 sigmaT = sigmaA + sigmaS;
                 
@@ -152,10 +152,10 @@ Shader "Custom/GerstnerOcean"
                 float3 normal = GO_ReadDetailsNormal((i.positionWS.xz - _MapCenterWS.xz) / _MapSizeWS.xz);
                 float jacobianCoeff = 0;
                 
-                half noise = smoothstep(0,1,SAMPLE_TEXTURE2D(_Noise, sampler_Noise, (i.positionWS.xz + _Time.y * 5) * .001));
-               // return half4(noise, noise, noise, 1);
+                //half noise = smoothstep(0,1,SAMPLE_TEXTURE2D(_Noise, sampler_Noise, (i.positionWS.xz + _Time.y * 5) * .001));
+                //return half4(noise, noise, noise, 1);
                 
-                G_GetNormalJacobian(i.initialWS.xz, _Time.y, _MaxWaves, _WaveDirs, normal, jacobianCoeff, noise);
+                G_GetNormalJacobian(i.initialWS.xz, _Time.y, _MaxWaves, _WaveDirs, normal, jacobianCoeff);
                 
                 float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos); 
                 
@@ -190,40 +190,58 @@ Shader "Custom/GerstnerOcean"
                 foamAmount = foamAmount * foamMask;
                 
                 #ifdef SSR
-                bool ssrHit = false;
-                half3 ssrReflection = H_RaymarchSSR_ViewSpace(
-                    i.positionWS,
-                    normal,
-                    _SSRSteps,
-                    _SSRStepSize,
-                    _SSRThickness,
-                    _StepPropagation,
-                    _CameraOpaqueTexture,
-                    sampler_CameraOpaqueTexture,
-                    _CameraDepthTexture,
-                    sampler_CameraDepthTexture,
-                    ssrHit
-                );
+                    bool ssrHit = false;
+                    half3 ssrReflection = H_RaymarchSS_Reflection(
+                        i.positionWS,
+                        normal,
+                        _SSRSteps,
+                        _SSRStepSize,
+                        _SSRThickness,
+                        _StepPropagation,
+                        _CameraOpaqueTexture,
+                        sampler_CameraOpaqueTexture,
+                        _CameraDepthTexture,
+                        sampler_CameraDepthTexture,
+                        ssrHit
+                    );
 
-                half blend = ssrHit ? 1.0 : 0.0;
-                cubemapReflection.rgb = lerp(cubemapReflection, ssrReflection, blend);
-                #endif
-                
-                float2 underUV = i.positionSS / max(i.positionCS.w, 1e-6) + normal.xz * .07;
-                
-                half depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, sampler_CameraDepthTexture, underUV);     
-                #if UNITY_REVERSED_Z
-                    bool isSky = depth < 0.0001;
+                    half blend = ssrHit ? 1.0 : 0.0;
+                    cubemapReflection.rgb = lerp(cubemapReflection, ssrReflection, blend);
+                    
+                    half depth;
+                    half3 ssrRefraction = H_RaymarchSS_Refraction(
+                        i.positionWS,
+                        normal,
+                        _SSRSteps,
+                        _SSRStepSize,
+                        _SSRThickness,
+                        _StepPropagation,
+                        _CameraOpaqueTexture,
+                        sampler_CameraOpaqueTexture,
+                        _CameraDepthTexture,
+                        sampler_CameraDepthTexture,
+                        ssrHit,
+                        _Color,
+                        _SSSColor
+                    );
+                    blend = ssrHit ? 1 : 0;
+                    ssrRefraction = lerp(_Color, ssrRefraction, blend);
                 #else
-                    bool isSky = depth > 0.9999;
+                    float2 underUV = i.positionSS / max(i.positionCS.w, 1e-6) + normal.xz * .07;
+                    half depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, sampler_CameraDepthTexture, underUV);     
+                    #if UNITY_REVERSED_Z
+                        bool isSky = depth < 0.0001;
+                    #else
+                        bool isSky = depth > 0.9999;
+                    #endif
+                    float3 underWS = ComputeWorldSpacePosition(underUV, depth, UNITY_MATRIX_I_VP);
+                    half3 ssrRefraction = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, underUV).rgb;
+                    ssrRefraction = lerp(ssrRefraction, CubemapAmbient(refractionDir, 0), isSky);
+                    if (dot(-viewDir, normal) > 0)
+                        ssrRefraction = saturate(GetDepthTint(i.positionWS, underWS, ssrRefraction, _SSSColor, _Color, _Transparency));
                 #endif
-                float3 underWS = ComputeWorldSpacePosition(underUV, depth, UNITY_MATRIX_I_VP);
-                half3 underColor = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, underUV).rgb;
-                underColor = lerp(underColor, CubemapAmbient(refractionDir, 0), isSky);
-                if (dot(-viewDir, normal) > 0)
-                    underColor = saturate(GetDepthTint(i.positionWS, underWS, underColor, 1 - _SSSColor, _Color, _Transparency));
                 
-                color = lerp(underColor,  color, fresnel) * (1 - foamAmount);
+                color = lerp(ssrRefraction, color, fresnel) * (1 - foamAmount);
                 color = lerp(color.rgb, foamColor, foamAmount);
                 color = color * d * mainLight.color * max(.5, mainLight.shadowAttenuation);
                 specular *= 1 - foamAmount;

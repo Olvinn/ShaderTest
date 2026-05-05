@@ -76,7 +76,7 @@ inline float SSR_SampleRawDepth(Texture2D depthTex, SamplerState samp, float2 uv
     return SAMPLE_DEPTH_TEXTURE(depthTex, samp, uv);
 }
 
-float3 H_RaymarchSSR_ViewSpace(
+float3 H_RaymarchSS_Reflection(
     float3 originWS,
     float3 normalWS,
     int    steps,
@@ -92,19 +92,16 @@ float3 H_RaymarchSSR_ViewSpace(
     hit = false;
     if (steps <= 0) return 0;
 
-    // View-space setup
     float3 originVS = mul(UNITY_MATRIX_V, float4(originWS, 1.0)).xyz;
     float3 viewDirVS = normalize(originVS);                               // towards camera
     float3 normalVS  = normalize(mul((float3x3)UNITY_MATRIX_V, normalWS)); // rotate normal to VS
     float3 reflDirVS = normalize(reflect(viewDirVS, normalVS));            // reflection dir in VS
 
-    // Nudge off the surface a tiny bit to avoid self-intersection
-    float  t = 1e-3; // meters
+    float  t = 1e-3;
     float3 currVS = originVS + reflDirVS * t;
 
     int maxSteps = min(max(1, steps), SSR_MAX_STEPS);
 
-    // Initialize previous dz at the starting point
     float2 uv = SSR_ProjectVSPosToUV(currVS);
     if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) return 0;
 
@@ -115,11 +112,9 @@ float3 H_RaymarchSSR_ViewSpace(
     float currLinearZ0  = -currVS.z;                 // Unity VS: in front => negative z
     float prevDz = currLinearZ0 - sceneLinearZ0;     // <0 means ray point is in front of scene
 
-    // March
     [loop]
     for (int i = 0; i < maxSteps; ++i)
     {
-        // Depth-aware step so density is ~constant in screen space
         float depthScale = max(1.0, abs(currVS.z));
         float thisStep   = stepSize * depthScale * (stepPropagation * i);
 
@@ -134,17 +129,16 @@ float3 H_RaymarchSSR_ViewSpace(
 
         float sceneLinearZ = LinearEyeDepth(rawDepth, _ZBufferParams);
         float currLinearZ  = -currVS.z;
-        float dz           = currLinearZ - sceneLinearZ; // crossing when prevDz < 0 && dz >= 0
+        float dz           = currLinearZ - sceneLinearZ; 
 
         if (dz >= 0 && prevDz < 0)
         {
-            // --- refine the hit with a small binary search along the last segment ---
             float tLo = t - thisStep;
             float tHi = t;
             float bestT = tHi;
 
             [unroll(6)]
-            for (int it = 0; it < 6; ++it)
+            for (int i = 0; i < 6; ++i)
             {
                 float tMid = 0.5 * (tLo + tHi);
                 float3 vsMid = originVS + reflDirVS * tMid;
@@ -168,11 +162,139 @@ float3 H_RaymarchSSR_ViewSpace(
             float sceneHit = LinearEyeDepth(rawHit, _ZBufferParams);
             float currHit  = -vsHit.z;
 
-            // Final thickness test in meters (view space)
             if (abs(currHit - sceneHit) <= thickness)
             {
                 hit = true;
                 return SAMPLE_TEXTURE2D(opaque, sampler_opaque, uvHit).rgb;
+            }
+        }
+
+        prevDz = dz;
+    }
+
+    return 0;
+}
+            
+inline half3 Screen(half3 a, half3 b, half t)
+{
+    half3 s = 1.0h - (1.0h - a) * (1.0h - b);
+    return lerp(a, s, t);
+}
+
+inline half3 Overlay(half3 a, half3 b, half t)
+{
+    half3 low  = 2.0h * a * b;
+    half3 high = 1.0h - 2.0h * (1.0h - a) * (1.0h - b);
+    half3 zeroOrOne = step(a, 0.5);
+    half3 o = low * zeroOrOne + (1 - zeroOrOne) * high;
+    return lerp(a, o, t);
+}
+
+float3 H_RaymarchSS_Refraction(
+    float3 originWS,
+    float3 normalWS,
+    int    steps,
+    float  stepSize,
+    float  thickness,
+    float  stepPropagation,
+    Texture2D opaqueTex,
+    SamplerState sampler_opaque,
+    Texture2D depthTex,
+    SamplerState sampler_depth,
+    out bool hit,
+    half3 depthColor,
+    half3 shallowColor)
+{
+    hit = false;
+    if (steps <= 0) return 0;
+
+    float3 originVS = mul(UNITY_MATRIX_V, float4(originWS, 1.0)).xyz;
+    float3 viewDirVS = normalize(originVS);                               
+    float3 normalVS  = normalize(mul((float3x3)UNITY_MATRIX_V, normalWS)); 
+    float3 refrDirVS = normalize(refract(viewDirVS, normalVS, 1/1.3));           
+
+    float  t = 1e-3;
+    float3 currVS = originVS + refrDirVS * t;
+
+    int maxSteps = min(max(1, steps), SSR_MAX_STEPS);
+
+    float2 uv = SSR_ProjectVSPosToUV(currVS);
+    if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) return 0;
+
+    float rawDepth0 = SSR_SampleRawDepth(depthTex, sampler_depth, uv);
+    if (rawDepth0 >= 0.9999) return 0;
+
+    float sceneLinearZ0 = LinearEyeDepth(rawDepth0, _ZBufferParams);
+    float currLinearZ0  = -currVS.z;                 // Unity VS: in front => negative z
+    float prevDz = currLinearZ0 - sceneLinearZ0;     // <0 means ray point is in front of scene
+
+    [loop]
+    for (int i = 0; i < maxSteps; ++i)
+    {
+        float depthScale = max(1.0, abs(currVS.z));
+        float thisStep   = stepSize * depthScale * (stepPropagation * i);
+
+        t     += thisStep;
+        currVS = originVS + refrDirVS * t;
+
+        uv = SSR_ProjectVSPosToUV(currVS);
+        if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) break;
+
+        float rawDepth = SSR_SampleRawDepth(depthTex, sampler_depth, uv);
+        if (rawDepth >= 0.9999) return 0;
+
+        float sceneLinearZ = LinearEyeDepth(rawDepth, _ZBufferParams);
+        float currLinearZ  = -currVS.z;
+        float dz           = currLinearZ - sceneLinearZ;
+
+        if (dz >= 0 && prevDz < 0)
+        {
+            float tLo = t - thisStep;
+            float tHi = t;
+            float bestT = tHi;
+
+            [unroll(6)]
+            for (int i = 0; i < 6; ++i)
+            {
+                float tMid = 0.5 * (tLo + tHi);
+                float3 vsMid = originVS + refrDirVS * tMid;
+
+                float2 uvMid = SSR_ProjectVSPosToUV(vsMid);
+                float rawMid = SSR_SampleRawDepth(depthTex, sampler_depth, uvMid);
+                if (rawMid >= 0.9999) { tHi = tMid; continue; }
+
+                float sceneMid = LinearEyeDepth(rawMid, _ZBufferParams);
+                float currMid  = -vsMid.z;
+                float dzMid    = currMid - sceneMid;
+
+                if (dzMid >= 0) { bestT = tMid; tHi = tMid; }
+                else            { tLo = tMid; }
+            }
+
+            float3 vsHit = originVS + refrDirVS * bestT;
+            float2 uvHit = SSR_ProjectVSPosToUV(vsHit);
+
+            float rawHit   = SSR_SampleRawDepth(depthTex, sampler_depth, uvHit);
+            float sceneDepthHit = LinearEyeDepth(rawHit, _ZBufferParams);
+            float currHit       = -vsHit.z;
+            float depth = LinearEyeDepth(rawHit, _ZBufferParams);
+
+            if (abs(currHit - depth) <= thickness)
+            {
+                hit = true;
+
+                float surfaceDepth = -originVS.z;
+                float waterDepth   = max(0, sceneDepthHit - surfaceDepth);
+
+                float3 col = SAMPLE_TEXTURE2D(opaqueTex, sampler_opaque, uvHit).rgb;
+
+                float t = 1.0 - exp((-waterDepth + 1) / 1.5);
+
+                float3 tint = lerp(col, shallowColor.rgb, saturate(t * 2));
+                tint = lerp(tint, depthColor.rgb, saturate(t * 2 - 1));
+                col *= tint;
+                
+                return col;
             }
         }
 
@@ -202,21 +324,6 @@ inline float3 PhongSpecular(float3 viewDir, float3 normal, float power)
     float3 h = normalize(light.direction + viewDir);
     float p = saturate(floor(dot(float3(0, 1, 0), light.direction)) + 1);
     return saturate(light.color * pow(max(0, dot(normal, h)), power) * p);
-}
-            
-inline half3 Screen(half3 a, half3 b, half t)
-{
-    half3 s = 1.0h - (1.0h - a) * (1.0h - b);
-    return lerp(a, s, t);
-}
-
-inline half3 Overlay(half3 a, half3 b, half t)
-{
-    half3 low  = 2.0h * a * b;
-    half3 high = 1.0h - 2.0h * (1.0h - a) * (1.0h - b);
-    half3 zeroOrOne = step(a, 0.5);
-    half3 o = low * zeroOrOne + (1 - zeroOrOne) * high;
-    return lerp(a, o, t);
 }
             
 inline half3 GetDepthTint(float3 posWS, float3 underWaterPosWS, half3 color, half4 shallowColor, half4 deepColor, half falloff)
