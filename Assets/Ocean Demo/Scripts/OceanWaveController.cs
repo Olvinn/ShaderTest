@@ -131,7 +131,7 @@ namespace Ocean_Demo.Scripts
         private int _kernel;
         private uint _tgx, _tgy, _tgz;
 
-        private float _storm = .1f, _foam, _transparency = 100;
+        private float _storm = .1f, _targetStorm, _foam, _transparency = 100;
         private Camera _camera;
 
         private void Awake()
@@ -157,7 +157,13 @@ namespace Ocean_Demo.Scripts
         {
             LocalMapCenterWS = new Vector2(_camera.transform.position.x , _camera.transform.position.z);
             ProcessingWaterCalculations();
-            WriteToMaterials(_storm, waveDirectionsReady);
+            WriteToMaterials(waveDirectionsReady);
+            var storm = Mathf.MoveTowards(_storm, _targetStorm, Time.deltaTime / 30);
+            if (!Mathf.Approximately(storm, _storm))
+            {
+                _storm = storm;
+                UpdateWaves();
+            }
         }
 
         private void OnValidate()
@@ -203,7 +209,7 @@ namespace Ocean_Demo.Scripts
 
         public void ChangeWater(float storm, float foam, float transparency)
         {
-            _storm = storm;
+            _targetStorm = storm;
             _foam = foam;
             _transparency = transparency;
             UpdateWaves();
@@ -216,7 +222,6 @@ namespace Ocean_Demo.Scripts
                 if (data.BoolValue) oceanMaterials[0].EnableKeyword("SSR");
                 else oceanMaterials[0].DisableKeyword("SSR");
             }
-            UpdateWaves();
         }
 
         private void UpdateWaves()
@@ -231,17 +236,17 @@ namespace Ocean_Demo.Scripts
             switch (i)
             {
                 case < 16:
-                    return new Vector4(waveDirections[i].x * (1 - _storm * .75f) + windDirection,
+                    return new Vector4(waveDirections[i].x * .25f + windDirection,
                         waveDirections[i].y * wavesParams.longWavesA * _storm, 
                         waveDirections[i].z * wavesParams.longWavesL,
                         waveDirections[i].w * wavesParams.longWavesS);
                 case < (16 + 24):
-                    return new Vector4(waveDirections[i].x * (1 - _storm * .5f) + windDirection,
+                    return new Vector4(waveDirections[i].x * .5f + windDirection,
                         waveDirections[i].y * wavesParams.mediumWavesA * _storm, 
                         waveDirections[i].z * wavesParams.mediumWavesL,
                         waveDirections[i].w * wavesParams.mediumWavesS);
                 case < (16 + 24 + 8):
-                    return new Vector4(waveDirections[i].x * (1 - _storm * .25f) + windDirection,
+                    return new Vector4(waveDirections[i].x * .85f + windDirection,
                         waveDirections[i].y * wavesParams.secondaryWavesA * _storm, 
                         waveDirections[i].z * wavesParams.secondaryWavesL,
                         waveDirections[i].w * wavesParams.secondaryWavesS);
@@ -254,7 +259,7 @@ namespace Ocean_Demo.Scripts
             return new Vector4(waveDirections[i].x, waveDirections[i].y, waveDirections[i].z, waveDirections[i].w);
         }
 
-        private void WriteToMaterials(float storm, Vector4[] waves)
+        private void WriteToMaterials(Vector4[] waves)
         {
             foreach (var mat in oceanMaterials)
             {
