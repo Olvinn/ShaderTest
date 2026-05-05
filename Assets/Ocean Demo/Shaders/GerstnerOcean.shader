@@ -155,7 +155,7 @@ Shader "Custom/GerstnerOcean"
                 half noise = smoothstep(0,1,SAMPLE_TEXTURE2D(_Noise, sampler_Noise, (i.positionWS.xz + _Time.y * 5) * .001));
                // return half4(noise, noise, noise, 1);
                 
-                G_GetNormalLaplacian(i.initialWS.xz, _Time.y, _MaxWaves, _WaveDirs, normal, jacobianCoeff, noise);
+                G_GetNormalJacobian(i.initialWS.xz, _Time.y, _MaxWaves, _WaveDirs, normal, jacobianCoeff, noise);
                 
                 float3 viewDir = normalize(i.positionWS - _WorldSpaceCameraPos); 
                 

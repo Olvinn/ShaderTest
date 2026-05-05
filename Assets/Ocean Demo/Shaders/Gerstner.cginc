@@ -60,7 +60,7 @@ float3 GetGerstnerOffset(float2 worldXZ, float time, float4 _WaveDirs[MAX_WAVES]
     return offset;
 }
 
-void G_GetNormalLaplacian(float2 worldXZ, float time, int count,
+void G_GetNormalJacobian(float2 worldXZ, float time, int count,
                                 float4 _WaveDirs[MAX_WAVES],
                                 inout float3 normal, out float jacobianCoeff,
                                 half ampDistribution)
