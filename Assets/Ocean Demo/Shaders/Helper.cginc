@@ -326,14 +326,14 @@ inline float3 PhongSpecular(float3 viewDir, float3 normal, float power)
     return saturate(light.color * pow(max(0, dot(normal, h)), power) * p);
 }
             
-inline half3 GetDepthTint(float3 posWS, float3 underWaterPosWS, half3 color, half4 shallowColor, half4 deepColor, half falloff)
-{
+inline half3 GetDepthTint(float3 posWS, float3 underWaterPosWS, half3 color, half3 shallowColor, half3 deepColor, half falloff)
+{ 
     half depthDifWS = length(underWaterPosWS - posWS);
     half d = (falloff * .01);
     half shallow = saturate(depthDifWS / d);
     half deep = saturate((depthDifWS - d) / (falloff - d));
-    shallowColor.rgb = Overlay(color, shallowColor.rgb, shallow * shallowColor.a);
+    shallowColor.rgb = Overlay(color, shallowColor.rgb, shallow);
     //return shallowColor;
-    deepColor.rgb = lerp(color, deepColor.rgb, deep * deepColor.a);
+    deepColor.rgb = lerp(color, deepColor.rgb, deep);
     return lerp(shallowColor, deepColor, deep);
 }
