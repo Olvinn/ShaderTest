@@ -7,7 +7,7 @@ Shader "Custom/GerstnerOcean"
         _WaterScatter    ("Scatter (rgb = per channel)",    Color) = (0.02, 0.05, 0.08, 0)
         
         _Transparency   ("Transparency",    Range(0, 1))    = 0
-        _MaxWaves       ("Max Waves",       Range(1, 64))   = 64
+        _MaxWaves       ("Max Waves",       Range(1, 128))   = 64
         _FoamTexture    ("Foam Texture",    2D)             = "white" {}
         _FoamAmount     ("Foam Amount",     Float)          = 1
         _FoamStrength   ("Foam Strength",   Float)          = 1
@@ -23,8 +23,8 @@ Shader "Custom/GerstnerOcean"
         [Header(SSS)]
         _SSSStrength        ("Strength",        Range(0, 2))    = 0.8
         _SSSDirectionality  ("Directionality",  Range(1, 8))    = 4.0
-        _SSSThicknessPower  ("Thickness Power", Range(0.5, 4))  = 2.0
-        _SSSAmbient         ("Ambient",         Range(0, 0.5))  = 0.1
+        _SSSThicknessPower  ("Thickness Power", Range(0.1, 4))  = 2.0
+        _SSSAmbient         ("Ambient",         Range(0, 1))  = 0.1
         _MaxWaveAmplitude   ("Max Amplitude",   Float)          = 1.5
     }
 
@@ -84,7 +84,7 @@ Shader "Custom/GerstnerOcean"
                 float _MaxWaveAmplitude;
             CBUFFER_END
 
-            #define MAX_WAVES       64
+            #define MAX_WAVES       128
             #define SSR_MAX_STEPS   64
             #define IOR_AIR_WATER   0.75 
 
@@ -146,7 +146,7 @@ Shader "Custom/GerstnerOcean"
                 float3 sigmaS = _WaterScatter.rgb;
                 float3 sigmaT = sigmaA + sigmaS;
 
-                float jacobianThin = saturate(1.0 - jacobian);
+                float jacobianThin = saturate(1.5 - jacobian);
                 float heightThin   = saturate(waveDisplacement / max(_MaxWaveAmplitude, 0.001));
                 float thickness    = pow(saturate(max(jacobianThin, heightThin)),
                                          _SSSThicknessPower);
@@ -155,7 +155,7 @@ Shader "Custom/GerstnerOcean"
                 float NdotV    = abs(dot(normal, viewDir));
                 float optDepth = thickness * (1.0 / max(NdotL, 0.1)
                                             + 1.0 / max(NdotV, 0.1));
-                optDepth       = min(optDepth, 8.0);
+                optDepth       = min(optDepth, _SSSAmbient);
 
                 float3 transmit = exp(-sigmaT * optDepth);
 
@@ -165,15 +165,15 @@ Shader "Custom/GerstnerOcean"
 
                 float  VdotL       = dot(-viewDir, light.direction);
                 float  backLobe    = pow(saturate(VdotL), _SSSDirectionality);
-                float3 backScatter = backLobe * thickness * NdotL 
+                float3 backScatter = backLobe * thickness * NdotV
                                    * sigmaS / max(sigmaT, 0.0001)
-                                   * light.color;
+                                   * light.color * .25;
 
                 float  crestMask  = saturate(heightThin * jacobianThin * 1.0);
                 float3 crestBoost = crestMask * light.color
                                   * sigmaS / max(sigmaT, 0.0001) * 0.4;
 
-                float shadow = max(light.shadowAttenuation, .5);
+                float shadow = 1;//max(light.shadowAttenuation, .5);
 
                 return (volScatter + backScatter + crestBoost)
                      * _SSSStrength
@@ -202,6 +202,7 @@ Shader "Custom/GerstnerOcean"
                 float fresnel = H_FresnelSchlickWater(viewDir, normal);
 
                 float3 envReflection = CubemapAmbient(reflDir, 0);
+                float3 cubemap = CubemapAmbient(viewDir, 0);
 
                 #ifdef SSR
                     bool   ssrHit;
@@ -220,17 +221,8 @@ Shader "Custom/GerstnerOcean"
                 
                 float waveDisplacement = i.positionWS.y - i.initialWS.y;
                 half3 sss = WaterSSS(viewDir, normal, mainLight, jacobian, waveDisplacement);   
+                //return half4(sss, 1);
 
-                #ifdef SSR
-                    bool refrHit;
-                    refraction = H_RaymarchSS_Refraction(
-                        i.positionWS, normal,
-                        _SSRSteps, _SSRStepSize, _SSRThickness, _StepPropagation,
-                        _CameraOpaqueTexture, sampler_CameraOpaqueTexture,
-                        _CameraDepthTexture,  sampler_CameraDepthTexture,
-                        refrHit, sss, sss);
-                    refraction = lerp(sss.rgb, refraction, refrHit ? 1.0 : 0.0);
-                #else
                     float2 refrUV    = i.positionSS.xy / max(i.positionSS.w, 1e-6)
                                      + normal.xz * 0.07;
                     float  refrDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture,
@@ -252,7 +244,6 @@ Shader "Custom/GerstnerOcean"
                         refraction = saturate(GetDepthTint(i.positionWS, underWS,
                                                             refraction, sss,
                                                             sss, _Transparency));
-                #endif
                 
                 half3 specular = H_PBRSpecular(normal, -viewDir, mainLight.direction,
                                                 sss, _Metallic, _Roughness)
@@ -265,12 +256,12 @@ Shader "Custom/GerstnerOcean"
 
                 half foamAmount = saturate(jacobian - _FoamAmount) * _FoamStrength * foamMask;
 
-                float3 transmitted = refraction * (1.0 - fresnel) + sss * (1.0 - fresnel);
+                float3 transmitted = refraction * (1.0 - fresnel);
                 float3 waterColor  = reflection * fresnel + transmitted;
 
                 float  NdotL      = saturate(dot(normal, mainLight.direction));
                 float3 foamDiffuse = foamMask * mainLight.color
-                                   * max(0.5, mainLight.shadowAttenuation) * NdotL;
+                                   * max(0.75, mainLight.shadowAttenuation) * NdotL;
                 float3 finalColor  = lerp(waterColor, foamDiffuse, foamAmount);
 
                 finalColor += specular * (1.0 - foamAmount);
@@ -306,7 +297,7 @@ Shader "Custom/GerstnerOcean"
                 int _MaxWaves;
             CBUFFER_END
 
-            #define MAX_WAVES 64
+            #define MAX_WAVES 128
             uniform float4 _WaveDirs[MAX_WAVES];
 
             float3 _LightDirection;

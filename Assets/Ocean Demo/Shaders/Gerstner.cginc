@@ -1,4 +1,4 @@
-#define MAX_WAVES 64
+#define MAX_WAVES 128
 #define G 9.81
 
 void GetWaveParams(float waveLength, out float k, out float omega)

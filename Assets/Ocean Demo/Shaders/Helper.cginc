@@ -201,9 +201,7 @@ float3 H_RaymarchSS_Refraction(
     SamplerState sampler_opaque,
     Texture2D depthTex,
     SamplerState sampler_depth,
-    out bool hit,
-    half3 depthColor,
-    half3 shallowColor)
+    out bool hit)
 {
     hit = false;
     if (steps <= 0) return 0;
@@ -227,6 +225,8 @@ float3 H_RaymarchSS_Refraction(
     float sceneLinearZ0 = LinearEyeDepth(rawDepth0, _ZBufferParams);
     float currLinearZ0  = -currVS.z;                 // Unity VS: in front => negative z
     float prevDz = currLinearZ0 - sceneLinearZ0;     // <0 means ray point is in front of scene
+        
+    float2 uvHit;
 
     [loop]
     for (int i = 0; i < maxSteps; ++i)
@@ -237,10 +237,10 @@ float3 H_RaymarchSS_Refraction(
         t     += thisStep;
         currVS = originVS + refrDirVS * t;
 
-        uv = SSR_ProjectVSPosToUV(currVS);
-        if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) break;
+        float2 loc_uv = SSR_ProjectVSPosToUV(currVS);
+        if (loc_uv.x < 0 || loc_uv.x > 1 || loc_uv.y < 0 || loc_uv.y > 1) break;
 
-        float rawDepth = SSR_SampleRawDepth(depthTex, sampler_depth, uv);
+        float rawDepth = SSR_SampleRawDepth(depthTex, sampler_depth, loc_uv);
         if (rawDepth >= 0.9999) return 0;
 
         float sceneLinearZ = LinearEyeDepth(rawDepth, _ZBufferParams);
@@ -272,7 +272,7 @@ float3 H_RaymarchSS_Refraction(
             }
 
             float3 vsHit = originVS + refrDirVS * bestT;
-            float2 uvHit = SSR_ProjectVSPosToUV(vsHit);
+            uvHit = SSR_ProjectVSPosToUV(vsHit);
 
             float rawHit   = SSR_SampleRawDepth(depthTex, sampler_depth, uvHit);
             float sceneDepthHit = LinearEyeDepth(rawHit, _ZBufferParams);
@@ -283,16 +283,15 @@ float3 H_RaymarchSS_Refraction(
             {
                 hit = true;
 
-                float surfaceDepth = -originVS.z;
-                float waterDepth   = max(0, sceneDepthHit - surfaceDepth);
-
                 float3 col = SAMPLE_TEXTURE2D(opaqueTex, sampler_opaque, uvHit).rgb;
+                
+                return col;
+            }
+            else
+            {
+                hit = 1 - depth / depthScale < .5;
 
-                float t = 1.0 - exp((-waterDepth + 1) / 1.5);
-
-                float3 tint = lerp(col, shallowColor.rgb, saturate(t * 2));
-                tint = lerp(tint, depthColor.rgb, saturate(t * 2 - 1));
-                col *= tint;
+                float3 col = SAMPLE_TEXTURE2D(opaqueTex, sampler_opaque, uv).rgb;
                 
                 return col;
             }
