@@ -202,8 +202,6 @@ Shader "Custom/GerstnerOcean"
                 float fresnel = H_FresnelSchlickWater(viewDir, normal);
 
                 float3 envReflection = CubemapAmbient(reflDir, 0);
-                float3 cubemap = CubemapAmbient(viewDir, 0);
-
                 #ifdef SSR
                     bool   ssrHit;
                     half3  ssrReflection = H_RaymarchSS_Reflection(
@@ -216,34 +214,31 @@ Shader "Custom/GerstnerOcean"
                 #else
                     float3 reflection = envReflection;
                 #endif
-
-                float3 refraction;
                 
                 float waveDisplacement = i.positionWS.y - i.initialWS.y;
-                half3 sss = WaterSSS(viewDir, normal, mainLight, jacobian, waveDisplacement);   
-                //return half4(sss, 1);
+                half3 sss = WaterSSS(viewDir, normal, mainLight, jacobian, waveDisplacement);  
 
-                    float2 refrUV    = i.positionSS.xy / max(i.positionSS.w, 1e-6)
+                float2 refrUV    = i.positionSS.xy / max(i.positionSS.w, 1e-6)
                                      + normal.xz * 0.07;
-                    float  refrDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture,
+                float  refrDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture,
                                                              sampler_CameraDepthTexture,
                                                              refrUV);
-                    #if UNITY_REVERSED_Z
-                        bool isSky = refrDepth < 0.0001;
-                    #else
-                        bool isSky = refrDepth > 0.9999;
-                    #endif
-
-                    float3 underWS = ComputeWorldSpacePosition(refrUV, refrDepth,
+                #if UNITY_REVERSED_Z
+                    bool isSky = refrDepth < 0.0001;
+                #else
+                    bool isSky = refrDepth > 0.9999;
+                #endif
+                
+                float3 underWS = ComputeWorldSpacePosition(refrUV, refrDepth,
                                                                 UNITY_MATRIX_I_VP);
-                    refraction = SAMPLE_TEXTURE2D(_CameraOpaqueTexture,
+                float3 refraction = SAMPLE_TEXTURE2D(_CameraOpaqueTexture,
                                                    sampler_CameraOpaqueTexture, refrUV).rgb;
-                    refraction = lerp(refraction, CubemapAmbient(refrDir, 0), isSky);
+                refraction = lerp(refraction, CubemapAmbient(refrDir, 0), isSky);
 
-                    if(dot(-viewDir, normal) > 0)
-                        refraction = saturate(GetDepthTint(i.positionWS, underWS,
-                                                            refraction, sss,
-                                                            sss, _Transparency));
+                if(dot(-viewDir, normal) > 0)
+                    refraction = saturate(GetDepthTint(i.positionWS, underWS,
+                    refraction, sss,
+                    sss, _Transparency));
                 
                 half3 specular = H_PBRSpecular(normal, -viewDir, mainLight.direction,
                                                 sss, _Metallic, _Roughness)
@@ -253,15 +248,14 @@ Shader "Custom/GerstnerOcean"
                 half foamMask   = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture,
                                     i.positionWS.xz * _FoamTexture_ST.xy
                                   + _FoamTexture_ST.zw);
-
-                half foamAmount = saturate(jacobian - _FoamAmount) * _FoamStrength * foamMask;
+                half foamAmount = saturate((jacobian + (_FoamAmount - 1) + foamMask * .5) - 1) * _FoamStrength;
 
                 float3 transmitted = refraction * (1.0 - fresnel);
                 float3 waterColor  = reflection * fresnel + transmitted;
 
                 float  NdotL      = saturate(dot(normal, mainLight.direction));
                 float3 foamDiffuse = foamMask * mainLight.color
-                                   * max(0.75, mainLight.shadowAttenuation) * NdotL;
+                                   * max(0.75, mainLight.shadowAttenuation) * (NdotL * .5 + .5);
                 float3 finalColor  = lerp(waterColor, foamDiffuse, foamAmount);
 
                 finalColor += specular * (1.0 - foamAmount);
