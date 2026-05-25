@@ -14,6 +14,7 @@ Material:
   m_ValidKeywords: []
   m_InvalidKeywords:
   - TESSELATION
+  - _FOGBLEND_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -98,12 +99,14 @@ Material:
     - _DstBlend: 0
     - _EdgeLength: 20
     - _FoamAmount: 0
-    - _FoamStrength: 1
+    - _FoamStrength: 20
+    - _FogBlend: 1
     - _Fresnel: 0.03
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _MaxWaves: 32
+    - _MaxWaveAmplitude: 20
+    - _MaxWaves: 25
     - _Metallic: 0
     - _Mode: 0
     - _NoiseScale: 0.08
@@ -115,18 +118,22 @@ Material:
     - _Roughness: 0.1
     - _SSRStepSize: 0.02
     - _SSRSteps: 32
-    - _SSRThickness: 1
+    - _SSRThickness: 0.5
+    - _SSSAmbient: 1
+    - _SSSDirectionality: 3.2
+    - _SSSStrength: 2
+    - _SSSThicknessPower: 4
     - _SmoothnessTextureChannel: 0
     - _Specular: 32
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SteepnessSuppression: 0.01
     - _SteepnessSupression: 0.8
-    - _StepPropagation: 0.1
+    - _StepPropagation: 0.05
     - _Tess: 32
     - _TessFactor: 3
     - _Tessellation: 8
-    - _Transparency: 100
+    - _Transparency: 3
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2
@@ -137,9 +144,11 @@ Material:
     - _WaveStrengthDistribution: 1.66
     - _ZWrite: 1
     m_Colors:
-    - _Color: {r: 0, g: 0.024490789, b: 0.1509434, a: 1}
+    - _Color: {r: 0, g: 0.08005739, b: 0.18039216, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _SSSColor: {r: 0.42537376, g: 0.745283, b: 0.5969706, a: 0.49019608}
+    - _SSSColor: {r: 0.22107512, g: 0.6563368, b: 0.6792453, a: 1}
     - _SpecColor: {r: 0.46226418, g: 0.46226418, b: 0.46226418, a: 0.5}
+    - _WaterAbsorption: {r: 0, g: 0.122641504, b: 0.122641474, a: 1}
+    - _WaterScatter: {r: 0, g: 0.28345424, b: 0.2924528, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -108,7 +108,7 @@ namespace Ocean_Demo.Scripts
         public Vector2 LocalMapCenterWS = Vector2.zero;
         public Vector2 LocalMapSizeWS = new Vector2(64, 64); // meters
 
-        public RenderTexture LocalWaterDetails;
+        public RenderTexture WaterLocalWaves, WaterFoam;
 
         // Add, update & clear sources at runtime
         [StructLayout(LayoutKind.Sequential)]
@@ -128,10 +128,10 @@ namespace Ocean_Demo.Scripts
         public WaveSource[] Sources = Array.Empty<WaveSource>();
         
         private ComputeBuffer _sourcesBuffer;
-        private int _kernel;
+        private int _wavesKernel, _foamKernel;
         private uint _tgx, _tgy, _tgz;
 
-        private float _storm = .1f, _targetStorm, _foam, _transparency = 100;
+        private float _storm = .1f, _targetStorm, _foam;
         private Camera _camera;
 
         private void Awake()
@@ -139,21 +139,19 @@ namespace Ocean_Demo.Scripts
             for (int i = 0; i < waveDirections.Length; i++)
                 waveDirections[i].x = Random.value * .5f + .5f;
             
+            _camera = Camera.main;
+            
             InitLocalDetailsTargets();
             InitCompute();
         }
 
         private void Start()
         {
-            _camera = Camera.main;
-            if (Settings.Instance != null)
-                Settings.Instance.onSettingsChanged += OnSettingsChanged;
-
             BindLocalDetailsToMaterials();
             UpdateWaves();
         }
 
-        private void Update()
+        private void FixedUpdate()
         {
             LocalMapCenterWS = new Vector2(_camera.transform.position.x , _camera.transform.position.z);
             ProcessingWaterCalculations();
@@ -179,9 +177,6 @@ namespace Ocean_Demo.Scripts
 
         private void OnDestroy()
         {
-            if (Settings.Instance != null)
-                Settings.Instance.onSettingsChanged -= OnSettingsChanged;
-
             ReleaseLocalDetails();
         }
 
@@ -207,21 +202,11 @@ namespace Ocean_Demo.Scripts
             RecreateSourcesBuffer();
         }
 
-        public void ChangeWater(float storm, float foam, float transparency)
+        public void ChangeWater(float storm, float foam)
         {
             _targetStorm = storm;
             _foam = foam;
-            _transparency = transparency;
             UpdateWaves();
-        }
-
-        private void OnSettingsChanged(SettingsProperty data)
-        {
-            if (data.Name == "SSR")
-            {
-                if (data.BoolValue) oceanMaterials[0].EnableKeyword("SSR");
-                else oceanMaterials[0].DisableKeyword("SSR");
-            }
         }
 
         private void UpdateWaves()
@@ -264,46 +249,51 @@ namespace Ocean_Demo.Scripts
             foreach (var mat in oceanMaterials)
             {
                 mat.SetVectorArray("_WaveDirs", waves);
-                //mat.SetFloat("_FoamAmount", _foam);
-                mat.SetFloat("_Transparency", _transparency);
                 mat.SetVector("_MapCenterWS", new Vector4(LocalMapCenterWS.x, 0, LocalMapCenterWS.y, 0));
                 mat.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));
-                mat.SetTexture("_LocalWaterDetails", LocalWaterDetails);
+                mat.SetTexture("_LocalWaterDetails", WaterLocalWaves);
+                mat.SetTexture("_LocalWaterFoam", WaterFoam);
             }
         }
 
         private void InitLocalDetailsTargets()
         {
-            if (LocalWaterDetails != null &&
-                (LocalWaterDetails.width != LocalDetailsResolution ||
-                 LocalWaterDetails.height != LocalDetailsResolution))
-            {
-                LocalWaterDetails.Release();
-                LocalWaterDetails = null;
-            }
+            WaterLocalWaves.Release();
+            WaterLocalWaves = null;
 
-            if (LocalWaterDetails == null)
-            {
-                LocalWaterDetails = new RenderTexture(LocalDetailsResolution, LocalDetailsResolution, 0, RenderTextureFormat.ARGBHalf);
-                LocalWaterDetails.enableRandomWrite = true;
-                LocalWaterDetails.wrapMode = TextureWrapMode.Clamp;
-                LocalWaterDetails.filterMode = FilterMode.Bilinear;
-                LocalWaterDetails.name = "LocalWaterDetails";
-                LocalWaterDetails.Create();
-            }
+            WaterLocalWaves = new RenderTexture(LocalDetailsResolution, LocalDetailsResolution, 0, RenderTextureFormat.ARGBHalf);
+            WaterLocalWaves.enableRandomWrite = true;
+            WaterLocalWaves.wrapMode = TextureWrapMode.MirrorOnce;
+            WaterLocalWaves.filterMode = FilterMode.Bilinear;
+            WaterLocalWaves.name = "LocalWaterDetails";
+            WaterLocalWaves.Create();
+            
+            WaterFoam.Release();
+            WaterFoam = null;
+
+            WaterFoam = new RenderTexture(LocalDetailsResolution, LocalDetailsResolution, 0, RenderTextureFormat.ARGB32);
+            WaterFoam.enableRandomWrite = true;
+            WaterFoam.wrapMode = TextureWrapMode.MirrorOnce;
+            WaterFoam.filterMode = FilterMode.Bilinear;
+            WaterFoam.name = "WaterFoam";
+            WaterFoam.Create();
         }
 
         private void InitCompute()
         {
             if (WaterDetailsCompute == null) return;
 
-            _kernel = WaterDetailsCompute.FindKernel("CSMain");
-            WaterDetailsCompute.GetKernelThreadGroupSizes(_kernel, out _tgx, out _tgy, out _tgz);
+            _wavesKernel = WaterDetailsCompute.FindKernel("Waves");
+            WaterDetailsCompute.GetKernelThreadGroupSizes(_wavesKernel, out _tgx, out _tgy, out _tgz);
 
             RecreateSourcesBuffer();
 
-            // Static params
             WaterDetailsCompute.SetInts("_Resolution", LocalDetailsResolution, LocalDetailsResolution);
+            
+            if (WaterFoam == null) return;
+
+            _foamKernel = WaterDetailsCompute.FindKernel("Foam");
+            WaterDetailsCompute.GetKernelThreadGroupSizes(_foamKernel, out _tgx, out _tgy, out _tgz);
         }
 
         private void RecreateSourcesBuffer()
@@ -330,7 +320,10 @@ namespace Ocean_Demo.Scripts
         private void BindLocalDetailsToMaterials()
         {
             foreach (var m in oceanMaterials)
-                m.SetTexture("_LocalWaterDetails", LocalWaterDetails);
+            {
+                m.SetTexture("_LocalWaterDetails", WaterLocalWaves);
+                m.SetTexture("_LocalWaterFoam", WaterFoam);
+            }
         }
 
         private void ReleaseLocalDetails()
@@ -338,29 +331,42 @@ namespace Ocean_Demo.Scripts
             _sourcesBuffer?.Dispose();
             _sourcesBuffer = null;
 
-            if (LocalWaterDetails != null)
+            if (WaterLocalWaves != null)
             {
-                LocalWaterDetails.Release();
-                LocalWaterDetails = null;
+                WaterLocalWaves.Release();
+                WaterLocalWaves = null;
             }
         }
 
         private void ProcessingWaterCalculations()
         {
-            if (WaterDetailsCompute == null || LocalWaterDetails == null) return;
+            if (WaterDetailsCompute == null || WaterLocalWaves == null) return;
 
             WaterDetailsCompute.SetFloat("_Time", Time.time);
+            WaterDetailsCompute.SetFloat("_dt", Time.fixedDeltaTime);
             WaterDetailsCompute.SetVector("_MapCenterWS", new Vector4(LocalMapCenterWS.x, 0, LocalMapCenterWS.y, 0));
             WaterDetailsCompute.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));
             WaterDetailsCompute.SetInt("_NumSources", Mathf.Max(0, Sources.Length));
             WaterDetailsCompute.SetFloat("_Damping", 0.985f);
 
-            WaterDetailsCompute.SetBuffer(_kernel, "_Sources", _sourcesBuffer);
-            WaterDetailsCompute.SetTexture(_kernel, "_LocalDetailsRW", LocalWaterDetails);
+            WaterDetailsCompute.SetBuffer(_wavesKernel, "_Sources", _sourcesBuffer);
+            WaterDetailsCompute.SetTexture(_wavesKernel, "_LocalWavesRW", WaterLocalWaves);
 
             int gx = Mathf.CeilToInt(LocalDetailsResolution / (float)_tgx);
             int gy = Mathf.CeilToInt(LocalDetailsResolution / (float)_tgy);
-            WaterDetailsCompute.Dispatch(_kernel, gx, gy, 1);
+            WaterDetailsCompute.Dispatch(_wavesKernel, gx, gy, 1);
+            
+            if (WaterFoam == null) return;
+            
+            WaterDetailsCompute.SetFloat("_Time", Time.time);
+            WaterDetailsCompute.SetFloat("_dt", Time.fixedDeltaTime);
+            WaterDetailsCompute.SetVector("_MapCenterWS", new Vector4(LocalMapCenterWS.x, 0, LocalMapCenterWS.y, 0));
+            WaterDetailsCompute.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));
+            WaterDetailsCompute.SetFloat("_Damping", 0.985f);
+            WaterDetailsCompute.SetTexture(_foamKernel, "_FoamRW", WaterFoam);
+            WaterDetailsCompute.SetTexture(_wavesKernel, "_LocalWavesRW", WaterLocalWaves);
+            WaterDetailsCompute.SetVectorArray("_WaveDirs", waveDirectionsReady);
+            WaterDetailsCompute.Dispatch(_foamKernel, gx, gy, 1);
         }
     }
 }

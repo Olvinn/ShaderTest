@@ -1,5 +1,8 @@
 #define MAX_WAVES 128
 #define G 9.81
+#define TWO_PI 6.283185307179586
+
+uniform float4 _WaveDirs[MAX_WAVES];
 
 void GetWaveParams(float waveLength, out float k, out float omega)
 {

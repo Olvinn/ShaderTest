@@ -21,7 +21,7 @@ namespace Ocean_Demo.Scripts
 
         private void ChangeTemplate(int templateNum)
         {
-             _oceanWaveController.ChangeWater(_templates.templates[templateNum].Storm, _templates.templates[templateNum].Foam, _templates.templates[templateNum].Transparency);
+             _oceanWaveController.ChangeWater(_templates.templates[templateNum].Storm, _templates.templates[templateNum].Foam);
             RenderSettings.skybox =  _templates.templates[templateNum].Cubemap; 
             RenderSettings.fogColor = _templates.templates[templateNum].FogColor;
             RenderSettings.defaultReflectionMode = UnityEngine.Rendering.DefaultReflectionMode.Custom;

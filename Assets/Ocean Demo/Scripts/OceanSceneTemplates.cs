@@ -9,7 +9,6 @@ namespace Ocean_Demo.Scripts
         public string Name;
         public float Storm;
         public float Foam;
-        public float Transparency;
         public Material Cubemap;
         public Color FogColor;
         public Vector3 DirLightDirection;

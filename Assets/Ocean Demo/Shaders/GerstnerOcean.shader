@@ -6,7 +6,7 @@ Shader "Custom/GerstnerOcean"
         _WaterAbsorption ("Absorption (rgb = per channel)", Color) = (0.45, 0.06, 0.01, 0)
         _WaterScatter    ("Scatter (rgb = per channel)",    Color) = (0.02, 0.05, 0.08, 0)
         
-        _Transparency   ("Transparency",    Range(0, 1))    = 0
+        _Transparency   ("Transparency",    Range(0, 1000))    = 0
         _MaxWaves       ("Max Waves",       Range(1, 128))   = 64
         _FoamTexture    ("Foam Texture",    2D)             = "white" {}
         _FoamAmount     ("Foam Amount",     Float)          = 1
@@ -26,13 +26,15 @@ Shader "Custom/GerstnerOcean"
         _SSSThicknessPower  ("Thickness Power", Range(0.1, 4))  = 2.0
         _SSSAmbient         ("Ambient",         Range(0, 1))  = 0.1
         _MaxWaveAmplitude   ("Max Amplitude",   Float)          = 1.5
+        
+        [Toggle] _FogBlend  ("Blend in Fog", Int) = 0
     }
 
     SubShader
     {
         Tags
         {
-            "RenderType"     = "Opaque"
+            "RenderType"     = "Transparent"
             "RenderPipeline" = "UniversalPipeline"
             "RenderQueue"    = "Transparent"
         }
@@ -43,6 +45,8 @@ Shader "Custom/GerstnerOcean"
             Tags { "LightMode" = "UniversalForward" }
 
             Cull Off
+            
+            Blend SrcAlpha OneMinusSrcAlpha
 
             HLSLPROGRAM
             #pragma target 5.0
@@ -65,7 +69,8 @@ Shader "Custom/GerstnerOcean"
 
             // ── Textures ─────────────────────────────────────────
             TEXTURE2D_X(_FoamTexture);              SAMPLER(sampler_FoamTexture);
-            TEXTURE2D_X(_LocalWaterDetails);        SAMPLER(sampler_LocalWaterDetails);
+            TEXTURE2D(_LocalWaterDetails);          SAMPLER(sampler_LocalWaterDetails);
+            TEXTURE2D_FLOAT(_LocalWaterFoam);       SAMPLER(sampler_LocalWaterFoam);
             TEXTURE2D_X(_CameraOpaqueTexture);      SAMPLER(sampler_CameraOpaqueTexture);
             TEXTURE2D_X_FLOAT(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
 
@@ -75,7 +80,7 @@ Shader "Custom/GerstnerOcean"
                 float4 _MapCenterWS, _MapSizeWS;
                 half   _FoamAmount, _FoamStrength, _Transparency;
                 half   _Metallic, _Roughness;
-                int    _MaxWaves;
+                int    _MaxWaves, _FogBlend;
                 #ifdef SSR
                     half _SSRThickness, _SSRStepSize, _StepPropagation;
                     int  _SSRSteps;
@@ -87,8 +92,6 @@ Shader "Custom/GerstnerOcean"
             #define MAX_WAVES       128
             #define SSR_MAX_STEPS   64
             #define IOR_AIR_WATER   0.75 
-
-            uniform float4 _WaveDirs[MAX_WAVES];
 
             struct Attributes
             {
@@ -103,6 +106,7 @@ Shader "Custom/GerstnerOcean"
                 float  fog        : TEXCOORD1; 
                 float4 positionSS : TEXCOORD2;
                 float3 initialWS  : TEXCOORD3;
+                float2 uv         : TEXCOORD4;
             };
 
             Varyings vert(Attributes IN)
@@ -119,6 +123,7 @@ Shader "Custom/GerstnerOcean"
                 OUT.positionCS    = clipPos;
                 OUT.positionSS    = ComputeScreenPos(clipPos);
                 OUT.positionWS    = worldPos;
+                OUT.uv            = IN.uv;
                 OUT.fog           = ComputeFogFactor(clipPos.z);
 
                 return OUT;
@@ -130,6 +135,14 @@ Shader "Custom/GerstnerOcean"
                 float4 packed = SAMPLE_TEXTURE2D(_LocalWaterDetails,
                                                   sampler_LocalWaterDetails, uv);
                 return normalize(float3(-packed.r, 1.0, -packed.g));
+            }
+
+            float ReadFoam(float2 worldXZ)
+            {
+                float2 uv = (worldXZ - _MapCenterWS.xz) / _MapSizeWS.xz + 0.5;
+                float foam = SAMPLE_TEXTURE2D(_LocalWaterFoam,
+                                                  sampler_LocalWaterFoam, uv);
+                return foam;
             }
 
             float HenyeyGreenstein(float cosTheta, float g)
@@ -151,8 +164,8 @@ Shader "Custom/GerstnerOcean"
                 float thickness    = pow(saturate(max(jacobianThin, heightThin)),
                                          _SSSThicknessPower);
 
-                float NdotL    = abs(dot(normal, light.direction));
-                float NdotV    = abs(dot(normal, viewDir));
+                float NdotL    = dot(normal, light.direction);
+                float NdotV    = dot(normal, viewDir);
                 float optDepth = thickness * (1.0 / max(NdotL, 0.1)
                                             + 1.0 / max(NdotV, 0.1));
                 optDepth       = min(optDepth, _SSSAmbient);
@@ -164,12 +177,12 @@ Shader "Custom/GerstnerOcean"
                                   * (1.0 - transmit) / max(sigmaT, 0.0001);
 
                 float  VdotL       = dot(-viewDir, light.direction);
-                float  backLobe    = pow(saturate(VdotL), _SSSDirectionality);
-                float3 backScatter = backLobe * thickness * NdotV
+                float  backLobe    = pow(saturate(NdotL * VdotL), _SSSDirectionality);
+                float3 backScatter = backLobe * thickness * -NdotV
                                    * sigmaS / max(sigmaT, 0.0001)
-                                   * light.color * .25;
+                                   * light.color * .15;
 
-                float  crestMask  = saturate(heightThin * jacobianThin * 1.0);
+                float  crestMask  = saturate(heightThin * jacobianThin * 1.0) * max(0, -VdotL) * max(0, NdotV * .5 + .5) * 2;
                 float3 crestBoost = crestMask * light.color
                                   * sigmaS / max(sigmaT, 0.0001) * 0.4;
 
@@ -217,6 +230,7 @@ Shader "Custom/GerstnerOcean"
                 
                 float waveDisplacement = i.positionWS.y - i.initialWS.y;
                 half3 sss = WaterSSS(viewDir, normal, mainLight, jacobian, waveDisplacement);  
+                //return half4(sss,1);
 
                 float2 refrUV    = i.positionSS.xy / max(i.positionSS.w, 1e-6)
                                      + normal.xz * 0.07;
@@ -229,26 +243,25 @@ Shader "Custom/GerstnerOcean"
                     bool isSky = refrDepth > 0.9999;
                 #endif
                 
-                float3 underWS = ComputeWorldSpacePosition(refrUV, refrDepth,
-                                                                UNITY_MATRIX_I_VP);
-                float3 refraction = SAMPLE_TEXTURE2D(_CameraOpaqueTexture,
-                                                   sampler_CameraOpaqueTexture, refrUV).rgb;
+                half3 underWS = ComputeWorldSpacePosition(refrUV, refrDepth, UNITY_MATRIX_I_VP);
+                half3 refraction = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, refrUV).rgb;
                 refraction = lerp(refraction, CubemapAmbient(refrDir, 0), isSky);
 
-                if(dot(-viewDir, normal) > 0)
-                    refraction = saturate(GetDepthTint(i.positionWS, underWS,
-                    refraction, sss,
-                    sss, _Transparency));
+                half3 sigmaT      = (1 - _WaterAbsorption.rgb) +  (1 - _WaterScatter.rgb);
+                half3 depthTint   = exp(-sigmaT * length(underWS - i.positionWS) / _Transparency);
+                refraction = refraction * (isSky ? 0 : depthTint);
+
+                half foamMask   = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture,
+                                    i.initialWS.xz * _FoamTexture_ST.xy
+                                  + _FoamTexture_ST.zw);
                 
+                half foamAmount = saturate(ReadFoam(i.initialWS.xz) * foamMask * _FoamStrength);
+                                
                 half3 specular = H_PBRSpecular(normal, -viewDir, mainLight.direction,
                                                 sss, _Metallic, _Roughness)
                                * mainLight.color
-                               * mainLight.shadowAttenuation;
-
-                half foamMask   = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture,
-                                    i.positionWS.xz * _FoamTexture_ST.xy
-                                  + _FoamTexture_ST.zw);
-                half foamAmount = saturate((jacobian + (_FoamAmount - 1) + foamMask * .5) - 1) * _FoamStrength;
+                               * mainLight.shadowAttenuation
+                               * (1 - foamAmount);
 
                 float3 transmitted = refraction * (1.0 - fresnel);
                 float3 waterColor  = reflection * fresnel + transmitted;
@@ -258,10 +271,13 @@ Shader "Custom/GerstnerOcean"
                                    * max(0.75, mainLight.shadowAttenuation) * (NdotL * .5 + .5);
                 float3 finalColor  = lerp(waterColor, foamDiffuse, foamAmount);
 
-                finalColor += specular * (1.0 - foamAmount);
+                finalColor += specular * (1.0 - foamAmount) + sss;
 
                 finalColor = MixFog(finalColor, i.fog);
-                return half4(finalColor, 1.0);
+                if (_FogBlend)
+                    return half4(finalColor, saturate(1.0 - i.fog));
+                else
+                    return half4(finalColor, 1);
             }
             ENDHLSL
         }
@@ -290,9 +306,6 @@ Shader "Custom/GerstnerOcean"
             CBUFFER_START(UnityPerMaterial)
                 int _MaxWaves;
             CBUFFER_END
-
-            #define MAX_WAVES 128
-            uniform float4 _WaveDirs[MAX_WAVES];
 
             float3 _LightDirection;
             float3 _LightPosition;

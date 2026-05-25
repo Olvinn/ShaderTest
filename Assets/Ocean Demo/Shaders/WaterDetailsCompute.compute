@@ -1,5 +1,7 @@
-// WaterDetails.compute
-#pragma kernel CSMain
+#pragma kernel Waves
+#pragma kernel Foam
+
+#include "Gerstner.cginc"
 
 struct WaveSource {
     float2 posWS;
@@ -12,12 +14,13 @@ struct WaveSource {
     float  angleDeg; // for directional wake
 };
 
-RWTexture2D<float4> _LocalDetailsRW; // RG: displacement (dx, dz), B: extra amp, A: foam mask
+RWTexture2D<float4> _LocalWavesRW; // RG: displacement (dx, dz), B: extra amp, A: foam mask
+RWTexture2D<float> _FoamRW; 
 
 StructuredBuffer<WaveSource> _Sources;
 
-int2 _Resolution;
-float _Time;                 // seconds
+uint2 _Resolution;
+float _Time, _dt;                 // seconds
 int _NumSources;
 float _Damping;              // 0..1 per-frame fade
 
@@ -33,13 +36,13 @@ float2 PixelToWS(int2 pix)
 }
 
 [numthreads(8,8,1)]
-void CSMain(uint3 id : SV_DispatchThreadID)
+void Waves(uint3 id : SV_DispatchThreadID)
 {
     if (id.x >= _Resolution.x || id.y >= _Resolution.y) return;
     int2 pix = int2(id.xy); 
     float2 P = PixelToWS(pix);
 
-    float4 prev = _LocalDetailsRW[pix];
+    float4 prev = _LocalWavesRW[pix];
     float4 acc  = prev * _Damping;
 
     for (int i = 0; i < _NumSources; i++)
@@ -83,5 +86,24 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     acc.b  = clamp(acc.b,  -2.0, 2.0);
     acc.a  = saturate(acc.a);
 
-    _LocalDetailsRW[pix] = acc;
+    _LocalWavesRW[pix] = acc;
+}
+
+[numthreads(8,8,1)]
+void Foam(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _Resolution.x || id.y >= _Resolution.y) return;
+    int2 pix = int2(id.xy); 
+    float2 P = PixelToWS(pix);
+
+    float prev = _FoamRW[pix];
+    float curr = clamp(0, 1, prev - _dt * .4);
+    
+    float jacobian = 0;
+    float3 normal = 0; 
+    
+    G_GetNormalJacobian(P, _Time, 64, _WaveDirs, normal, jacobian);
+    float foam = clamp(0, 1, (jacobian - .5) * 2);
+    curr = max(curr, foam);
+    _FoamRW[pix] = curr;
 }

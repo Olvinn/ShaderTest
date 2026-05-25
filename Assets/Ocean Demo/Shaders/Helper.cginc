@@ -3,6 +3,7 @@
 
 #define SSR_MAX_STEPS 64
 
+
 float H_FresnelSchlickWater(float3 viewDir, float3 normal)
 {
     const float R0 = 0.02;
@@ -323,16 +324,4 @@ inline float3 PhongSpecular(float3 viewDir, float3 normal, float power)
     float3 h = normalize(light.direction + viewDir);
     float p = saturate(floor(dot(float3(0, 1, 0), light.direction)) + 1);
     return saturate(light.color * pow(max(0, dot(normal, h)), power) * p);
-}
-            
-inline half3 GetDepthTint(float3 posWS, float3 underWaterPosWS, half3 color, half3 shallowColor, half3 deepColor, half falloff)
-{ 
-    half depthDifWS = length(underWaterPosWS - posWS);
-    half d = (falloff * .01);
-    half shallow = saturate(depthDifWS / d);
-    half deep = saturate((depthDifWS - d) / (falloff - d));
-    shallowColor.rgb = Overlay(color, shallowColor.rgb, shallow);
-    //return shallowColor;
-    deepColor.rgb = lerp(color, deepColor.rgb, deep);
-    return lerp(shallowColor, deepColor, deep);
 }
