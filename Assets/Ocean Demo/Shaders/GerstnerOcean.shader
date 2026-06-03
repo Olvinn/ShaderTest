@@ -274,7 +274,7 @@ Shader "Custom/GerstnerOcean"
                 float3 waterColor  = reflection * fresnel + transmitted;
 
                 float  NdotL      = saturate(dot(normal, mainLight.direction));
-                float3 foamDiffuse = foamMask * mainLight.color
+                float3 foamDiffuse = (foamMask * mainLight.color + SampleSH(normal))
                                    * max(0.75, mainLight.shadowAttenuation) * (NdotL * .5 + .5);
                 float3 finalColor  = lerp(waterColor, foamDiffuse, foamAmount);
 

@@ -124,12 +124,13 @@ namespace Ocean_Demo.Scripts
 
         // Runtime container
         public WaveSource[] Sources = Array.Empty<WaveSource>();
+        public float targetStorm = .1f;
         
         private ComputeBuffer _sourcesBuffer;
         private int _wavesKernel;
         private uint _tgx, _tgy, _tgz;
 
-        private float _storm = .1f, _targetStorm, _foam;
+        private float _storm, _foam;
         private Camera _camera;
 
         private void Awake()
@@ -154,10 +155,10 @@ namespace Ocean_Demo.Scripts
             LocalMapCenterWS = new Vector2(_camera.transform.position.x , _camera.transform.position.z);
             ProcessingWaterCalculations();
             WriteToMaterials(waveDirectionsReady);
-            var storm = Mathf.MoveTowards(_storm, _targetStorm, Time.deltaTime / 30);
-            if (!Mathf.Approximately(storm, _storm))
+            var storm = Mathf.MoveTowards(this._storm, targetStorm, Time.deltaTime / 30);
+            if (!Mathf.Approximately(storm, this._storm))
             {
-                _storm = storm;
+                this._storm = storm;
                 UpdateWaves();
             }
         }
@@ -202,7 +203,7 @@ namespace Ocean_Demo.Scripts
 
         public void ChangeWater(float storm, float foam)
         {
-            _targetStorm = storm;
+            targetStorm = storm;
             _foam = foam;
             UpdateWaves();
         }
