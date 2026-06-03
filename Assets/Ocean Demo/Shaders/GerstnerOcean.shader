@@ -70,7 +70,6 @@ Shader "Custom/GerstnerOcean"
             // ── Textures ─────────────────────────────────────────
             TEXTURE2D_X(_FoamTexture);              SAMPLER(sampler_FoamTexture);
             TEXTURE2D(_LocalWaterDetails);          SAMPLER(sampler_LocalWaterDetails);
-            TEXTURE2D_FLOAT(_LocalWaterFoam);       SAMPLER(sampler_LocalWaterFoam);
             TEXTURE2D_X(_CameraOpaqueTexture);      SAMPLER(sampler_CameraOpaqueTexture);
             TEXTURE2D_X_FLOAT(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
 
@@ -109,6 +108,14 @@ Shader "Custom/GerstnerOcean"
                 float2 uv         : TEXCOORD4;
             };
 
+            float3 ReadDetailsHeight(float2 worldXZ)
+            {
+                float2 uv = (worldXZ - _MapCenterWS.xz) / _MapSizeWS.xz + 0.5;
+                float4 packed = SAMPLE_TEXTURE2D_LOD(_LocalWaterDetails,
+                                                  sampler_LocalWaterDetails, uv, 0);
+                return packed.b;
+            }
+
             Varyings vert(Attributes IN)
             {
                 Varyings OUT = (Varyings)0;
@@ -117,7 +124,7 @@ Shader "Custom/GerstnerOcean"
                 OUT.initialWS = worldPos;
 
                 float3 offset = GetGerstnerOffset(worldPos.xz, _Time.y, _WaveDirs, _MaxWaves);
-                worldPos += offset;
+                worldPos += offset + ReadDetailsHeight(worldPos.xz);
 
                 float4 clipPos    = TransformWorldToHClip(worldPos);
                 OUT.positionCS    = clipPos;
@@ -140,8 +147,8 @@ Shader "Custom/GerstnerOcean"
             float ReadFoam(float2 worldXZ)
             {
                 float2 uv = (worldXZ - _MapCenterWS.xz) / _MapSizeWS.xz + 0.5;
-                float foam = SAMPLE_TEXTURE2D(_LocalWaterFoam,
-                                                  sampler_LocalWaterFoam, uv);
+                float foam = SAMPLE_TEXTURE2D(_LocalWaterDetails,
+                                                  sampler_LocalWaterDetails, uv).a;
                 return foam;
             }
 
@@ -180,7 +187,7 @@ Shader "Custom/GerstnerOcean"
                 float  backLobe    = pow(saturate(NdotL * VdotL), _SSSDirectionality);
                 float3 backScatter = backLobe * thickness * -NdotV
                                    * sigmaS / max(sigmaT, 0.0001)
-                                   * light.color * .15;
+                                   * light.color * .05;
 
                 float  crestMask  = saturate(heightThin * jacobianThin * 1.0) * max(0, -VdotL) * max(0, NdotV * .5 + .5) * 2;
                 float3 crestBoost = crestMask * light.color

@@ -31,9 +31,7 @@ namespace Ocean_Demo.Scripts
                 amplitude = WaveAmplitude,
                 wavelength= WaveLength,
                 speed     = 0f,
-                decay     = 1.0f,
-                type      = 0f,        // radial
-                angleDeg  = 0f
+                decay     = 1.0f
             };
             _waveSourceIndex = _WaveController.AddSource(src);
         }
@@ -102,9 +100,7 @@ namespace Ocean_Demo.Scripts
                     amplitude = WaveAmplitude,
                     wavelength= WaveLength,
                     speed = 2f,
-                    decay = 1.7f,
-                    type = 0f,          // directional
-                    angleDeg  = 1f
+                    decay = 1.7f
                 });
         }
         
