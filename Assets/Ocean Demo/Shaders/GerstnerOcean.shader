@@ -262,7 +262,7 @@ Shader "Custom/GerstnerOcean"
                                     i.initialWS.xz * _FoamTexture_ST.xy
                                   + _FoamTexture_ST.zw);
                 
-                half foamAmount = saturate(ReadFoam(i.initialWS.xz) * foamMask * _FoamStrength);
+                half foamAmount = saturate((foamMask - (1 -  ReadFoam(i.initialWS.xz)) + _FoamAmount) * _FoamStrength);
                                 
                 half3 specular = H_PBRSpecular(normal, -viewDir, mainLight.direction,
                                                 sss, _Metallic, _Roughness)

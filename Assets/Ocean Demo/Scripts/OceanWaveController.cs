@@ -95,7 +95,7 @@ namespace Ocean_Demo.Scripts
                 new Vector4( 0.50f, 0.02f,  2.1f, 1),
                 new Vector4(-0.55f, 0.02f,  2.0f, 1),
                 new Vector4( 0.75f, 0.02f,  1.8f, 1),
-                new Vector4(-0.90f, 0.02f,  1.6f, 1),
+                new Vector4(-0.90f, 0.02f,  1.6f, 1), 
         };
         public Vector4[] waveDirectionsReady = new Vector4[64];
         public float windDirection = 60;

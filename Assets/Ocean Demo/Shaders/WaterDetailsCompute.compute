@@ -78,13 +78,13 @@ void Waves(uint3 id : SV_DispatchThreadID)
 
     prev = acc;
     
-    float curr = clamp(0, 1, prev.a - _dt * .3);
+    float curr = clamp(0, 1, prev.a - _dt * .15);
     
     float jacobian = 0;
     float3 normal = 0; 
     
     G_GetNormalJacobian(P, _Time, 64, _WaveDirs, normal, jacobian);
-    float foam = clamp(0, 1, (jacobian - .5) * 2);
+    float foam = clamp(0, 1, (jacobian - .3) * 3);
     curr = max(curr, foam);
     prev.a = curr;
     
