@@ -78,7 +78,7 @@ void Waves(uint3 id : SV_DispatchThreadID)
 
     prev = acc;
     
-    float curr = clamp(0, 1, prev.a - _dt * .15);
+    float curr = clamp(0, 1, prev.a - _dt * .1);
     
     float jacobian = 0;
     float3 normal = 0; 

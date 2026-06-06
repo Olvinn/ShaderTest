@@ -15,6 +15,7 @@ Material:
   - SSR
   m_InvalidKeywords:
   - TESSELATION
+  - _FOGBLEND_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -100,7 +101,7 @@ Material:
     - _EdgeLength: 20
     - _FoamAmount: 0
     - _FoamStrength: 2
-    - _FogBlend: 0
+    - _FogBlend: 1
     - _Fresnel: 0.03
     - _GlossMapScale: 1
     - _Glossiness: 0.5

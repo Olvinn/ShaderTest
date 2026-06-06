@@ -45,8 +45,6 @@ Shader "Custom/GerstnerOcean"
             Tags { "LightMode" = "UniversalForward" }
 
             Cull Off
-            
-            Blend SrcAlpha OneMinusSrcAlpha
 
             HLSLPROGRAM
             #pragma target 5.0
@@ -279,10 +277,10 @@ Shader "Custom/GerstnerOcean"
                 float3 finalColor  = lerp(waterColor, foamDiffuse, foamAmount);
 
                 finalColor += specular * (1.0 - foamAmount) + sss;
-
-                finalColor = MixFog(finalColor, i.fog);
+                
+                //finalColor = MixFog(finalColor, i.fog);
                 if (_FogBlend)
-                    return half4(finalColor, saturate(1.0 - i.fog));
+                    return half4(lerp(finalColor, CubemapAmbient(viewDir, 0), saturate(i.fog)), 1);
                 else
                     return half4(finalColor, 1);
             }
