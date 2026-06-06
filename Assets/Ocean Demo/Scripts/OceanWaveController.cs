@@ -261,7 +261,7 @@ namespace Ocean_Demo.Scripts
 
             WaterDetailsRT = new RenderTexture(LocalDetailsResolution, LocalDetailsResolution, 0, RenderTextureFormat.ARGBHalf);
             WaterDetailsRT.enableRandomWrite = true;
-            WaterDetailsRT.wrapMode = TextureWrapMode.MirrorOnce;
+            WaterDetailsRT.wrapMode = TextureWrapMode.Clamp;
             WaterDetailsRT.filterMode = FilterMode.Bilinear;
             WaterDetailsRT.name = "LocalWaterDetails";
             WaterDetailsRT.Create();

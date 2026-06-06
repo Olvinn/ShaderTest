@@ -34,7 +34,7 @@ float2 PixelToWS(int2 pix)
 [numthreads(8,8,1)]
 void Waves(uint3 id : SV_DispatchThreadID)
 {
-    if (id.x >= _Resolution.x || id.y >= _Resolution.y) return;
+    if ((id.x >= _Resolution.x - 1) || (id.y >= _Resolution.y - 1) || id.x == 0 || id.y == 0) return;
     int2 pix = int2(id.xy); 
     float2 P = PixelToWS(pix);
 
