@@ -251,6 +251,7 @@ namespace Ocean_Demo.Scripts
                 mat.SetVector("_MapCenterWS", new Vector4(LocalMapCenterWS.x, 0, LocalMapCenterWS.y, 0));
                 mat.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));
                 mat.SetTexture("_LocalWaterDetails", WaterDetailsRT);
+                mat.SetFloat("_NormalsPower", _storm);
             }
         }
 

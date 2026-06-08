@@ -3,6 +3,7 @@ Shader "Custom/GerstnerOcean"
     Properties
     {
         _NormalMap ("Normal map", 2D) = "white" {}
+        _NormalsPower ("Normals power", Range(0,1)) = .5
         
         [Header(Water Volume)]
         _WaterAbsorption ("Absorption (rgb = per channel)", Color) = (0.45, 0.06, 0.01, 0)
@@ -78,7 +79,7 @@ Shader "Custom/GerstnerOcean"
             CBUFFER_START(UnityPerMaterial)
                 float4 _WaterAbsorption, _WaterScatter, _FoamTexture_ST;
                 float4 _MapCenterWS, _MapSizeWS;
-                half   _FoamAmount, _FoamStrength, _Transparency;
+                half   _FoamAmount, _FoamStrength, _Transparency, _NormalsPower;
                 half   _Metallic, _Roughness;
                 int    _MaxWaves, _FogBlend;
                 #ifdef SSR
@@ -220,13 +221,11 @@ Shader "Custom/GerstnerOcean"
                                                   sampler_NormalMap, i.initialWS.xz * .15 - _Time.y * .15);
                 float3 normalTS = lerp(UnpackNormal(packed1), UnpackNormal(packed2), .5);
                 float  jacobian = 0;
-                Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, _MaxWaves, normal, jacobian);
                 jacobian = max(jacobian, ReadFoam(i.initialWS.xz));
-                normalTS.xy *= saturate(.85 - jacobian);
-                //return saturate(1 - abs(jacobian * 2 - 1)).xxxx;
+                normalTS.xy *= saturate(.85 - jacobian * 1.25) * _NormalsPower * .5 + .05;
                 normalTS = normalize(normalTS);
                 normal = normalize(mul(normalTS, TBN));
-                //return half4(normal * .5 + .5, 1);
+                //Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, 32, normal, jacobian);
 
                 float3 viewDir  = normalize(i.positionWS - _WorldSpaceCameraPos);
                 float3 reflDir  = reflect(viewDir, normal);
