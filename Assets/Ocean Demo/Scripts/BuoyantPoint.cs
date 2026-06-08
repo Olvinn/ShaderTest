@@ -53,9 +53,9 @@ namespace Ocean_Demo.Scripts
         
             Vector3 position = _rb.position;
         
-            float depth = waveOffset.y - position.y;
+            Vector3 depth = waveOffset - position;
         
-            if (depth >= 0f)
+            if (depth.y >= 0f)
             {
                 if (_inAir)
                 {
@@ -63,10 +63,11 @@ namespace Ocean_Demo.Scripts
                         _splash.Play();
                     _inAir = false;
                 }
+
+                depth.x *= .03f;
+                depth.z *= .03f;
                 
-                depth = Mathf.Clamp01(depth * .5f);
-        
-                Vector3 force = Vector3.up * (depth * buoyancyForce);
+                Vector3 force = depth * (Mathf.Clamp01(depth.y * .25f) * buoyancyForce);
                 _rb.AddForce(force, ForceMode.Force);
         
                 Vector3 drag = -_rb.linearVelocity * (Time.fixedDeltaTime * 2);
@@ -74,8 +75,6 @@ namespace Ocean_Demo.Scripts
         
                 if (torque)
                 {
-                    //transform.up = waveNormal;
-
                     Quaternion targetRotation =
                         Quaternion.LookRotation(Vector3.Cross(transform.right, waveNormal), waveNormal);
                     Quaternion delta = targetRotation * Quaternion.Inverse(_rb.rotation);
@@ -83,9 +82,9 @@ namespace Ocean_Demo.Scripts
                     
                     if (angle > 180f) angle -= 360f;
                     if (Mathf.Abs(angle) > 0.01f)
-                        _rb.AddTorque(axis * angle);
+                        _rb.AddTorque(axis * angle * 10);
                     
-                    Vector3 angDrag = -_rb.angularVelocity * Time.fixedDeltaTime;
+                    Vector3 angDrag = -_rb.angularVelocity * (Time.fixedDeltaTime);
                     _rb.AddTorque(angDrag, ForceMode.VelocityChange);
                 }
             }
@@ -156,7 +155,7 @@ namespace Ocean_Demo.Scripts
                 float k, speed, steepness = _WaveDirs[i].w;
                 GetWaveParams(_WaveDirs[i].z, out k, out speed);
 
-                float a = _WaveDirs[i].x * Mathf.PI * 2;
+                float a = _WaveDirs[i].x;
                 float x = Mathf.Cos(a);
                 float y = Mathf.Sin(a);
                 Vector2 dir = (new Vector2(x, y)).normalized;
@@ -175,7 +174,7 @@ namespace Ocean_Demo.Scripts
                 float k, speed, steepness = _WaveDirs[i].w;
                 GetWaveParams(_WaveDirs[i].z, out k, out speed);
 
-                float a = _WaveDirs[i].x * Mathf.PI * 2;
+                float a = _WaveDirs[i].x;
                 float x = Mathf.Cos(a);
                 float y = Mathf.Sin(a);
                 Vector2 dir = new Vector2(x, y).normalized;

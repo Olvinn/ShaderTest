@@ -213,19 +213,20 @@ Shader "Custom/GerstnerOcean"
 
             half4 frag(Varyings i) : SV_Target
             {
-                float3x3 TBN    = float3x3(i.tangentWS, i.bitangentWS, i.normalWS);
-                float3 normal   = i.normalWS;//normalize(mul(ReadDetailsNormal(i.initialWS.xz), TBN));
+                float3x3 TBN   = float3x3(i.tangentWS, i.bitangentWS, i.normalWS);
                 float4 packed1 = SAMPLE_TEXTURE2D(_NormalMap,
-                                                  sampler_NormalMap, i.initialWS.xz * .1);
+                                                  sampler_NormalMap, i.initialWS.xz * .2);
                 float4 packed2 = SAMPLE_TEXTURE2D(_NormalMap,
-                                                  sampler_NormalMap, i.initialWS.xz * .15 - _Time.y * .15);
+                                                  sampler_NormalMap, i.initialWS.xz * .3 - _Time.y * .15);
                 float3 normalTS = lerp(UnpackNormal(packed1), UnpackNormal(packed2), .5);
                 float  jacobian = 0;
                 jacobian = max(jacobian, ReadFoam(i.initialWS.xz));
                 normalTS.xy *= saturate(.85 - jacobian * 1.25) * _NormalsPower * .5 + .05;
                 normalTS = normalize(normalTS);
-                normal = normalize(mul(normalTS, TBN));
+                float3 normal = normalize(mul(normalTS, TBN));
                 //Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, 32, normal, jacobian);
+                float3 details = ReadDetailsNormal(i.initialWS.xz) - float3(0, 1, 0);
+                normal += details;
 
                 float3 viewDir  = normalize(i.positionWS - _WorldSpaceCameraPos);
                 float3 reflDir  = reflect(viewDir, normal);
