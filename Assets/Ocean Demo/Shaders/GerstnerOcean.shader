@@ -2,6 +2,8 @@ Shader "Custom/GerstnerOcean"
 {
     Properties
     {
+        _NormalMap ("Normal map", 2D) = "white" {}
+        
         [Header(Water Volume)]
         _WaterAbsorption ("Absorption (rgb = per channel)", Color) = (0.45, 0.06, 0.01, 0)
         _WaterScatter    ("Scatter (rgb = per channel)",    Color) = (0.02, 0.05, 0.08, 0)
@@ -67,6 +69,7 @@ Shader "Custom/GerstnerOcean"
 
             // ── Textures ─────────────────────────────────────────
             TEXTURE2D_X(_FoamTexture);              SAMPLER(sampler_FoamTexture);
+            TEXTURE2D_X(_NormalMap);                SAMPLER(sampler_NormalMap);
             TEXTURE2D(_LocalWaterDetails);          SAMPLER(sampler_LocalWaterDetails);
             TEXTURE2D_X(_CameraOpaqueTexture);      SAMPLER(sampler_CameraOpaqueTexture);
             TEXTURE2D_X_FLOAT(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
@@ -211,8 +214,19 @@ Shader "Custom/GerstnerOcean"
             {
                 float3x3 TBN    = float3x3(i.tangentWS, i.bitangentWS, i.normalWS);
                 float3 normal   = i.normalWS;//normalize(mul(ReadDetailsNormal(i.initialWS.xz), TBN));
+                float4 packed1 = SAMPLE_TEXTURE2D(_NormalMap,
+                                                  sampler_NormalMap, i.initialWS.xz * .1);
+                float4 packed2 = SAMPLE_TEXTURE2D(_NormalMap,
+                                                  sampler_NormalMap, i.initialWS.xz * .15 - _Time.y * .15);
+                float3 normalTS = lerp(UnpackNormal(packed1), UnpackNormal(packed2), .5);
                 float  jacobian = 0;
-                //Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, _MaxWaves, normal, jacobian);
+                Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, _MaxWaves, normal, jacobian);
+                jacobian = max(jacobian, ReadFoam(i.initialWS.xz));
+                normalTS.xy *= saturate(.85 - jacobian);
+                //return saturate(1 - abs(jacobian * 2 - 1)).xxxx;
+                normalTS = normalize(normalTS);
+                normal = normalize(mul(normalTS, TBN));
+                //return half4(normal * .5 + .5, 1);
 
                 float3 viewDir  = normalize(i.positionWS - _WorldSpaceCameraPos);
                 float3 reflDir  = reflect(viewDir, normal);
@@ -269,7 +283,7 @@ Shader "Custom/GerstnerOcean"
                                     i.initialWS.xz * _FoamTexture_ST.xy
                                   + _FoamTexture_ST.zw);
                 
-                half foamAmount = saturate((foamMask - (1 -  ReadFoam(i.initialWS.xz)) + _FoamAmount) * _FoamStrength);
+                half foamAmount = saturate((foamMask - (1 - jacobian) + _FoamAmount) * _FoamStrength);
                                 
                 half3 specular = H_PBRSpecular(normal, -viewDir, mainLight.direction,
                                                 sss, _Metallic, _Roughness)
