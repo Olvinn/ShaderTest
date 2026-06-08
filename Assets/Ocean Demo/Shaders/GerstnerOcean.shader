@@ -104,6 +104,9 @@ Shader "Custom/GerstnerOcean"
                 float4 positionSS : TEXCOORD2;
                 float3 initialWS  : TEXCOORD3;
                 float2 uv         : TEXCOORD4;
+                float3 normalWS   : TEXCOORD5;
+                float3 tangentWS  : TEXCOORD6;
+                float3 bitangentWS: TEXCOORD7;
             };
 
             float3 ReadDetailsHeight(float2 worldXZ)
@@ -121,8 +124,11 @@ Shader "Custom/GerstnerOcean"
                 float3 worldPos = mul(unity_ObjectToWorld, float4(IN.vertex.xyz, 1)).xyz;
                 OUT.initialWS = worldPos;
 
-                float3 offset = GetGerstnerOffset(worldPos.xz, _Time.y, _WaveDirs, _MaxWaves);
-                worldPos += offset + ReadDetailsHeight(worldPos.xz);
+                float3 normal, tangent;
+                
+                float3 offset = Gerstner_GetOffset(worldPos.xz, _Time.y, _MaxWaves, normal, tangent);
+                worldPos += offset;
+                worldPos.y += ReadDetailsHeight(worldPos.xz);
 
                 float4 clipPos    = TransformWorldToHClip(worldPos);
                 OUT.positionCS    = clipPos;
@@ -130,6 +136,9 @@ Shader "Custom/GerstnerOcean"
                 OUT.positionWS    = worldPos;
                 OUT.uv            = IN.uv;
                 OUT.fog           = ComputeFogFactor(clipPos.z);
+                OUT.normalWS      = normalize(normal);
+                OUT.tangentWS     = normalize(tangent);
+                OUT.bitangentWS   = cross(OUT.normalWS, OUT.tangentWS);
 
                 return OUT;
             }
@@ -200,10 +209,10 @@ Shader "Custom/GerstnerOcean"
 
             half4 frag(Varyings i) : SV_Target
             {
-                float3 normal        = ReadDetailsNormal(i.positionWS.xz);
-                float  jacobian      = 0;
-                G_GetNormalJacobian(i.initialWS.xz, _Time.y, _MaxWaves,
-                                     _WaveDirs, normal, jacobian);
+                float3x3 TBN    = float3x3(i.tangentWS, i.bitangentWS, i.normalWS);
+                float3 normal   = i.normalWS;//normalize(mul(ReadDetailsNormal(i.initialWS.xz), TBN));
+                float  jacobian = 0;
+                //Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, _MaxWaves, normal, jacobian);
 
                 float3 viewDir  = normalize(i.positionWS - _WorldSpaceCameraPos);
                 float3 reflDir  = reflect(viewDir, normal);
@@ -323,9 +332,9 @@ Shader "Custom/GerstnerOcean"
                 ShadowVaryings OUT;
 
                 float3 worldPos = mul(unity_ObjectToWorld, float4(IN.vertex.xyz, 1)).xyz;
-                float3 normalWS = TransformObjectToWorldNormal(IN.normal);
+                float3 normalWS, tangentWS;
 
-                float3 offset = GetGerstnerOffset(worldPos.xz, _Time.y, _WaveDirs, _MaxWaves);
+                float3 offset = Gerstner_GetOffset(worldPos.xz, _Time.y, _MaxWaves, normalWS, tangentWS);
                 worldPos += offset;
 
                 #ifdef _CASTING_PUNCTUAL_LIGHT_SHADOW

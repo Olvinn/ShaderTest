@@ -2,15 +2,15 @@
 #define G 9.81
 #define TWO_PI 6.283185307179586
 
-uniform float4 _WaveDirs[MAX_WAVES];
+uniform float4 _WaveDirs[MAX_WAVES]; //x: angle (rad), y: amp, z: len, w: steep
 
-void GetWaveParams(float waveLength, out float k, out float omega)
+void ger_waveParams(float waveLength, out float k, out float omega)
 {
     k     = TWO_PI / waveLength;
     omega = sqrt(G * k);
 }
 
-float3 GerstnerWave(float2 pos, float2 dir, float k, float amp,
+float3 ger_wave(float2 pos, float2 dir, float k, float amp,
                     float steepness, float speed, float time)
 {
     float phase = k * dot(dir, pos) - speed * time;
@@ -24,7 +24,7 @@ float3 GerstnerWave(float2 pos, float2 dir, float k, float amp,
     );
 }
 
-void GerstnerWaveNormal(float2 pos, float2 dir, float k, float amp,
+void ger_waveNormalJacobian(float2 pos, float2 dir, float k, float amp,
                         float steepness, float speed, float time,
                         inout float3 normal, inout float2x2 J)
 {    
@@ -44,27 +44,46 @@ void GerstnerWaveNormal(float2 pos, float2 dir, float k, float amp,
     J[1][1] += common * dir.y * dir.y; // dZ'/dz
 }
 
-float3 GetGerstnerOffset(float2 worldXZ, float time, float4 _WaveDirs[MAX_WAVES],
-                         int count)
+void ger_waveNormalTangent(float2 pos, float2 dir, float k, float amp,
+                        float steepness, float speed, float time,
+                        inout float3 normal, inout float3 tangent)
+{    
+    float phase = k * dot(dir, pos) - speed * time;
+    float sinP  = sin(phase);
+    float cosP  = cos(phase);
+
+    normal.x += -dir.x * k * amp * cosP;
+    normal.y -= steepness * amp * k * sinP;
+    normal.z += -dir.y * k * amp * cosP;
+    
+    tangent.x += -steepness * amp * k * dir.x * dir.x * sinP;
+    tangent.y +=  amp * k * dir.x * cosP;
+    tangent.z += -steepness * amp * k * dir.x * dir.y * sinP;
+}
+
+float3 Gerstner_GetOffset(float2 worldXZ, float time, int count, out float3 normal, out float3 tangent)
 {
     float3 offset = float3(0, 0, 0);
+    normal = float3(0, 1, 0);
+    tangent = float3(1, 0, 0);
 
     for (int i = 0; i < count; i++)
     {
         float k, speed, steepness = _WaveDirs[i].w;
-        GetWaveParams(_WaveDirs[i].z, k, speed);
-        float a = _WaveDirs[i].x * TWO_PI;
+        ger_waveParams(_WaveDirs[i].z, k, speed);
+        float a = _WaveDirs[i].x;
         float x = cos(a);
         float y = sin(a);
         float2 dir = normalize(float2(x, y));
-        offset += GerstnerWave(worldXZ, dir, k, _WaveDirs[i].y, steepness, speed, time);
+        offset += ger_wave(worldXZ, dir, k, _WaveDirs[i].y, steepness, speed, time);
+        ger_waveNormalTangent(worldXZ, dir, k, _WaveDirs[i].y, steepness, speed, time,
+                           normal, tangent);
     }
 
     return offset;
 }
 
-void G_GetNormalJacobian(float2 worldXZ, float time, int count,
-                                float4 _WaveDirs[MAX_WAVES],
+void Gerstner_GetNormalJacobian(float2 worldXZ, float time, int count,
                                 inout float3 normal, out float jacobianCoeff)
 {   
     float2x2 J = float2x2(
@@ -76,12 +95,12 @@ void G_GetNormalJacobian(float2 worldXZ, float time, int count,
     for (int i = 0; i < count; i++)
     {
         float k, speed, steepness = _WaveDirs[i].w;
-        GetWaveParams(_WaveDirs[i].z, k, speed);
-        float a = _WaveDirs[i].x * TWO_PI;
+        ger_waveParams(_WaveDirs[i].z, k, speed);
+        float a = _WaveDirs[i].x;
         float x = cos(a);
         float y = sin(a);
         float2 dir = normalize(float2(x, y));
-        GerstnerWaveNormal(worldXZ, dir, k, _WaveDirs[i].y, steepness, speed, time,
+        ger_waveNormalJacobian(worldXZ, dir, k, _WaveDirs[i].y, steepness, speed, time,
                            normal, J);
     }
     

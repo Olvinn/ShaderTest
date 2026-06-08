@@ -136,7 +136,7 @@ namespace Ocean_Demo.Scripts
         private void Awake()
         {
             for (int i = 0; i < waveDirections.Length; i++)
-                waveDirections[i].x = Random.value * .5f + .5f;
+                waveDirections[i].x = Random.value * Mathf.PI * 2;
             
             _camera = Camera.main;
             

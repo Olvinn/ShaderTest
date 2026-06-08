@@ -39,7 +39,17 @@ void Waves(uint3 id : SV_DispatchThreadID)
     float2 P = PixelToWS(pix);
 
     float4 prev = _LocalWavesRW[pix];
-    float4 acc  = prev * _Damping;
+    float4 curr = prev;
+    curr.xyz *= _Damping;
+    
+    curr.a = clamp(0, 1, curr.a - _dt * .2);
+    
+    float jacobian = 0;
+    float3 normal = 0; 
+    
+    Gerstner_GetNormalJacobian(P, _Time, 64, normal, jacobian);
+    float foam = clamp(0, 1, (jacobian - .3) * 3);
+    curr.a = max(curr.a, foam);
 
     for (int i = 0; i < _NumSources; i++)
     {
@@ -67,26 +77,13 @@ void Waves(uint3 id : SV_DispatchThreadID)
         float2 grad = dhdr * n_r;
 
         // Accumulate:
-        acc.rg += grad;          // local tangent offsets (dx,dz)
-        acc.b  += h;             // extra height contribution
-        acc.a  += saturate(A);   // simple foam mask energy
+        curr.rg += grad;          
+        curr.b  += h;          
+        curr.a = max(curr.a, saturate(A));
     }
 
-    acc.rg = clamp(acc.rg, -2.0, 2.0);
-    acc.b  = clamp(acc.b,  -2.0, 2.0);
-    acc.a  = saturate(acc.a);
-
-    prev = acc;
+    curr.rg = clamp(curr.rg, -1.0, 1.0);
+    curr.b  = clamp(curr.b,  -1.0, 1.0);
     
-    float curr = clamp(0, 1, prev.a - _dt * .1);
-    
-    float jacobian = 0;
-    float3 normal = 0; 
-    
-    G_GetNormalJacobian(P, _Time, 64, _WaveDirs, normal, jacobian);
-    float foam = clamp(0, 1, (jacobian - .3) * 3);
-    curr = max(curr, foam);
-    prev.a = curr;
-    
-    _LocalWavesRW[pix] = prev;
+    _LocalWavesRW[pix] = curr;
 }
