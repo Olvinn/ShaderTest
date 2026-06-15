@@ -107,12 +107,12 @@ Material:
     - _Glossiness: 0.5
     - _GlossyReflections: 1
     - _MaxWaveAmplitude: 20
-    - _MaxWaves: 64
+    - _MaxWaves: 128
     - _Metallic: 0
     - _Mode: 0
     - _NoiseScale: 0.08
     - _NormalPow: 1
-    - _NormalsPower: 1
+    - _NormalsPower: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _PartialNormals: 1
@@ -121,8 +121,8 @@ Material:
     - _SSRStepSize: 0.02
     - _SSRSteps: 32
     - _SSRThickness: 0.5
-    - _SSSAmbient: 1
-    - _SSSDirectionality: 8
+    - _SSSAmbient: 0.26
+    - _SSSDirectionality: 7.7
     - _SSSStrength: 2
     - _SSSThicknessPower: 4
     - _SmoothnessTextureChannel: 0
@@ -135,7 +135,7 @@ Material:
     - _Tess: 32
     - _TessFactor: 3
     - _Tessellation: 8
-    - _Transparency: 3
+    - _Transparency: 5
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2

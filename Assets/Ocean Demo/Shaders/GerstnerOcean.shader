@@ -152,7 +152,9 @@ Shader "Custom/GerstnerOcean"
                 float2 uv = (worldXZ - _MapCenterWS.xz) / _MapSizeWS.xz + 0.5;
                 float4 packed = SAMPLE_TEXTURE2D(_LocalWaterDetails,
                                                   sampler_LocalWaterDetails, uv);
-                return normalize(float3(-packed.r, 1.0, -packed.g));
+                //packed.rg *= 2.0;
+                //packed.rg -= 1.0;
+                return normalize(float3(-packed.r, 1, -packed.g));
             }
 
             float ReadFoam(float2 worldXZ)
@@ -215,18 +217,18 @@ Shader "Custom/GerstnerOcean"
             {
                 float3x3 TBN   = float3x3(i.tangentWS, i.bitangentWS, i.normalWS);
                 float4 packed1 = SAMPLE_TEXTURE2D(_NormalMap,
-                                                  sampler_NormalMap, i.initialWS.xz * .2);
+                                                  sampler_NormalMap, i.initialWS.xz * .01);
                 float4 packed2 = SAMPLE_TEXTURE2D(_NormalMap,
-                                                  sampler_NormalMap, i.initialWS.xz * .3 - _Time.y * .15);
+                                                  sampler_NormalMap, i.initialWS.xz * .05 - _Time.y * .1);
                 float3 normalTS = lerp(UnpackNormal(packed1), UnpackNormal(packed2), .5);
                 float  jacobian = 0;
                 jacobian = max(jacobian, ReadFoam(i.initialWS.xz));
                 normalTS.xy *= saturate(.85 - jacobian * 1.25) * _NormalsPower * .5 + .05;
                 normalTS = normalize(normalTS);
-                float3 normal = normalize(mul(normalTS, TBN));
-                //Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, 32, normal, jacobian);
-                float3 details = ReadDetailsNormal(i.initialWS.xz) - float3(0, 1, 0);
-                normal += details;
+                float3 normal = mul(normalTS, TBN); 
+                //Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, 50, normal, jacobian);
+                normal += ReadDetailsNormal(i.initialWS.xz);
+                normal = normalize(normal);
 
                 float3 viewDir  = normalize(i.positionWS - _WorldSpaceCameraPos);
                 float3 reflDir  = reflect(viewDir, normal);
@@ -272,12 +274,12 @@ Shader "Custom/GerstnerOcean"
                 #endif
                 
                 half3 underWS = ComputeWorldSpacePosition(refrUV, refrDepth, UNITY_MATRIX_I_VP);
-                half3 refraction = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, refrUV).rgb;
-                refraction = lerp(refraction, CubemapAmbient(refrDir, 0), isSky);
+                half3 unerwaterCol = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, refrUV).rgb;
+                unerwaterCol = lerp(unerwaterCol, CubemapAmbient(refrDir, 0), isSky);
 
                 half3 sigmaT      = (1 - _WaterAbsorption.rgb) +  (1 - _WaterScatter.rgb);
                 half3 depthTint   = exp(-sigmaT * length(underWS - i.positionWS) / _Transparency);
-                refraction = refraction * (isSky ? 0 : depthTint);
+                unerwaterCol = unerwaterCol * (isSky ? 0 : depthTint);
 
                 half foamMask   = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture,
                                     i.initialWS.xz * _FoamTexture_ST.xy
@@ -291,7 +293,7 @@ Shader "Custom/GerstnerOcean"
                                * mainLight.shadowAttenuation
                                * (1 - foamAmount);
 
-                float3 transmitted = refraction * (1.0 - fresnel);
+                float3 transmitted = unerwaterCol * (1.0 - fresnel);
                 float3 waterColor  = reflection * fresnel + transmitted;
 
                 float  NdotL      = saturate(dot(normal, mainLight.direction));
@@ -316,9 +318,7 @@ Shader "Custom/GerstnerOcean"
             Tags { "LightMode" = "ShadowCaster" }
 
             ZWrite On
-            ZTest LEqual
             Cull Front
-            ColorMask 0
 
             HLSLPROGRAM
             #pragma target 5.0
@@ -333,10 +333,9 @@ Shader "Custom/GerstnerOcean"
 
             CBUFFER_START(UnityPerMaterial)
                 int _MaxWaves;
+                float3 _LightDirection;
+                float3 _LightPosition;
             CBUFFER_END
-
-            float3 _LightDirection;
-            float3 _LightPosition;
 
             struct ShadowAttributes { float4 vertex : POSITION; float3 normal : NORMAL; };
             struct ShadowVaryings   { float4 positionCS : SV_POSITION; };

@@ -6,98 +6,13 @@ using Random = UnityEngine.Random;
 
 namespace Ocean_Demo.Scripts
 {
-    [Serializable]
-    public struct WavesParams
-    {
-        public float longWavesA, longWavesL, longWavesS;
-        public float mediumWavesA, mediumWavesL, mediumWavesS;
-        public float secondaryWavesA, secondaryWavesL, secondaryWavesS;
-        public float shortWavesA, shortWavesL, shortWavesS;
-    }
-    
     [ExecuteInEditMode]
     public class OceanWaveController : MonoBehaviour
     {
         public Material[] oceanMaterials;
 
-        [Range(1, 360)] public float minAngle = 45;
-
-        public WavesParams wavesParams;
-        public Vector4[] waveDirections = new Vector4[] 
-        {
-                // ── Primary swell ────────────────────────────────────────────
-                new Vector4( 0.00f, 1.40f, 78.0f, 1),
-                new Vector4( 0.05f, 1.20f, 72.0f, 1),
-                new Vector4(-0.04f, 1.10f, 68.0f, 1),
-                new Vector4( 0.09f, 1.30f, 65.0f, 1),
-                new Vector4(-0.07f, 0.95f, 60.0f, 1),
-                new Vector4( 0.03f, 1.05f, 57.0f, 1),
-                new Vector4(-0.11f, 0.85f, 52.0f, 1),
-                new Vector4( 0.13f, 0.90f, 48.0f, 1),
-                new Vector4(-0.06f, 0.75f, 45.0f, 1),
-                new Vector4( 0.08f, 0.80f, 43.0f, 1),
-                new Vector4(-0.15f, 0.70f, 40.0f, 1),
-                new Vector4( 0.10f, 0.65f, 38.0f, 1),
-                new Vector4(-0.09f, 0.60f, 36.0f, 1),
-                new Vector4( 0.14f, 0.55f, 34.0f, 1),
-                new Vector4(-0.12f, 0.50f, 32.0f, 1),
-                new Vector4( 0.07f, 0.45f, 30.0f, 1),
-
-                // ── Wind waves ───────────────────────────────────────────────
-                new Vector4( 0.22f, 0.42f, 28.0f, 1),
-                new Vector4(-0.18f, 0.38f, 26.0f, 1),
-                new Vector4( 0.30f, 0.35f, 24.0f, 1),
-                new Vector4(-0.25f, 0.32f, 22.0f, 1),
-                new Vector4( 0.17f, 0.30f, 20.0f, 1),
-                new Vector4(-0.20f, 0.28f, 19.0f, 1),
-                new Vector4( 0.35f, 0.25f, 18.0f, 1),
-                new Vector4(-0.28f, 0.24f, 17.0f, 1),
-                new Vector4( 0.15f, 0.22f, 16.0f, 1),
-                new Vector4(-0.32f, 0.20f, 15.0f, 1),
-                new Vector4( 0.40f, 0.18f, 14.0f, 1),
-                new Vector4(-0.22f, 0.17f, 13.5f, 1),
-                new Vector4( 0.28f, 0.15f, 13.0f, 1),
-                new Vector4(-0.35f, 0.14f, 12.0f, 1),
-                new Vector4( 0.19f, 0.13f, 11.0f, 1),
-                new Vector4(-0.42f, 0.12f, 10.5f, 1),
-                new Vector4( 0.45f, 0.11f, 10.0f, 1),
-                new Vector4(-0.38f, 0.10f,  9.5f, 1),
-                new Vector4( 0.33f, 0.09f,  9.0f, 1),
-                new Vector4(-0.47f, 0.09f,  8.5f, 1),
-                new Vector4( 0.50f, 0.08f,  8.0f, 1),
-                new Vector4(-0.43f, 0.08f,  7.5f, 1),
-                new Vector4( 0.38f, 0.07f,  7.0f, 1),
-                new Vector4(-0.50f, 0.07f,  6.5f, 1),
-
-                // ── Cross swell ──────────────────────────────────────────────
-                new Vector4( 0.90f, 0.55f, 55.0f, 1),
-                new Vector4( 0.95f, 0.45f, 50.0f, 1),
-                new Vector4( 0.85f, 0.40f, 45.0f, 1),
-                new Vector4( 1.00f, 0.35f, 40.0f, 1),
-                new Vector4( 0.80f, 0.30f, 35.0f, 1),
-                new Vector4( 1.05f, 0.25f, 32.0f, 1),
-                new Vector4( 0.92f, 0.22f, 30.0f, 1),
-                new Vector4( 1.10f, 0.20f, 28.0f, 1),
-
-                // ── Chop ─────────────────────────────────────────────────────
-                new Vector4( 0.55f, 0.06f,  6.0f, 1),
-                new Vector4(-0.60f, 0.05f,  5.5f, 1),
-                new Vector4( 0.70f, 0.05f,  5.0f, 1),
-                new Vector4(-0.65f, 0.04f,  4.5f, 1),
-                new Vector4( 0.80f, 0.04f,  4.0f, 1),
-                new Vector4(-0.75f, 0.04f,  3.8f, 1),
-                new Vector4( 0.90f, 0.03f,  3.5f, 1),
-                new Vector4(-0.85f, 0.03f,  3.2f, 1),
-                new Vector4( 0.60f, 0.03f,  3.0f, 1),
-                new Vector4(-0.70f, 0.03f,  2.8f, 1),
-                new Vector4( 0.95f, 0.02f,  2.5f, 1),
-                new Vector4(-0.80f, 0.02f,  2.3f, 1),
-                new Vector4( 0.50f, 0.02f,  2.1f, 1),
-                new Vector4(-0.55f, 0.02f,  2.0f, 1),
-                new Vector4( 0.75f, 0.02f,  1.8f, 1),
-                new Vector4(-0.90f, 0.02f,  1.6f, 1), 
-        };
-        public Vector4[] waveDirectionsReady = new Vector4[64];
+        public Vector4[] shapeWaves;
+        public Vector4[] shapeWavesReady = new Vector4[64];
         public float windDirection = 60;
 
         // === NEW: compute-based local details ===
@@ -108,9 +23,8 @@ namespace Ocean_Demo.Scripts
         public Vector2 LocalMapCenterWS = Vector2.zero;
         public Vector2 LocalMapSizeWS = new Vector2(64, 64); // meters
 
-        [SerializeField] private RenderTexture WaterDetailsRT; //Serialized for debug
+        private RenderTexture WaterDetailsRT; //Serialized for debug
 
-        // Add, update & clear sources at runtime
         [StructLayout(LayoutKind.Sequential)]
         public struct WaveSource
         {
@@ -135,8 +49,10 @@ namespace Ocean_Demo.Scripts
 
         private void Awake()
         {
-            for (int i = 0; i < waveDirections.Length; i++)
-                waveDirections[i].x = Random.value * Mathf.PI * 2;
+            shapeWaves = WavesGenerator.GetShapeWaves();
+            
+            for (int i = 0; i < shapeWaves.Length; i++)
+                shapeWaves[i].x = Random.value * Mathf.PI * 2;
             
             _camera = Camera.main;
             
@@ -148,18 +64,19 @@ namespace Ocean_Demo.Scripts
         {
             BindLocalDetailsToMaterials();
             UpdateWaves();
+            WriteToMaterials(shapeWavesReady);
         }
 
         private void FixedUpdate()
         {
             LocalMapCenterWS = new Vector2(_camera.transform.position.x , _camera.transform.position.z);
             ProcessingWaterCalculations();
-            WriteToMaterials(waveDirectionsReady);
             var storm = Mathf.MoveTowards(this._storm, targetStorm, Time.deltaTime / 30);
             if (!Mathf.Approximately(storm, this._storm))
             {
                 this._storm = storm;
                 UpdateWaves();
+                WriteToMaterials(shapeWavesReady);
             }
         }
 
@@ -172,6 +89,7 @@ namespace Ocean_Demo.Scripts
                 BindLocalDetailsToMaterials();
             }
             UpdateWaves();
+            WriteToMaterials(shapeWavesReady);
         }
 
         private void OnDestroy()
@@ -201,53 +119,35 @@ namespace Ocean_Demo.Scripts
             RecreateSourcesBuffer();
         }
 
-        public void ChangeWater(float storm, float foam)
-        {
-            targetStorm = storm;
-            _foam = foam;
-            UpdateWaves();
-        }
-
         private void UpdateWaves()
         {
-            waveDirectionsReady = new Vector4[waveDirections.Length];
-            for (int i = 0; i < waveDirections.Length; i++)
-                waveDirectionsReady[i] = ScaleWave(i);
+            shapeWavesReady = new Vector4[shapeWaves.Length];
+            for (int i = 0; i < shapeWaves.Length; i++)
+                shapeWavesReady[i] = ScaleWave(i);
         }
 
         private Vector4 ScaleWave(int i)
         {
-            switch (i)
-            {
-                case < 16:
-                    return new Vector4(waveDirections[i].x * .25f + windDirection,
-                        waveDirections[i].y * wavesParams.longWavesA * _storm, 
-                        waveDirections[i].z * wavesParams.longWavesL,
-                        waveDirections[i].w * wavesParams.longWavesS);
-                case < (16 + 24):
-                    return new Vector4(waveDirections[i].x * .5f + windDirection,
-                        waveDirections[i].y * wavesParams.mediumWavesA * _storm, 
-                        waveDirections[i].z * wavesParams.mediumWavesL,
-                        waveDirections[i].w * wavesParams.mediumWavesS);
-                case < (16 + 24 + 8):
-                    return new Vector4(waveDirections[i].x * .85f + windDirection,
-                        waveDirections[i].y * wavesParams.secondaryWavesA * _storm, 
-                        waveDirections[i].z * wavesParams.secondaryWavesL,
-                        waveDirections[i].w * wavesParams.secondaryWavesS);
-                case < (64):
-                    return new Vector4(waveDirections[i].x,
-                        waveDirections[i].y * wavesParams.shortWavesA * _storm, 
-                        waveDirections[i].z * wavesParams.shortWavesL,
-                        waveDirections[i].w *  wavesParams.shortWavesS);
-            }
-            return new Vector4(waveDirections[i].x, waveDirections[i].y, waveDirections[i].z, waveDirections[i].w);
+            var AdW = Vector2.Dot(new Vector2(Mathf.Cos(windDirection), Mathf.Sin(windDirection)),
+                new Vector2(Mathf.Cos(shapeWaves[i].x), Mathf.Sin(shapeWaves[i].x)));
+            var s = Mathf.Sign(AdW);
+            AdW *= AdW * AdW * AdW;
+            AdW -= s > 0 ? 0 : Mathf.PI * 2;
+            return new Vector4(shapeWaves[i].x, shapeWaves[i].y * _storm * s * AdW, shapeWaves[i].z, shapeWaves[i].w);
         }
 
         private void WriteToMaterials(Vector4[] waves)
         {
+            ComputeBuffer shapeWaveBuffer =
+                new ComputeBuffer(
+                    shapeWavesReady.Length,
+                    sizeof(float) * 4);
+
+            shapeWaveBuffer.SetData(waves);
+            
             foreach (var mat in oceanMaterials)
             {
-                mat.SetVectorArray("_WaveDirs", waves);
+                mat.SetBuffer("_ShapeWaves", shapeWaveBuffer);
                 mat.SetVector("_MapCenterWS", new Vector4(LocalMapCenterWS.x, 0, LocalMapCenterWS.y, 0));
                 mat.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));
                 mat.SetTexture("_LocalWaterDetails", WaterDetailsRT);
@@ -337,7 +237,16 @@ namespace Ocean_Demo.Scripts
 
             int gx = Mathf.CeilToInt(LocalDetailsResolution / (float)_tgx);
             int gy = Mathf.CeilToInt(LocalDetailsResolution / (float)_tgy);
-            WaterDetailsCompute.SetVectorArray("_WaveDirs", waveDirectionsReady);
+            
+            
+            ComputeBuffer waveBuffer =
+                new ComputeBuffer(
+                    shapeWavesReady.Length,
+                    sizeof(float) * 4);
+            
+            waveBuffer.SetData(shapeWavesReady);
+            
+            WaterDetailsCompute.SetBuffer(_wavesKernel, "_ShapeWaves", waveBuffer);
             WaterDetailsCompute.Dispatch(_wavesKernel, gx, gy, 1);
         }
     }

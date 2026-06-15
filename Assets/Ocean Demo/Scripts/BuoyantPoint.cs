@@ -41,12 +41,12 @@ namespace Ocean_Demo.Scripts
             Vector3 waveNormal = GetGerstnerNormal(
                 new Vector2(_rb.position.x,  _rb.position.z),
                 Time.time,
-                _WaveController.waveDirectionsReady,
+                _WaveController.shapeWavesReady,
             32);
             Vector3 waveOffset = GetGerstnerOffset(
                 new Vector2(_rb.position.x,  _rb.position.z),
                 Time.time,
-                _WaveController.waveDirectionsReady,
+                _WaveController.shapeWavesReady,
                 64);
             
             //if (_rb.position.y > waveOffset.y) return;
