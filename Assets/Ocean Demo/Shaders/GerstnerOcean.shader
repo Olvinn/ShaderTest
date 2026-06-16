@@ -9,11 +9,15 @@ Shader "Custom/GerstnerOcean"
         _WaterAbsorption ("Absorption (rgb = per channel)", Color) = (0.45, 0.06, 0.01, 0)
         _WaterScatter    ("Scatter (rgb = per channel)",    Color) = (0.02, 0.05, 0.08, 0)
         
-        _Transparency   ("Transparency",    Range(0, 1000))    = 0
-        _MaxWaves       ("Max Waves",       Range(1, 128))   = 64
+        [Header(Foam)]
         _FoamTexture    ("Foam Texture",    2D)             = "white" {}
+        _FoamNormal     ("Foam Normal",     2D)             = "white" {}
         _FoamAmount     ("Foam Amount",     Float)          = 1
         _FoamStrength   ("Foam Strength",   Float)          = 1
+        _FoamNormalsPower ("Foam normals power", Range(0,1)) = .5
+        
+        _Transparency   ("Transparency",    Range(0, 1000))    = 0
+        _MaxWaves       ("Max Waves",       Range(1, 128))   = 64
         _Metallic       ("Metallic",        Range(0, 1))    = 0.5
         _Roughness      ("Roughness",       Range(0, 1))    = 0.5
 
@@ -70,6 +74,7 @@ Shader "Custom/GerstnerOcean"
 
             // ── Textures ─────────────────────────────────────────
             TEXTURE2D_X(_FoamTexture);              SAMPLER(sampler_FoamTexture);
+            TEXTURE2D_X(_FoamNormal);               SAMPLER(sampler_FoamNormal);
             TEXTURE2D_X(_NormalMap);                SAMPLER(sampler_NormalMap);
             TEXTURE2D(_LocalWaterDetails);          SAMPLER(sampler_LocalWaterDetails);
             TEXTURE2D_X(_CameraOpaqueTexture);      SAMPLER(sampler_CameraOpaqueTexture);
@@ -77,9 +82,9 @@ Shader "Custom/GerstnerOcean"
 
             // ── Constant buffer ───────────────────────────────────
             CBUFFER_START(UnityPerMaterial)
-                float4 _WaterAbsorption, _WaterScatter, _FoamTexture_ST;
+                float4 _WaterAbsorption, _WaterScatter, _FoamTexture_ST, _NormalMap_ST;
                 float4 _MapCenterWS, _MapSizeWS;
-                half   _FoamAmount, _FoamStrength, _Transparency, _NormalsPower;
+                half   _FoamAmount, _FoamStrength, _Transparency, _NormalsPower, _FoamNormalsPower;
                 half   _Metallic, _Roughness;
                 int    _MaxWaves, _FogBlend;
                 #ifdef SSR
@@ -217,17 +222,30 @@ Shader "Custom/GerstnerOcean"
             {
                 float3x3 TBN   = float3x3(i.tangentWS, i.bitangentWS, i.normalWS);
                 float4 packed1 = SAMPLE_TEXTURE2D(_NormalMap,
-                                                  sampler_NormalMap, i.initialWS.xz * .01);
+                                                  sampler_NormalMap, i.initialWS.xz * _NormalMap_ST.xy);
                 float4 packed2 = SAMPLE_TEXTURE2D(_NormalMap,
-                                                  sampler_NormalMap, i.initialWS.xz * .05 - _Time.y * .1);
+                                                  sampler_NormalMap, i.initialWS.xz * _NormalMap_ST.xy * 1.3f - _Time.y * .01);
                 float3 normalTS = lerp(UnpackNormal(packed1), UnpackNormal(packed2), .5);
                 float  jacobian = 0;
                 jacobian = max(jacobian, ReadFoam(i.initialWS.xz));
-                normalTS.xy *= saturate(.85 - jacobian * 1.25) * _NormalsPower * .5 + .05;
+                normalTS.xy *= saturate(1 - jacobian) * _NormalsPower + .05;
                 normalTS = normalize(normalTS);
                 float3 normal = mul(normalTS, TBN); 
                 //Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, 50, normal, jacobian);
                 normal += ReadDetailsNormal(i.initialWS.xz);
+                
+                half foamMask   = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture,
+                                    i.initialWS.xz * _FoamTexture_ST.xy
+                                  + _FoamTexture_ST.zw);
+                float4 foamNormal = SAMPLE_TEXTURE2D(_FoamNormal, sampler_FoamNormal,
+                                    i.initialWS.xz * _FoamTexture_ST.xy
+                                  + _FoamTexture_ST.zw);
+                
+                half foamAmount = saturate((foamMask - (1 - jacobian) + _FoamAmount) * _FoamStrength);
+                
+                float3 foamNormalUnpacked = UnpackNormal(foamNormal);
+                foamNormalUnpacked.xy *= _FoamNormalsPower;
+                normal = lerp(normal, mul(foamNormalUnpacked, TBN), foamAmount);
                 normal = normalize(normal);
 
                 float3 viewDir  = normalize(i.positionWS - _WorldSpaceCameraPos);
@@ -280,12 +298,6 @@ Shader "Custom/GerstnerOcean"
                 half3 sigmaT      = (1 - _WaterAbsorption.rgb) +  (1 - _WaterScatter.rgb);
                 half3 depthTint   = exp(-sigmaT * length(underWS - i.positionWS) / _Transparency);
                 unerwaterCol = unerwaterCol * (isSky ? 0 : depthTint);
-
-                half foamMask   = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture,
-                                    i.initialWS.xz * _FoamTexture_ST.xy
-                                  + _FoamTexture_ST.zw);
-                
-                half foamAmount = saturate((foamMask - (1 - jacobian) + _FoamAmount) * _FoamStrength);
                                 
                 half3 specular = H_PBRSpecular(normal, -viewDir, mainLight.direction,
                                                 sss, _Metallic, _Roughness)

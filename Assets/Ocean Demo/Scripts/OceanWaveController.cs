@@ -131,7 +131,7 @@ namespace Ocean_Demo.Scripts
             var AdW = Vector2.Dot(new Vector2(Mathf.Cos(windDirection), Mathf.Sin(windDirection)),
                 new Vector2(Mathf.Cos(shapeWaves[i].x), Mathf.Sin(shapeWaves[i].x)));
             var s = Mathf.Sign(AdW);
-            AdW *= AdW * AdW * AdW;
+            //AdW = Mathf.Pow(AdW, 10);
             AdW -= s > 0 ? 0 : Mathf.PI * 2;
             return new Vector4(shapeWaves[i].x, shapeWaves[i].y * _storm * s * AdW, shapeWaves[i].z, shapeWaves[i].w);
         }
@@ -151,7 +151,6 @@ namespace Ocean_Demo.Scripts
                 mat.SetVector("_MapCenterWS", new Vector4(LocalMapCenterWS.x, 0, LocalMapCenterWS.y, 0));
                 mat.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));
                 mat.SetTexture("_LocalWaterDetails", WaterDetailsRT);
-                mat.SetFloat("_NormalsPower", _storm);
             }
         }
 

@@ -19,7 +19,7 @@ Material:
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 3000
+  m_CustomRenderQueue: 2050
   stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 
@@ -50,6 +50,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _FoamNormal:
+        m_Texture: {fileID: 2800000, guid: 12217e7d720c8f14181cb89e434c96c2, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _FoamTexture:
         m_Texture: {fileID: 2800000, guid: b58daac2a7f67d94f83649cfc20ff14e, type: 3}
         m_Scale: {x: 0.05, y: 0.05}
@@ -76,7 +80,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _NormalMap:
         m_Texture: {fileID: 2800000, guid: 1cc3f244d93e74643a5ff36b5a09d13e, type: 3}
-        m_Scale: {x: 1, y: 1}
+        m_Scale: {x: 0.02, y: 0.02}
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
         m_Texture: {fileID: 0}
@@ -100,7 +104,8 @@ Material:
     - _DstBlend: 0
     - _EdgeLength: 20
     - _FoamAmount: 0
-    - _FoamStrength: 2
+    - _FoamNormalsPower: 0.5
+    - _FoamStrength: 5
     - _FogBlend: 1
     - _Fresnel: 0.03
     - _GlossMapScale: 1
@@ -112,18 +117,18 @@ Material:
     - _Mode: 0
     - _NoiseScale: 0.08
     - _NormalPow: 1
-    - _NormalsPower: 0
+    - _NormalsPower: 0.5
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _PartialNormals: 1
     - _Phong: 0.5
-    - _Roughness: 0.1
+    - _Roughness: 0.05
     - _SSRStepSize: 0.02
     - _SSRSteps: 32
     - _SSRThickness: 0.5
     - _SSSAmbient: 1
-    - _SSSDirectionality: 8
-    - _SSSStrength: 2
+    - _SSSDirectionality: 1
+    - _SSSStrength: 1
     - _SSSThicknessPower: 4
     - _SmoothnessTextureChannel: 0
     - _Specular: 32
@@ -150,7 +155,7 @@ Material:
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SSSColor: {r: 0.22107512, g: 0.6563368, b: 0.6792453, a: 1}
     - _SpecColor: {r: 0.46226418, g: 0.46226418, b: 0.46226418, a: 0.5}
-    - _WaterAbsorption: {r: 0, g: 0.3679245, b: 0.24961159, a: 1}
-    - _WaterScatter: {r: 0, g: 0.48267925, b: 0.6431373, a: 1}
+    - _WaterAbsorption: {r: 0.12904951, g: 0.56600744, b: 0.9433962, a: 0}
+    - _WaterScatter: {r: 0.013883951, g: 0.2264151, b: 0.111143954, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

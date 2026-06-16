@@ -12,11 +12,18 @@ namespace Ocean_Demo.Scripts
         {
             var result = new Vector4[128];
             //Big swells
-            for (int i = 0; i < 64; i++)
+            for (int i = 0; i < 32; i++)
             {
-                var a = i * 360f / 64f + Random.Range(-5f, 5f);
+                var a = i * 360f / 32f + Random.Range(-10f, 10f);
                 a *= Mathf.Deg2Rad;
-                result[i] = new Vector4(a, Random.Range(.05f, .15f), Random.Range(30f, 120f), Random.Range(.75f, 2f));
+                result[i] = new Vector4(a, Random.Range(.1f, .2f), Random.Range(60f, 120f), Random.Range(.5f, 1f));
+            }
+            
+            for (int i = 32; i < 64; i++)
+            {
+                var a = i * 360f / 32f + Random.Range(-5f, 5f);
+                a *= Mathf.Deg2Rad;
+                result[i] = new Vector4(a, Random.Range(.05f, .1f), Random.Range(30f, 60f), Random.Range(.75f, 1.25f));
             }
             
             //Secondary waves
