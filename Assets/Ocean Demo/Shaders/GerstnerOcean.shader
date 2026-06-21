@@ -222,7 +222,7 @@ Shader "Brod/Ocean"
                 float3 mid  = (p0WS + p1WS) * 0.5;
                 float  dist = distance(mid, _WorldSpaceCameraPos);
                 float  t    = saturate((dist - _TessNear) / (_TessFar - _TessNear));
-                return max(1.0, lerp(_TessMax, _TessMin, t));
+                return max(1.0, lerp(_TessMax, _TessMin, sqrt(t)));
             }
             
             bool BrodOcean_FrustumCull(float3 p0, float3 p1, float3 p2)
