@@ -1,13 +1,14 @@
-Shader "Custom/GerstnerOcean"
+Shader "Brod/Ocean"
 {
     Properties
     {
-        _NormalMap ("Normal map", 2D) = "white" {}
-        _NormalsPower ("Normals power", Range(0,1)) = .5
+        [Header(Details Normal)]
+        _NormalMap ("Normal Map", 2D) = "white" {}
+        _NormalsPower ("Normals Power", Range(0,1)) = .5
         
         [Header(Water Volume)]
-        _WaterAbsorption ("Absorption (rgb = per channel)", Color) = (0.45, 0.06, 0.01, 0)
-        _WaterScatter    ("Scatter (rgb = per channel)",    Color) = (0.02, 0.05, 0.08, 0)
+        _WaterAbsorption ("Absorption", Color) = (0.45, 0.06, 0.01, 0)
+        _WaterScatter    ("Scatter",    Color) = (0.02, 0.05, 0.08, 0)
         
         [Header(Foam)]
         _FoamTexture    ("Foam Texture",    2D)             = "white" {}
@@ -16,6 +17,7 @@ Shader "Custom/GerstnerOcean"
         _FoamStrength   ("Foam Strength",   Float)          = 1
         _FoamNormalsPower ("Foam normals power", Range(0,1)) = .5
         
+        [Header(Shading)]
         _Transparency   ("Transparency",    Range(0, 1000))    = 0
         _MaxWaves       ("Max Waves",       Range(1, 128))   = 64
         _Metallic       ("Metallic",        Range(0, 1))    = 0.5
@@ -34,6 +36,13 @@ Shader "Custom/GerstnerOcean"
         _SSSAmbient         ("Ambient",         Range(0, 1))  = 0.1
         _MaxWaveAmplitude   ("Max Amplitude",   Float)          = 1.5
         
+        [Header(Tesselation)]
+        _TessMin  ("Tess Min",           Range(1, 4))   = 1
+        _TessMax  ("Tess Max",           Range(4, 64))  = 32
+        _TessNear ("Tess Near Distance", Float)         = 5
+        _TessFar  ("Tess Far Distance",  Float)         = 80
+        _MaxDisp  ("Max Displacement",   Float)         = 3 
+        
         [Toggle] _FogBlend  ("Blend in Fog", Int) = 0
     }
 
@@ -41,9 +50,9 @@ Shader "Custom/GerstnerOcean"
     {
         Tags
         {
-            "RenderType"     = "Transparent"
+            "RenderType"     = "Opaque"
             "RenderPipeline" = "UniversalPipeline"
-            "RenderQueue"    = "Transparent"
+            "RenderQueue"    = "Geometry+100"
         }
 
         Pass
@@ -54,9 +63,13 @@ Shader "Custom/GerstnerOcean"
             Cull Off
 
             HLSLPROGRAM
+            // ── Defines ──
             #pragma target 5.0
             #pragma vertex   vert
+            #pragma hull     hull
+            #pragma domain   domain
             #pragma fragment frag
+            #pragma require  tessellation tessHW
 
             #pragma multi_compile_fog
             #pragma shader_feature SSR
@@ -72,7 +85,10 @@ Shader "Custom/GerstnerOcean"
             #include "Helper.cginc"
             #include "Gerstner.cginc"
 
-            // ── Textures ─────────────────────────────────────────
+            #define SSR_MAX_STEPS   64
+            #define IOR_AIR_WATER   0.75 
+
+            // ── Variables ──
             TEXTURE2D_X(_FoamTexture);              SAMPLER(sampler_FoamTexture);
             TEXTURE2D_X(_FoamNormal);               SAMPLER(sampler_FoamNormal);
             TEXTURE2D_X(_NormalMap);                SAMPLER(sampler_NormalMap);
@@ -80,29 +96,39 @@ Shader "Custom/GerstnerOcean"
             TEXTURE2D_X(_CameraOpaqueTexture);      SAMPLER(sampler_CameraOpaqueTexture);
             TEXTURE2D_X_FLOAT(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
 
-            // ── Constant buffer ───────────────────────────────────
             CBUFFER_START(UnityPerMaterial)
                 float4 _WaterAbsorption, _WaterScatter, _FoamTexture_ST, _NormalMap_ST;
                 float4 _MapCenterWS, _MapSizeWS;
                 half   _FoamAmount, _FoamStrength, _Transparency, _NormalsPower, _FoamNormalsPower;
                 half   _Metallic, _Roughness;
                 int    _MaxWaves, _FogBlend;
-                #ifdef SSR
-                    half _SSRThickness, _SSRStepSize, _StepPropagation;
-                    int  _SSRSteps;
-                #endif
+
+                half   _SSRThickness, _SSRStepSize, _StepPropagation;
+                int    _SSRSteps;
+
                 half  _SSSStrength, _SSSDirectionality, _SSSThicknessPower, _SSSAmbient;
                 float _MaxWaveAmplitude;
+
+                half _TessMin, _TessMax, _TessNear, _TessFar, _MaxDisp;
             CBUFFER_END
-
-            #define MAX_WAVES       128
-            #define SSR_MAX_STEPS   64
-            #define IOR_AIR_WATER   0.75 
-
+            
+            // ── Structs ──
             struct Attributes
             {
                 float4 vertex : POSITION;
                 half2  uv     : TEXCOORD0;
+            };
+            
+            struct ControlPoint
+            {
+                float3 positionWS : TEXCOORD0;
+                float2 uv         : TEXCOORD1;
+            };
+
+            struct TessFactors
+            {
+                float edge[3] : SV_TessFactor;
+                float inside  : SV_InsideTessFactor;
             };
 
             struct Varyings
@@ -117,8 +143,9 @@ Shader "Custom/GerstnerOcean"
                 float3 tangentWS  : TEXCOORD6;
                 float3 bitangentWS: TEXCOORD7;
             };
-
-            float3 ReadDetailsHeight(float2 worldXZ)
+            
+            // ── Helper Functions ──
+            float3 BrodOcean_ReadDetailsHeight(float2 worldXZ)
             {
                 float2 uv = (worldXZ - _MapCenterWS.xz) / _MapSizeWS.xz + 0.5;
                 float4 packed = SAMPLE_TEXTURE2D_LOD(_LocalWaterDetails,
@@ -126,43 +153,15 @@ Shader "Custom/GerstnerOcean"
                 return packed.b;
             }
 
-            Varyings vert(Attributes IN)
-            {
-                Varyings OUT = (Varyings)0;
-
-                float3 worldPos = mul(unity_ObjectToWorld, float4(IN.vertex.xyz, 1)).xyz;
-                OUT.initialWS = worldPos;
-
-                float3 normal, tangent;
-                
-                float3 offset = Gerstner_GetOffset(worldPos.xz, _Time.y, _MaxWaves, normal, tangent);
-                worldPos += offset;
-                worldPos.y += ReadDetailsHeight(worldPos.xz);
-
-                float4 clipPos    = TransformWorldToHClip(worldPos);
-                OUT.positionCS    = clipPos;
-                OUT.positionSS    = ComputeScreenPos(clipPos);
-                OUT.positionWS    = worldPos;
-                OUT.uv            = IN.uv;
-                OUT.fog           = ComputeFogFactor(clipPos.z);
-                OUT.normalWS      = normalize(normal);
-                OUT.tangentWS     = normalize(tangent);
-                OUT.bitangentWS   = cross(OUT.normalWS, OUT.tangentWS);
-
-                return OUT;
-            }
-
-            float3 ReadDetailsNormal(float2 worldXZ)
+            float3 BrodOcean_ReadDetailsNormal(float2 worldXZ)
             {
                 float2 uv = (worldXZ - _MapCenterWS.xz) / _MapSizeWS.xz + 0.5;
                 float4 packed = SAMPLE_TEXTURE2D(_LocalWaterDetails,
                                                   sampler_LocalWaterDetails, uv);
-                //packed.rg *= 2.0;
-                //packed.rg -= 1.0;
                 return normalize(float3(-packed.r, 1, -packed.g));
             }
 
-            float ReadFoam(float2 worldXZ)
+            float BrodOcean_ReadFoam(float2 worldXZ)
             {
                 float2 uv = (worldXZ - _MapCenterWS.xz) / _MapSizeWS.xz + 0.5;
                 float foam = SAMPLE_TEXTURE2D(_LocalWaterDetails,
@@ -170,14 +169,14 @@ Shader "Custom/GerstnerOcean"
                 return foam;
             }
 
-            float HenyeyGreenstein(float cosTheta, float g)
+            float BrodOcean_HenyeyGreenstein(float cosTheta, float g)
             {
                 float g2 = g * g;
                 float d  = 1.0 + g2 - 2.0 * g * cosTheta;
                 return (1.0 - g2) / (4.0 * PI * pow(d, 1.5));
             }
 
-            half3 WaterSSS(float3 viewDir, float3 normal, Light light,
+            half3 BrodOcean_WaterSSS(float3 viewDir, float3 normal, Light light,
                float jacobian, float waveDisplacement)
             {
                 float3 sigmaA = _WaterAbsorption.rgb;
@@ -197,7 +196,7 @@ Shader "Custom/GerstnerOcean"
 
                 float3 transmit = exp(-sigmaT * optDepth);
 
-                float  phase      = HenyeyGreenstein(dot(light.direction, viewDir), 0.5);
+                float  phase      = BrodOcean_HenyeyGreenstein(dot(light.direction, viewDir), 0.5);
                 float3 volScatter = light.color * sigmaS * phase
                                   * (1.0 - transmit) / max(sigmaT, 0.0001);
 
@@ -217,6 +216,106 @@ Shader "Custom/GerstnerOcean"
                      * _SSSStrength
                      * shadow;
             }
+            
+            float BrodOcean_EdgeTessFactor(float3 p0WS, float3 p1WS)
+            {
+                float3 mid  = (p0WS + p1WS) * 0.5;
+                float  dist = distance(mid, _WorldSpaceCameraPos);
+                float  t    = saturate((dist - _TessNear) / (_TessFar - _TessNear));
+                return max(1.0, lerp(_TessMax, _TessMin, t));
+            }
+            
+            bool BrodOcean_FrustumCull(float3 p0, float3 p1, float3 p2)
+            {
+                float4 c0 = TransformWorldToHClip(p0);
+                float4 c1 = TransformWorldToHClip(p1);
+                float4 c2 = TransformWorldToHClip(p2);
+
+                float bias = _MaxDisp;
+                c0.w += bias;
+                c1.w += bias;
+                c2.w += bias;
+
+                if(c0.x < -c0.w && c1.x < -c1.w && c2.x < -c2.w) return true; // left
+                if(c0.x >  c0.w && c1.x >  c1.w && c2.x >  c2.w) return true; // right
+                if(c0.y < -c0.w && c1.y < -c1.w && c2.y < -c2.w) return true; // bottom
+                if(c0.y >  c0.w && c1.y >  c1.w && c2.y >  c2.w) return true; // top
+                if(c0.z <  0    && c1.z <  0    && c2.z <  0    ) return true; // near
+                if(c0.z >  c0.w && c1.z >  c1.w && c2.z >  c2.w) return true; // far
+
+                return false;
+            }
+            
+            TessFactors BrodOcean_PatchConstant(InputPatch<ControlPoint, 3> patch)
+            {
+                TessFactors f;
+
+                if(BrodOcean_FrustumCull(patch[0].positionWS, patch[1].positionWS, patch[2].positionWS))
+                {
+                    f.edge[0] = f.edge[1] = f.edge[2] = f.inside = 0;
+                    return f;
+                }
+
+                f.edge[0] = BrodOcean_EdgeTessFactor(patch[1].positionWS, patch[2].positionWS);
+                f.edge[1] = BrodOcean_EdgeTessFactor(patch[2].positionWS, patch[0].positionWS);
+                f.edge[2] = BrodOcean_EdgeTessFactor(patch[0].positionWS, patch[1].positionWS);
+
+                f.inside  = max(f.edge[0], max(f.edge[1], f.edge[2]));
+
+                return f;
+            }
+
+            // ── Main Functions ──
+            ControlPoint vert(Attributes IN)
+            {
+                ControlPoint OUT;
+                OUT.positionWS = TransformObjectToWorld(IN.vertex.xyz);
+                OUT.uv         = IN.uv;
+                return OUT;
+            }
+            
+            [domain("tri")]
+            [partitioning("fractional_even")]
+            [outputtopology("triangle_cw")]
+            [outputcontrolpoints(3)]
+            [patchconstantfunc("BrodOcean_PatchConstant")]
+            ControlPoint hull(InputPatch<ControlPoint, 3> patch,
+                              uint id : SV_OutputControlPointID)
+            {
+                return patch[id];
+            }
+            
+            [domain("tri")]
+            Varyings domain(TessFactors factors, OutputPatch<ControlPoint, 3> patch, float3 bary : SV_DomainLocation)
+            {
+                float3 posWS = patch[0].positionWS * bary.x
+                             + patch[1].positionWS * bary.y
+                             + patch[2].positionWS * bary.z;
+                float2 uv    = patch[0].uv * bary.x
+                             + patch[1].uv * bary.y
+                             + patch[2].uv * bary.z;
+                
+                Varyings OUT = (Varyings)0;
+
+                OUT.initialWS = posWS;
+
+                float3 normal, tangent;
+                
+                float3 offset = Gerstner_GetOffset(posWS.xz, _Time.y, _MaxWaves, normal, tangent);
+                posWS += offset;
+                posWS.y += BrodOcean_ReadDetailsHeight(posWS.xz);
+
+                float4 clipPos    = TransformWorldToHClip(posWS);
+                OUT.positionCS    = clipPos;
+                OUT.positionSS    = ComputeScreenPos(clipPos);
+                OUT.positionWS    = posWS;
+                OUT.uv            = uv;
+                OUT.fog           = ComputeFogFactor(clipPos.z);
+                OUT.normalWS      = normalize(normal);
+                OUT.tangentWS     = normalize(tangent);
+                OUT.bitangentWS   = cross(OUT.normalWS, OUT.tangentWS);
+                return OUT;
+            }
 
             half4 frag(Varyings i) : SV_Target
             {
@@ -227,12 +326,12 @@ Shader "Custom/GerstnerOcean"
                                                   sampler_NormalMap, i.initialWS.xz * _NormalMap_ST.xy * 1.3f - _Time.y * .01);
                 float3 normalTS = lerp(UnpackNormal(packed1), UnpackNormal(packed2), .5);
                 float  jacobian = 0;
-                jacobian = max(jacobian, ReadFoam(i.initialWS.xz));
+                jacobian = max(jacobian, BrodOcean_ReadFoam(i.initialWS.xz));
                 normalTS.xy *= saturate(1 - jacobian) * _NormalsPower + .05;
                 normalTS = normalize(normalTS);
                 float3 normal = mul(normalTS, TBN); 
                 //Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, 50, normal, jacobian);
-                normal += ReadDetailsNormal(i.initialWS.xz);
+                normal += BrodOcean_ReadDetailsNormal(i.initialWS.xz);
                 
                 half foamMask   = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture,
                                     i.initialWS.xz * _FoamTexture_ST.xy
@@ -277,7 +376,7 @@ Shader "Custom/GerstnerOcean"
                 #endif
                 
                 float waveDisplacement = i.positionWS.y - i.initialWS.y;
-                half3 sss = WaterSSS(viewDir, normal, mainLight, jacobian, waveDisplacement);  
+                half3 sss = BrodOcean_WaterSSS(viewDir, normal, mainLight, jacobian, waveDisplacement);  
                 //return half4(sss,1);
 
                 float2 refrUV    = i.positionSS.xy / max(i.positionSS.w, 1e-6)

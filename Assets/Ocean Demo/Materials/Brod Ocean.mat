@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Ocean LOD0
+  m_Name: Brod Ocean
   m_Shader: {fileID: 4800000, guid: 0595cbe020c1c654f918cdbd368ccf6d, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -80,7 +80,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _NormalMap:
         m_Texture: {fileID: 2800000, guid: 1cc3f244d93e74643a5ff36b5a09d13e, type: 3}
-        m_Scale: {x: 0.02, y: 0.02}
+        m_Scale: {x: 0.05, y: 0.05}
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
         m_Texture: {fileID: 0}
@@ -111,13 +111,14 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
+    - _MaxDisp: 3
     - _MaxWaveAmplitude: 20
     - _MaxWaves: 128
     - _Metallic: 0
     - _Mode: 0
     - _NoiseScale: 0.08
     - _NormalPow: 1
-    - _NormalsPower: 0.5
+    - _NormalsPower: 0.24
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _PartialNormals: 1
@@ -139,6 +140,10 @@ Material:
     - _StepPropagation: 0.05
     - _Tess: 32
     - _TessFactor: 3
+    - _TessFar: 500
+    - _TessMax: 32
+    - _TessMin: 1
+    - _TessNear: 5
     - _Tessellation: 8
     - _Transparency: 5
     - _UVSec: 0
