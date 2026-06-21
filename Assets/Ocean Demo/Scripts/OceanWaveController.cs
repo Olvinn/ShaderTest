@@ -51,9 +51,6 @@ namespace Ocean_Demo.Scripts
         {
             shapeWaves = WavesGenerator.GetShapeWaves();
             
-            for (int i = 0; i < shapeWaves.Length; i++)
-                shapeWaves[i].x = Random.value * Mathf.PI * 2;
-            
             _camera = Camera.main;
             
             InitLocalDetailsTargets();
@@ -131,7 +128,7 @@ namespace Ocean_Demo.Scripts
             var AdW = Vector2.Dot(new Vector2(Mathf.Cos(windDirection), Mathf.Sin(windDirection)),
                 new Vector2(Mathf.Cos(shapeWaves[i].x), Mathf.Sin(shapeWaves[i].x)));
             var s = Mathf.Sign(AdW);
-            //AdW = Mathf.Pow(AdW, 10);
+            AdW = Mathf.Pow(AdW, 10);
             AdW -= s > 0 ? 0 : Mathf.PI * 2;
             return new Vector4(shapeWaves[i].x, shapeWaves[i].y * _storm * s * AdW, shapeWaves[i].z, shapeWaves[i].w);
         }
