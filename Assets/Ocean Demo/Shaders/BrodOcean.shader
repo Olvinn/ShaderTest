@@ -301,9 +301,12 @@ Shader "Brod/Ocean"
 
                 float3 normal, tangent;
                 
-                float3 offset = Gerstner_GetOffset(posWS.xz, _Time.y, _MaxWaves, normal, tangent);
+                float  dist = distance(posWS, _WorldSpaceCameraPos);
+                int maxWaves = max(16, (1 - saturate(dist / (_TessFar * 2))) * _MaxWaves);
+                half3 sec = BrodOcean_ReadDetailsHeight(posWS.xz);
+                float3 offset = Gerstner_GetOffset(posWS.xz, _Time.y, maxWaves, normal, tangent);
                 posWS += offset;
-                posWS.y += BrodOcean_ReadDetailsHeight(posWS.xz);
+                posWS.y += sec;
 
                 float4 clipPos    = TransformWorldToHClip(posWS);
                 OUT.positionCS    = clipPos;
@@ -326,11 +329,13 @@ Shader "Brod/Ocean"
                                                   sampler_NormalMap, i.initialWS.xz * _NormalMap_ST.xy * 1.3f - _Time.y * .01);
                 float3 normalTS = lerp(UnpackNormal(packed1), UnpackNormal(packed2), .5);
                 float  jacobian = 0;
-                jacobian = max(jacobian, BrodOcean_ReadFoam(i.initialWS.xz));
+                float3 normal = mul(normalTS, TBN); 
+                float  dist = distance(i.positionWS, _WorldSpaceCameraPos);
+                int maxWaves = max(16, (1 - saturate(dist / (_TessFar * 2))) * _MaxWaves);
+                Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, maxWaves, normal, jacobian);
+                jacobian = BrodOcean_ReadFoam(i.initialWS.xz);
                 normalTS.xy *= saturate(1 - jacobian) * _NormalsPower + .05;
                 normalTS = normalize(normalTS);
-                float3 normal = mul(normalTS, TBN); 
-                //Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, 50, normal, jacobian);
                 normal += BrodOcean_ReadDetailsNormal(i.initialWS.xz);
                 
                 half foamMask   = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture,

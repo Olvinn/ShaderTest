@@ -47,9 +47,12 @@ namespace Ocean_Demo.Scripts
         private float _storm, _foam;
         private Camera _camera;
 
+        public float swellHeight = 3, windSpeed = 13, fetch = 250000, storm = .6f;
+
         private void Awake()
         {
-            shapeWaves = WavesGenerator.GetShapeWaves();
+            shapeWaves = WavesGenerator.
+                GetShapeWaves(swellHeight: swellHeight, windSpeed: windSpeed, fetch: fetch, storm: storm);
             
             _camera = Camera.main;
             
@@ -79,6 +82,8 @@ namespace Ocean_Demo.Scripts
 
         private void OnValidate()
         {
+            shapeWaves = WavesGenerator.
+                GetShapeWaves(swellHeight: swellHeight, windSpeed: windSpeed, fetch: fetch, storm: storm);
             if (Application.isPlaying == false)
             {
                 InitLocalDetailsTargets();
@@ -130,7 +135,7 @@ namespace Ocean_Demo.Scripts
             var s = Mathf.Sign(AdW);
             AdW = Mathf.Pow(AdW, 10);
             AdW -= s > 0 ? 0 : Mathf.PI * 2;
-            return new Vector4(shapeWaves[i].x, shapeWaves[i].y * _storm * s * AdW, shapeWaves[i].z, shapeWaves[i].w);
+            return new Vector4(shapeWaves[i].x, shapeWaves[i].y/* * _storm * s * AdW*/, shapeWaves[i].z, shapeWaves[i].w); 
         }
 
         private void WriteToMaterials(Vector4[] waves)

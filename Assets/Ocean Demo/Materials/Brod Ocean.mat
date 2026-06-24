@@ -143,7 +143,7 @@ Material:
     - _TessFar: 500
     - _TessMax: 32
     - _TessMin: 1
-    - _TessNear: 5
+    - _TessNear: 250
     - _Tessellation: 8
     - _Transparency: 5
     - _UVSec: 0
