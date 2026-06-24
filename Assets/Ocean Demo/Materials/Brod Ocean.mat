@@ -123,7 +123,7 @@ Material:
     - _Parallax: 0.02
     - _PartialNormals: 1
     - _Phong: 0.5
-    - _Roughness: 0.05
+    - _Roughness: 0.06
     - _SSRStepSize: 0.01
     - _SSRSteps: 32
     - _SSRThickness: 0.5

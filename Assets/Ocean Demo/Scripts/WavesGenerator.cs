@@ -9,7 +9,7 @@ namespace Ocean_Demo.Scripts
         const float G          = 9.81f;
         const float TWO_PI     = Mathf.PI * 2f;
         const float LAMBDA_MIN = 1f;
-        const float LAMBDA_MAX = 200f;
+        const float LAMBDA_MAX = 500f;
 
         /// <summary>
         /// x: angle (rad), y: amplitude (m), z: wavelength (m), w: steepness

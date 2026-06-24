@@ -49,7 +49,7 @@ namespace Ocean_Demo.Scripts
                 _WaveController.shapeWavesReady,
                 64);
             
-            //if (_rb.position.y > waveOffset.y) return;
+            if (_rb.position.y > waveOffset.y) return;
         
             Vector3 position = _rb.position;
         
@@ -64,14 +64,11 @@ namespace Ocean_Demo.Scripts
                     _inAir = false;
                 }
 
-                depth.x *= .03f;
-                depth.z *= .03f;
+                depth.x *= .01f;
+                depth.z *= .01f;
                 
-                Vector3 force = depth * (Mathf.Clamp01(depth.y * .25f) * buoyancyForce);
+                Vector3 force = depth * (Mathf.Clamp01(depth.y * 2) * buoyancyForce);
                 _rb.AddForce(force, ForceMode.Force);
-        
-                Vector3 drag = -_rb.linearVelocity * (Time.fixedDeltaTime * 2);
-                _rb.AddForce(drag, ForceMode.VelocityChange);
         
                 if (torque)
                 {
@@ -82,10 +79,7 @@ namespace Ocean_Demo.Scripts
                     
                     if (angle > 180f) angle -= 360f;
                     if (Mathf.Abs(angle) > 0.01f)
-                        _rb.AddTorque(axis * angle * 10);
-                    
-                    Vector3 angDrag = -_rb.angularVelocity * (Time.fixedDeltaTime);
-                    _rb.AddTorque(angDrag, ForceMode.VelocityChange);
+                        _rb.AddTorque(axis * (angle * 10));
                 }
             }
             else
