@@ -105,13 +105,13 @@ Material:
     - _EdgeLength: 20
     - _FoamAmount: 0
     - _FoamNormalsPower: 0.5
-    - _FoamStrength: 5
+    - _FoamStrength: 2
     - _FogBlend: 1
     - _Fresnel: 0.03
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _MaxDisp: 3
+    - _MaxDisp: 50
     - _MaxWaveAmplitude: 20
     - _MaxWaves: 128
     - _Metallic: 0
@@ -123,10 +123,10 @@ Material:
     - _Parallax: 0.02
     - _PartialNormals: 1
     - _Phong: 0.5
-    - _Roughness: 0.06
-    - _SSRStepSize: 0.01
+    - _Roughness: 0.089
+    - _SSRStepSize: 0.1
     - _SSRSteps: 32
-    - _SSRThickness: 0.5
+    - _SSRThickness: 0.01
     - _SSSAmbient: 1
     - _SSSDirectionality: 1
     - _SSSStrength: 1
@@ -137,13 +137,13 @@ Material:
     - _SrcBlend: 1
     - _SteepnessSuppression: 0.01
     - _SteepnessSupression: 0.8
-    - _StepPropagation: 0.05
+    - _StepPropagation: 0.1
     - _Tess: 32
     - _TessFactor: 3
-    - _TessFar: 500
+    - _TessFar: 1000
     - _TessMax: 32
     - _TessMin: 1
-    - _TessNear: 250
+    - _TessNear: 10
     - _Tessellation: 8
     - _Transparency: 5
     - _UVSec: 0

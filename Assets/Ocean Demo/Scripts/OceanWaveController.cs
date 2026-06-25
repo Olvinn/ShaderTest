@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 namespace Ocean_Demo.Scripts
 {
@@ -38,7 +37,7 @@ namespace Ocean_Demo.Scripts
 
         // Runtime container
         public WaveSource[] Sources = Array.Empty<WaveSource>();
-        public float targetStorm = .1f;
+        public float targetStorm = .1f, foamLifetime = 3;
         
         private ComputeBuffer _sourcesBuffer;
         private int _wavesKernel;
@@ -123,7 +122,7 @@ namespace Ocean_Demo.Scripts
 
         private void UpdateWaves()
         {
-            shapeWavesReady = new Vector4[shapeWaves.Length];
+            shapeWavesReady ??= new Vector4[shapeWaves.Length];
             for (int i = 0; i < shapeWaves.Length; i++)
                 shapeWavesReady[i] = ScaleWave(i);
         }
@@ -232,6 +231,7 @@ namespace Ocean_Demo.Scripts
             WaterDetailsCompute.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));
             WaterDetailsCompute.SetInt("_NumSources", Mathf.Max(0, Sources.Length));
             WaterDetailsCompute.SetFloat("_Damping", 0.985f);
+            WaterDetailsCompute.SetFloat("_FoamLifetime", foamLifetime);
 
             WaterDetailsCompute.SetBuffer(_wavesKernel, "_Sources", _sourcesBuffer);
             WaterDetailsCompute.SetTexture(_wavesKernel, "_LocalWavesRW", WaterDetailsRT);

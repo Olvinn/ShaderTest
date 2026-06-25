@@ -18,7 +18,7 @@ StructuredBuffer<WaveSource> _Sources;
 uint2 _Resolution;
 float _Time, _dt;                 // seconds
 int _NumSources;
-float _Damping;              // 0..1 per-frame fade
+float _Damping, _FoamLifetime;              // 0..1 per-frame fade
 
 float4 _MapCenterWS;         // x,z used
 float4 _MapSizeWS;           // x,z used
@@ -42,13 +42,13 @@ void Waves(uint3 id : SV_DispatchThreadID)
     float4 curr = prev;
     curr.xyz *= _Damping;
     
-    curr.a = clamp(0, 1, curr.a - _dt * .2);
+    curr.a = clamp(0, 1, curr.a - _dt / _FoamLifetime);
     
     float jacobian = 0;
     float3 normal = 0; 
     
     Gerstner_GetNormalJacobian(P, _Time, 128, normal, jacobian);
-    float foam = clamp(0, 1, jacobian * jacobian > .9);
+    float foam = clamp(0, 1, jacobian >= 1);
     curr.a = max(curr.a, foam);
 
     for (int i = 0; i < _NumSources; i++)

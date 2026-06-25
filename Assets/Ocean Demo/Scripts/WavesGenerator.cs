@@ -30,35 +30,34 @@ namespace Ocean_Demo.Scripts
             var rng   = new Random(seed);
             var waves = new Vector4[128]; 
 
-            float omegaPeak = 22f * Mathf.Pow((G * G) / (windSpeed * fetch), 1f / 3f);
-            float omegaMin  = Mathf.Sqrt(G * TWO_PI / LAMBDA_MAX); // ω at 200m
-            float omegaMax  = Mathf.Sqrt(G * TWO_PI / LAMBDA_MIN); // ω at 3m
-            float dOmega    = (omegaMax - omegaMin) / 128f;
+            var omegaPeak = 22f * Mathf.Pow((G * G) / (windSpeed * fetch), 1f / 3f);
+            var omegaMin  = Mathf.Sqrt(G * TWO_PI / LAMBDA_MAX);
+            var omegaMax  = Mathf.Sqrt(G * TWO_PI / LAMBDA_MIN);
+            var dOmega    = (omegaMax - omegaMin) / 128f;
 
-            float peakEnergy = JONSWAP(omegaPeak, omegaPeak);
-            float normFactor = swellHeight
+            var peakEnergy = JONSWAP(omegaPeak, omegaPeak);
+            var normFactor = swellHeight
                              / Mathf.Max(Mathf.Sqrt(2f * peakEnergy * dOmega), 0.0001f);
 
-            for(int i = 0; i < 128; i++)
+            for (var i = 0; i < 128; i++)
             {
-                float t      = (i + (float)rng.NextDouble()) / 128f;
-                float omega  = omegaMin + t * (omegaMax - omegaMin);
-                float k      = omega * omega / G;
-                float lambda = TWO_PI / k;
+                var t      = (i + (float)rng.NextDouble()) / 128f;
+                var omega  = omegaMin + t * (omegaMax - omegaMin);
+                var k      = omega * omega / G;
+                var lambda = TWO_PI / k;
 
-                float energy = JONSWAP(omega, omegaPeak);
-                float amp    = Mathf.Sqrt(2f * energy * dOmega) * normFactor;
+                var energy = JONSWAP(omega, omegaPeak);
+                var amp    = Mathf.Sqrt(2f * energy * dOmega) * normFactor;
                 amp          = Mathf.Max(amp, 0.001f);
 
-                float lambdaT   = Mathf.InverseLerp(LAMBDA_MAX, LAMBDA_MIN, lambda);
-                float spreadRad = Mathf.Lerp(0.17f, Mathf.PI * 0.9f, lambdaT * lambdaT);
-                float angle     = (float)(rng.NextDouble() * 2.0 - 1.0) * spreadRad;
+                var lambdaT   = Mathf.InverseLerp(LAMBDA_MAX, LAMBDA_MIN, lambda);
+                var spreadRad = Mathf.Lerp(0.17f, Mathf.PI * 0.9f, lambdaT * lambdaT);
+                var angle = (float)(rng.NextDouble() * 2.0 - 1.0) * spreadRad;
 
-                float steepScale = Mathf.Lerp(0.5f, 1.0f,
-                                               Mathf.InverseLerp(LAMBDA_MIN, LAMBDA_MAX, lambda));
-                float Q          = steepScale;
+                var steepScale = Mathf.Lerp(0.5f, 1.0f, Mathf.InverseLerp(LAMBDA_MIN, LAMBDA_MAX, lambda));
+                var Q          = steepScale;
 
-                float steepness  = Q / Mathf.Max(k * amp, 0.001f) * storm;
+                var steepness  = Q / Mathf.Max(k * amp, 0.001f) * storm;
 
                 waves[i] = new Vector4(angle, amp, lambda, steepness);
             }

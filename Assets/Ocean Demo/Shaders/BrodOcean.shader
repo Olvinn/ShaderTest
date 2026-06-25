@@ -333,7 +333,7 @@ Shader "Brod/Ocean"
                 float3 normal = mul(normalTS, TBN); 
                 float  dist = distance(i.positionWS, _WorldSpaceCameraPos);
                 int maxWaves = max(16, (1 - saturate(dist / (_TessFar * 2))) * _MaxWaves);
-                Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, maxWaves, normal, jacobian);
+                //Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, maxWaves, normal, jacobian);
                 jacobian = BrodOcean_ReadFoam(i.initialWS.xz);
                 normal += BrodOcean_ReadDetailsNormal(i.positionWS.xz);
                 

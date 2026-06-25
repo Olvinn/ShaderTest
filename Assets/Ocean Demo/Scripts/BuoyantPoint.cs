@@ -19,10 +19,12 @@ namespace Ocean_Demo.Scripts
         public bool _inAir = false;
         private Rigidbody _rb;
         private int _waveSourceIndex;
+        private Vector3 _startPos;
         
         void Start()
         {
             _rb = GetComponent<Rigidbody>();
+            _startPos =  transform.position;
             
             var src = new OceanWaveController.WaveSource
             {
@@ -36,7 +38,7 @@ namespace Ocean_Demo.Scripts
             _waveSourceIndex = _WaveController.AddSource(src);
         }
         
-        void FixedUpdate()
+        void Update()
         {
             Vector3 waveNormal = GetGerstnerNormal(
                 new Vector2(_rb.position.x,  _rb.position.z),
@@ -44,12 +46,14 @@ namespace Ocean_Demo.Scripts
                 _WaveController.shapeWavesReady,
             32);
             Vector3 waveOffset = GetGerstnerOffset(
-                new Vector2(_rb.position.x,  _rb.position.z),
+                new Vector2(_startPos.x,  _startPos.z),
                 Time.time,
                 _WaveController.shapeWavesReady,
-                64);
+                128);
             
-            if (_rb.position.y > waveOffset.y) return;
+            transform.position = _startPos + waveOffset;
+            transform.up =  waveNormal;
+            return;
         
             Vector3 position = _rb.position;
         
@@ -61,13 +65,13 @@ namespace Ocean_Demo.Scripts
                 {
                     if (_splash)
                         _splash.Play();
+                    var v = _rb.linearVelocity;
+                    v.y *= .1f;
+                    _rb.linearVelocity = v;
                     _inAir = false;
                 }
-
-                depth.x *= .01f;
-                depth.z *= .01f;
                 
-                Vector3 force = depth * (Mathf.Clamp01(depth.y * 2) * buoyancyForce);
+                Vector3 force = Vector3.up * (Mathf.Clamp01(depth.y * .01f) * buoyancyForce);
                 _rb.AddForce(force, ForceMode.Force);
         
                 if (torque)
@@ -83,7 +87,15 @@ namespace Ocean_Demo.Scripts
                 }
             }
             else
+            {
+                if (!_inAir)
+                {
+                    var v = _rb.linearVelocity;
+                    v.y *= .1f;
+                    _rb.linearVelocity = v; 
+                }
                 _inAir = true;
+            }
             
             _WaveController.UpdateSource(_waveSourceIndex, 
                 new OceanWaveController.WaveSource
