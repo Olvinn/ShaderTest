@@ -22,7 +22,7 @@ Material:
   m_CustomRenderQueue: 2050
   stringTagMap: {}
   disabledShaderPasses: []
-  m_LockedProperties: 
+  m_LockedProperties: _WaterScatter
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -55,8 +55,8 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _FoamTexture:
-        m_Texture: {fileID: 2800000, guid: b58daac2a7f67d94f83649cfc20ff14e, type: 3}
-        m_Scale: {x: 0.1, y: 0.1}
+        m_Texture: {fileID: 2800000, guid: 7deb2c08cf9f3bc4aad311ae4bfcba64, type: 3}
+        m_Scale: {x: 0.2, y: 0.2}
         m_Offset: {x: 0, y: 0}
     - _LocalWaterDetails:
         m_Texture: {fileID: 0}
@@ -111,25 +111,25 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _MaxDisp: 50
+    - _MaxDisp: 150
     - _MaxWaveAmplitude: 20
     - _MaxWaves: 128
     - _Metallic: 0
     - _Mode: 0
     - _NoiseScale: 0.08
     - _NormalPow: 1
-    - _NormalsPower: 0.24
+    - _NormalsPower: 0.895
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _PartialNormals: 1
     - _Phong: 0.5
     - _Roughness: 0.089
-    - _SSRStepSize: 0.1
+    - _SSRStepSize: 0.2
     - _SSRSteps: 32
-    - _SSRThickness: 0.01
+    - _SSRThickness: 0.1
     - _SSSAmbient: 1
     - _SSSDirectionality: 1
-    - _SSSStrength: 1
+    - _SSSStrength: 0.69
     - _SSSThicknessPower: 4
     - _SmoothnessTextureChannel: 0
     - _Specular: 32
@@ -145,7 +145,7 @@ Material:
     - _TessMin: 1
     - _TessNear: 10
     - _Tessellation: 8
-    - _Transparency: 5
+    - _Transparency: 10
     - _UVSec: 0
     - _WaveDestrebution: 5
     - _WaveDistribution: 1.2

@@ -328,12 +328,14 @@ Shader "Brod/Ocean"
                 float4 packed2 = SAMPLE_TEXTURE2D(_NormalMap,
                                                   sampler_NormalMap, i.initialWS.xz * _NormalMap_ST.xy * 1.3f - _Time.y * .01);
                 float3 normalTS = lerp(UnpackNormal(packed1), UnpackNormal(packed2), .5);
+                normalTS.xy *= _NormalsPower;
                 normalTS = normalize(normalTS);
                 float  jacobian = 0;
                 float3 normal = mul(normalTS, TBN); 
                 float  dist = distance(i.positionWS, _WorldSpaceCameraPos);
-                int maxWaves = max(16, (1 - saturate(dist / (_TessFar * 2))) * _MaxWaves);
-                //Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, maxWaves, normal, jacobian);
+                half t = 1 - saturate(dist / (_TessFar * 2));
+                int maxWaves = max(16, t * t * _MaxWaves * .5);
+                Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, maxWaves, normal, jacobian);
                 jacobian = BrodOcean_ReadFoam(i.initialWS.xz);
                 normal += BrodOcean_ReadDetailsNormal(i.positionWS.xz);
                 
