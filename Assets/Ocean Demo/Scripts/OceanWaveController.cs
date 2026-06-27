@@ -18,9 +18,10 @@ namespace Ocean_Demo.Scripts
         public ComputeShader WaterDetailsCompute;
         [Tooltip("Resolution of the local details texture.")]
         public int LocalDetailsResolution = 512;
-        [Tooltip("World-space quad that the local map covers (center + size).")]
+        [Tooltip("World-space quad which local map covers (center + size).")]
         public Vector2 LocalMapCenterWS = Vector2.zero;
         public Vector2 LocalMapSizeWS = new Vector2(64, 64); // meters
+        private Vector2 _oldMapCenterWS;
 
         private RenderTexture WaterDetailsRT; //Serialized for debug
 
@@ -40,7 +41,7 @@ namespace Ocean_Demo.Scripts
         public float targetStorm = .1f, foamLifetime = 3;
         
         private ComputeBuffer _sourcesBuffer;
-        private int _wavesKernel;
+        private int _wavesKernel, _offsetKernel;
         private uint _tgx, _tgy, _tgz;
 
         private float _storm, _foam;
@@ -77,6 +78,7 @@ namespace Ocean_Demo.Scripts
                 UpdateWaves();
                 WriteToMaterials(shapeWavesReady);
             }
+            _oldMapCenterWS = LocalMapCenterWS;
         }
 
         private void OnValidate()
@@ -173,11 +175,10 @@ namespace Ocean_Demo.Scripts
             if (WaterDetailsCompute == null) return;
 
             _wavesKernel = WaterDetailsCompute.FindKernel("Waves");
+            _offsetKernel = WaterDetailsCompute.FindKernel("Offset");
             WaterDetailsCompute.GetKernelThreadGroupSizes(_wavesKernel, out _tgx, out _tgy, out _tgz);
 
             RecreateSourcesBuffer();
-
-            WaterDetailsCompute.SetInts("_Resolution", LocalDetailsResolution, LocalDetailsResolution);
         }
 
         private void RecreateSourcesBuffer()
@@ -225,17 +226,6 @@ namespace Ocean_Demo.Scripts
         {
             if (WaterDetailsCompute == null || WaterDetailsRT == null) return;
 
-            WaterDetailsCompute.SetFloat("_Time", Time.time);
-            WaterDetailsCompute.SetFloat("_dt", Time.fixedDeltaTime);
-            WaterDetailsCompute.SetVector("_MapCenterWS", new Vector4(LocalMapCenterWS.x, 0, LocalMapCenterWS.y, 0));
-            WaterDetailsCompute.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));
-            WaterDetailsCompute.SetInt("_NumSources", Mathf.Max(0, Sources.Length));
-            WaterDetailsCompute.SetFloat("_Damping", 0.985f);
-            WaterDetailsCompute.SetFloat("_FoamLifetime", foamLifetime);
-
-            WaterDetailsCompute.SetBuffer(_wavesKernel, "_Sources", _sourcesBuffer);
-            WaterDetailsCompute.SetTexture(_wavesKernel, "_LocalWavesRW", WaterDetailsRT);
-
             int gx = Mathf.CeilToInt(LocalDetailsResolution / (float)_tgx);
             int gy = Mathf.CeilToInt(LocalDetailsResolution / (float)_tgy);
             
@@ -246,9 +236,29 @@ namespace Ocean_Demo.Scripts
                     sizeof(float) * 4);
             
             waveBuffer.SetData(shapeWavesReady);
-            
+
+            WaterDetailsCompute.SetInts("_Resolution", LocalDetailsResolution, LocalDetailsResolution);
+            WaterDetailsCompute.SetVector("_MapCenterWS", LocalMapCenterWS);
+            WaterDetailsCompute.SetVector("_MapSizeWS", LocalMapSizeWS);
+            WaterDetailsCompute.SetVector("_DS", LocalMapCenterWS - _oldMapCenterWS);
+            WaterDetailsCompute.SetTexture(_offsetKernel, "_LocalWavesRW", WaterDetailsRT);
+            WaterDetailsCompute.Dispatch(_offsetKernel, gx, gy, 1);
+
+            WaterDetailsCompute.SetFloat("_Time", Time.time);
+            WaterDetailsCompute.SetFloat("_dt", Time.fixedDeltaTime);
+            WaterDetailsCompute.SetInt("_NumSources", Mathf.Max(0, Sources.Length));
+            WaterDetailsCompute.SetFloat("_Damping", 0.985f);
+            WaterDetailsCompute.SetFloat("_FoamLifetime", foamLifetime);
+            WaterDetailsCompute.SetBuffer(_wavesKernel, "_Sources", _sourcesBuffer);
+            WaterDetailsCompute.SetTexture(_wavesKernel, "_LocalWavesRW", WaterDetailsRT);
             WaterDetailsCompute.SetBuffer(_wavesKernel, "_ShapeWaves", waveBuffer);
             WaterDetailsCompute.Dispatch(_wavesKernel, gx, gy, 1);
+            
+            foreach (var mat in oceanMaterials)
+            {
+                mat.SetVector("_MapCenterWS", new Vector4(LocalMapCenterWS.x, 0, LocalMapCenterWS.y, 0));
+                mat.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));
+            }
         }
     }
 }

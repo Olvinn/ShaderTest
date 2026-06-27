@@ -1,4 +1,5 @@
 #pragma kernel Waves
+#pragma kernel Offset
 
 #include "Gerstner.cginc"
 
@@ -20,15 +21,34 @@ float _Time, _dt;                 // seconds
 int _NumSources;
 float _Damping, _FoamLifetime;              // 0..1 per-frame fade
 
-float4 _MapCenterWS;         // x,z used
-float4 _MapSizeWS;           // x,z used
+float2 _MapCenterWS;         
+float2 _MapSizeWS; 
+float2 _DS;
 
 float2 PixelToWS(int2 pix)
 {
     float2 uv = (pix + 0.5) / (float2)_Resolution;
-    float2 halfSize = _MapSizeWS.xz * 0.5;
-    float2 ws = _MapCenterWS.xz + (uv * 2.0 - 1.0) * halfSize; // [-1..1] → world span
+    float2 halfSize = _MapSizeWS * 0.5;
+    float2 ws = _MapCenterWS + (uv * 2.0 - 1.0) * halfSize; 
     return ws;
+}
+
+int2 WSToPixel(float2 ws)
+{
+    float2 halfSize = _MapSizeWS * 0.5;
+    ws -= _MapCenterWS;
+    ws = ws / halfSize * .5 + .5;
+    return (int2)(ws * _Resolution);
+}
+
+[numthreads(8,8,1)]
+void Offset(uint3 id : SV_DispatchThreadID)
+{
+    int2 oldPix = WSToPixel(PixelToWS(id.xy) + _DS);
+    if ((id.x >= _Resolution.x - 1) || (id.y >= _Resolution.y - 1) || id.x == 0 || id.y == 0) return;
+    if ((oldPix.x >= _Resolution.x - 1) || (oldPix.y >= _Resolution.y - 1) || oldPix.x == 0 || oldPix.y == 0) return;
+    float4 old = _LocalWavesRW[oldPix];
+    _LocalWavesRW[id.xy] = old;
 }
 
 [numthreads(8,8,1)]
