@@ -5,48 +5,39 @@ using UnityEngine;
 
 namespace Brod.Scripts
 {
+    [Serializable]
+    public struct WaveSource
+    {
+        public Vector2 posWS;      // world-space XZ (Y ignored)
+        public float radius;       // meters
+        public float amplitude;    // meters
+        public float wavelength;   // meters
+        public float speed;        // m/s (phase speed)
+        public float decay;        // 0..1 (how quickly fades with distance)
+    }
+    
     [ExecuteInEditMode]
     public class BrodWaterController : MonoBehaviour
     {
+        public BrodSettings settings;
+        
         public Material[] oceanMaterials;
 
-        public ComputeShader WaterDetailsCompute;
-        [Tooltip("Resolution of the local details texture.")]
-        public int LocalDetailsResolution = 512;
-        public Vector3 LocalMapSizeWS;
-
-        public float targetStorm = .1f, foamLifetime = 3;
-        public float windDirection = 60;
-        public float swellHeight = 3, windSpeed = 13, fetch = 250000, storm = .6f;
-        
-        private Vector4[] shapeWaves;
         public Vector4[] ShapeWavesReady;
+        private Vector4[] shapeWaves;
         
         private BrodConnector _brodConnector;
 
-        [StructLayout(LayoutKind.Sequential)]
-        public struct WaveSource
-        {
-            public Vector2 posWS;      // world-space XZ (Y ignored)
-            public float radius;       // meters
-            public float amplitude;    // meters
-            public float wavelength;   // meters
-            public float speed;        // m/s (phase speed)
-            public float decay;        // 0..1 (how quickly fades with distance)
-        }
-
         private WaveSource[] Sources = Array.Empty<WaveSource>();
-        
         private ComputeBuffer _sourcesBuffer;
-
-        private float _storm, _foam;
         private Camera _camera;
         private Vector2 _viewerPos;
 
         private void Awake()
         {
             shapeWaves = WavesGenerator.
-                GetShapeWaves(swellHeight: swellHeight, windSpeed: windSpeed, fetch: fetch, storm: storm);
+                GetShapeWaves(swellHeight: settings.SwellHeight, windSpeed: settings.WindSpeed, fetch: settings.Fetch, 
+                    storm: settings.Storm);
             
             UpdateWaves();
             
@@ -59,8 +50,8 @@ namespace Brod.Scripts
             
             RecreateSourcesBuffer();
             
-            _brodConnector = new BrodConnector(WaterDetailsCompute, LocalMapSizeWS);
-            _brodConnector.InitializeRenderTexture(LocalDetailsResolution);
+            _brodConnector = new BrodConnector(settings.WaterComputeShader, settings.DetailsMapSizeWS);
+            _brodConnector.InitializeRenderTexture(settings.DetailsMapResolution);
             
             WriteToMaterials(ShapeWavesReady);
         }
@@ -74,14 +65,7 @@ namespace Brod.Scripts
                 WriteToMaterials(ShapeWavesReady);
             }
             
-            var storm = Mathf.MoveTowards(this._storm, targetStorm, Time.deltaTime / 30);
-            if (!Mathf.Approximately(storm, this._storm))
-            {
-                this._storm = storm;
-                UpdateWaves();
-                WriteToMaterials(ShapeWavesReady);
-            }
-            _brodConnector?.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, foamLifetime, Time.time, Time.fixedDeltaTime);
+            _brodConnector?.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, Time.fixedDeltaTime);
         }
 
         private void OnValidate()
@@ -90,11 +74,11 @@ namespace Brod.Scripts
             
             RecreateSourcesBuffer();
             
-            _brodConnector = new BrodConnector(WaterDetailsCompute, LocalMapSizeWS);
-            _brodConnector.InitializeRenderTexture(LocalDetailsResolution);
+            _brodConnector = new BrodConnector(settings.WaterComputeShader, settings.DetailsMapSizeWS);
+            _brodConnector.InitializeRenderTexture(settings.DetailsMapResolution);
             
-            shapeWaves = WavesGenerator.
-                GetShapeWaves(swellHeight: swellHeight, windSpeed: windSpeed, fetch: fetch, storm: storm);
+            shapeWaves = WavesGenerator.GetShapeWaves(swellHeight: settings.SwellHeight, windSpeed: settings.WindSpeed, 
+                fetch: settings.Fetch, storm: settings.Storm);
             
             if (Application.isPlaying == false)
             {
@@ -106,7 +90,7 @@ namespace Brod.Scripts
             if (ShapeWavesReady == null) return;
             
             _brodConnector.UpdateSquareCenter(new Vector2(_camera.transform.position.x , _camera.transform.position.z));
-            _brodConnector.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, foamLifetime, Time.time, Time.fixedDeltaTime);
+            _brodConnector.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, Time.fixedDeltaTime);
             
             UpdateWaves();
             
@@ -149,12 +133,7 @@ namespace Brod.Scripts
 
         private Vector4 ScaleWave(int i)
         {
-            var AdW = Vector2.Dot(new Vector2(Mathf.Cos(windDirection), Mathf.Sin(windDirection)),
-                new Vector2(Mathf.Cos(shapeWaves[i].x), Mathf.Sin(shapeWaves[i].x)));
-            var s = Mathf.Sign(AdW);
-            AdW = Mathf.Pow(AdW, 10);
-            AdW -= s > 0 ? 0 : Mathf.PI * 2;
-            return new Vector4(shapeWaves[i].x, shapeWaves[i].y/* * _storm * s * AdW*/, shapeWaves[i].z, shapeWaves[i].w); 
+            return new Vector4(shapeWaves[i].x, shapeWaves[i].y, shapeWaves[i].z, shapeWaves[i].w); 
         }
 
         private void WriteToMaterials(Vector4[] waves)
@@ -170,7 +149,7 @@ namespace Brod.Scripts
             {
                 mat.SetBuffer("_ShapeWaves", shapeWaveBuffer);
                 mat.SetVector("_MapCenterWS", new Vector4(_viewerPos.x, 0, _viewerPos.y, 0));
-                mat.SetVector("_MapSizeWS", new Vector4(LocalMapSizeWS.x, 0, LocalMapSizeWS.y, 0));
+                mat.SetVector("_MapSizeWS", new Vector4(settings.DetailsMapSizeWS.x, 0, settings.DetailsMapSizeWS.y, 0));
                 mat.SetTexture("_LocalWaterDetails", _brodConnector.GetDetailsRT());
             }
         }

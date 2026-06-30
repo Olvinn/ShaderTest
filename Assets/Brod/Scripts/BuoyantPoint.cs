@@ -26,7 +26,7 @@ namespace Brod.Scripts
             _rb = GetComponent<Rigidbody>();
             _startPos =  transform.position;
             
-            var src = new BrodWaterController.WaveSource
+            var src = new WaveSource
             {
                 posWS     = new Vector2(transform.position.x, transform.position.z),
                 radius    = Radius,
@@ -98,7 +98,7 @@ namespace Brod.Scripts
             }
             
             _WaveController.UpdateSource(_waveSourceIndex, 
-                new BrodWaterController.WaveSource
+                new WaveSource
                 {
                     posWS     = new Vector2(transform.position.x, transform.position.z),
                     radius    = Radius,
