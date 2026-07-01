@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Brod.Scripts.BrodSettings
   WaterComputeShader: {fileID: 7200000, guid: fe35a72ec91ecd34cbcf41c5497c8a24, type: 3}
   DetailsMapResolution: 2048
-  DetailsMapSizeWS: {x: 512, y: 512}
+  DetailsMapSizeWS: {x: 1024, y: 1024}
   FoamLifetime: 7
   SwellHeight: 5
   WindSpeed: 50

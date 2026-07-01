@@ -16,12 +16,13 @@ namespace Brod.Scripts
         public float decay;        // 0..1 (how quickly fades with distance)
     }
     
-    [ExecuteInEditMode]
+    //[ExecuteInEditMode]
     public class BrodWaterController : MonoBehaviour
     {
         public BrodSettings settings;
         
         public Material[] oceanMaterials;
+        public GameObject tilePrefab;
 
         public Vector4[] ShapeWavesReady;
         private Vector4[] shapeWaves;
@@ -40,6 +41,7 @@ namespace Brod.Scripts
                     storm: settings.Storm);
             
             UpdateWaves();
+            BuildOcean();
             
             _camera = Camera.main;
         }
@@ -121,6 +123,16 @@ namespace Brod.Scripts
         {
             Sources = Array.Empty<WaveSource>();
             RecreateSourcesBuffer();
+        }
+
+        private void BuildOcean()
+        {
+            for (var i = 0; i < 100; i++)
+            for (var j = 0; j < 100; j++)
+            {
+                var tile = Instantiate(tilePrefab, transform);
+                tile.transform.position = new Vector3(i * 100 - 5000, 0, j * 100 - 5000);
+            }
         }
 
         private void UpdateWaves()

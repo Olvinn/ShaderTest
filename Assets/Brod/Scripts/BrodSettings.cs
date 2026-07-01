@@ -8,7 +8,7 @@ namespace Brod.Scripts
         [Header("Compute shader")]
         public ComputeShader WaterComputeShader;
 
-        [Header("Details Map Parameters")]
+        [Header("Details Map Parameters")] 
         public int DetailsMapResolution = 512;
         public Vector2 DetailsMapSizeWS;
         public float FoamLifetime;
