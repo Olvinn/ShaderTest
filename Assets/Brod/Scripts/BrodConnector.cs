@@ -56,7 +56,7 @@ namespace Brod.Scripts
                 _waterDetailsCompute.SetFloat("_Damping", 0.985f);
                 _waterDetailsCompute.SetFloat("_FoamLifetime", foamLifetime);
                 _waterDetailsCompute.SetInts("_Resolution", _detailsMapOne[i].width, _detailsMapOne[i].height);
-                _waterDetailsCompute.SetVector("_MapSizeWS", _mapSizeWS * (i + 1));
+                _waterDetailsCompute.SetVector("_MapSizeWS", _mapSizeWS * Mathf.Pow(2, i));
                 _waterDetailsCompute.SetFloat("_Time", time);
                 _waterDetailsCompute.SetBuffer(_wavesKernel, "_Sources", secondaryWaveSourcesBuffer);
                 _waterDetailsCompute.SetTexture(_wavesKernel, "_LocalWavesRW",
@@ -120,7 +120,7 @@ namespace Brod.Scripts
 
                 _waterDetailsCompute.SetVector("_MapCenterWS", _mapCenterWS);
                 _waterDetailsCompute.SetVector("_DS", offset);
-                _waterDetailsCompute.SetVector("_MapSizeWS", _mapSizeWS * (i + 1));
+                _waterDetailsCompute.SetVector("_MapSizeWS", _mapSizeWS * Mathf.Pow(2, i));
                 _waterDetailsCompute.SetInts("_Resolution", _detailsMapOne[i].width, _detailsMapOne[i].height);
                 _waterDetailsCompute.SetTexture(_offsetKernel, "_LocalWavesR",
                     _pingPong ? _detailsMapOne[i] : _detailsMapTwo[i]);

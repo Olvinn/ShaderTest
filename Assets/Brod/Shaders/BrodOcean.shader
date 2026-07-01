@@ -150,7 +150,7 @@ Shader "Brod/Ocean"
             // ── Helper Functions ──
             float3 BrodOcean_ReadDetailsHeight(float2 worldXZ, int cascade)
             {
-                float2 uv = (worldXZ - _MapCenterWS.xz) / (_MapSizeWS.xz * (cascade + 1)) + 0.5;
+                float2 uv = (worldXZ - _MapCenterWS.xz) / (_MapSizeWS.xz * pow(2, cascade)) + 0.5;
                 float4 packed = 0; 
                 if (cascade == 0)
                     packed = SAMPLE_TEXTURE2D_LOD(_LocalWaterDetailsA, sampler_LocalWaterDetailsA, uv, 0);
@@ -165,7 +165,7 @@ Shader "Brod/Ocean"
 
             float3 BrodOcean_ReadDetailsNormal(float2 worldXZ, int cascade)
             {
-                float2 uv = (worldXZ - _MapCenterWS.xz) / (_MapSizeWS.xz * (cascade + 1)) + 0.5;
+                float2 uv = (worldXZ - _MapCenterWS.xz) / (_MapSizeWS.xz * pow(2, cascade)) + 0.5;
                 float4 packed = 0; 
                 if (cascade == 0)
                     packed = SAMPLE_TEXTURE2D(_LocalWaterDetailsA, sampler_LocalWaterDetailsA, uv);
@@ -180,7 +180,7 @@ Shader "Brod/Ocean"
 
             float BrodOcean_ReadFoam(float2 worldXZ, int cascade)
             {
-                float2 uv = (worldXZ - _MapCenterWS.xz) / (_MapSizeWS.xz * (cascade + 1)) + 0.5;
+                float2 uv = (worldXZ - _MapCenterWS.xz) / (_MapSizeWS.xz * pow(2, cascade)) + 0.5;
                 float4 packed = 0; 
                 if (cascade == 0)
                     packed = SAMPLE_TEXTURE2D(_LocalWaterDetailsA, sampler_LocalWaterDetailsA, uv);

@@ -51,8 +51,20 @@ namespace Brod.Scripts
                 _WaveController.ShapeWavesReady,
                 128);
             
-            transform.position = _startPos + waveOffset;
+            transform.position = _startPos + Vector3.up * waveOffset.y;
             transform.up =  waveNormal;
+            
+            _WaveController.UpdateSource(_waveSourceIndex, 
+                new WaveSource
+                {
+                    posWS     = new Vector2(transform.position.x, transform.position.z),
+                    radius    = Radius,
+                    amplitude = WaveAmplitude,
+                    wavelength= WaveLength,
+                    speed = 2f,
+                    decay = 1.7f
+                });
+            
             return;
         
             Vector3 position = _rb.position;
@@ -96,17 +108,6 @@ namespace Brod.Scripts
                 }
                 _inAir = true;
             }
-            
-            _WaveController.UpdateSource(_waveSourceIndex, 
-                new WaveSource
-                {
-                    posWS     = new Vector2(transform.position.x, transform.position.z),
-                    radius    = Radius,
-                    amplitude = WaveAmplitude,
-                    wavelength= WaveLength,
-                    speed = 2f,
-                    decay = 1.7f
-                });
         }
         
         // void Update()

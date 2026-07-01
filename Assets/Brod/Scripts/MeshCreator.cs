@@ -51,6 +51,9 @@ public class MeshCreator : MonoBehaviour
         
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
+        var bounds = mesh.bounds;
+        bounds.extents *= 1.5f;
+        mesh.bounds = bounds;
 
         _meshFilter.mesh = mesh;
     }
