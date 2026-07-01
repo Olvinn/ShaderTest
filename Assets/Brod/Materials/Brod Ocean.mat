@@ -141,7 +141,7 @@ Material:
     - _Tess: 32
     - _TessFactor: 3
     - _TessFar: 1000
-    - _TessMax: 32
+    - _TessMax: 64
     - _TessMin: 1
     - _TessNear: 10
     - _Tessellation: 8

@@ -10,6 +10,7 @@ namespace Brod.Scripts
 
         [Header("Details Map Parameters")] 
         public int DetailsMapResolution = 512;
+        [Range(1, 4)] public int Cascades = 4; 
         public Vector2 DetailsMapSizeWS;
         public float FoamLifetime;
         

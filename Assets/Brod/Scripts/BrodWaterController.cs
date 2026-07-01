@@ -52,7 +52,7 @@ namespace Brod.Scripts
             
             RecreateSourcesBuffer();
             
-            _brodConnector = new BrodConnector(settings.WaterComputeShader, settings.DetailsMapSizeWS);
+            _brodConnector = new BrodConnector(settings.WaterComputeShader, settings.DetailsMapSizeWS, settings.Cascades);
             _brodConnector.InitializeRenderTexture(settings.DetailsMapResolution);
             
             WriteToMaterials(ShapeWavesReady);
@@ -76,7 +76,7 @@ namespace Brod.Scripts
             
             RecreateSourcesBuffer();
             
-            _brodConnector = new BrodConnector(settings.WaterComputeShader, settings.DetailsMapSizeWS);
+            _brodConnector = new BrodConnector(settings.WaterComputeShader, settings.DetailsMapSizeWS, settings.Cascades);
             _brodConnector.InitializeRenderTexture(settings.DetailsMapResolution);
             
             shapeWaves = WavesGenerator.GetShapeWaves(swellHeight: settings.SwellHeight, windSpeed: settings.WindSpeed, 
@@ -162,8 +162,10 @@ namespace Brod.Scripts
                 mat.SetBuffer("_ShapeWaves", shapeWaveBuffer);
                 mat.SetVector("_MapCenterWS", new Vector4(_viewerPos.x, 0, _viewerPos.y, 0));
                 mat.SetVector("_MapSizeWS", new Vector4(settings.DetailsMapSizeWS.x, 0, settings.DetailsMapSizeWS.y, 0));
-                mat.SetTexture("_LocalWaterDetails", _brodConnector.GetDetailsRT());
+                mat.SetTexture("_LocalWaterDetails", _brodConnector.GetDetailsRT(0));
             }
+
+            BindLocalDetailsToMaterials();
         }
 
         private void RecreateSourcesBuffer()
@@ -189,7 +191,10 @@ namespace Brod.Scripts
             
             foreach (var m in oceanMaterials)
             {
-                m.SetTexture("_LocalWaterDetails", _brodConnector.GetDetailsRT());
+                m.SetTexture("_LocalWaterDetailsA", _brodConnector.GetDetailsRT(0));
+                m.SetTexture("_LocalWaterDetailsB", _brodConnector.GetDetailsRT(1));
+                m.SetTexture("_LocalWaterDetailsC", _brodConnector.GetDetailsRT(2));
+                m.SetTexture("_LocalWaterDetailsD", _brodConnector.GetDetailsRT(3));
             }
         }
     }

@@ -13,15 +13,16 @@ struct WaveSource {
 };
 
 RWTexture2D<float4> _LocalWavesRW; // RG: displacement (dx, dz), B: extra amp, A: foam mask
-RWTexture2D<float4> _LocalWavesR; // RG: displacement (dx, dz), B: extra amp, A: foam mask
-RWTexture2D<float4> _LocalWavesW; // RG: displacement (dx, dz), B: extra amp, A: foam mask
+
+RWTexture2D<float4> _LocalWavesR; 
+RWTexture2D<float4> _LocalWavesW; 
 
 StructuredBuffer<WaveSource> _Sources;
 
 uint2 _Resolution;
 float _Time, _dt;                 // seconds
 int _NumSources;
-float _Damping, _FoamLifetime;              // 0..1 per-frame fade
+float _Damping, _FoamLifetime;
 
 float2 _MapCenterWS;         
 float2 _MapSizeWS; 
