@@ -15,9 +15,9 @@ MonoBehaviour:
   WaterComputeShader: {fileID: 7200000, guid: fe35a72ec91ecd34cbcf41c5497c8a24, type: 3}
   DetailsMapResolution: 1024
   Cascades: 4
-  DetailsMapSizeWS: {x: 256, y: 256}
-  FoamLifetime: 7
-  SwellHeight: 5
-  WindSpeed: 35
+  DetailsMapSizeWS: {x: 128, y: 128}
+  FoamLifetime: 5
+  SwellHeight: 1
+  WindSpeed: 5
   Fetch: 250000
   Storm: 0.17
