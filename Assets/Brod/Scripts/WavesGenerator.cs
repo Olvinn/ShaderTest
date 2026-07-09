@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using Random = System.Random;
 
-namespace Brod.Scripts
+namespace Brod
 {
     public static class WavesGenerator
     {

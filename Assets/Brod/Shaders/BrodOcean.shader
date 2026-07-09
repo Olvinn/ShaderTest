@@ -41,7 +41,6 @@ Shader "Brod/Ocean"
         _TessMax  ("Tess Max",           Range(4, 64))  = 32
         _TessNear ("Tess Near Distance", Float)         = 5
         _TessFar  ("Tess Far Distance",  Float)         = 80
-        _MaxDisp  ("Max Displacement",   Float)         = 3 
         
         [Toggle] _FogBlend  ("Blend in Fog", Int) = 0
     }
@@ -246,7 +245,7 @@ Shader "Brod/Ocean"
                 float3 mid  = (p0WS + p1WS) * 0.5;
                 float  dist = distance(mid, _WorldSpaceCameraPos);
                 float  t    = saturate((dist - _TessNear) / (_TessFar - _TessNear));
-                return max(1.0, lerp(_TessMax, _TessMin, sqrt(t)));
+                return max(1.0, lerp(_TessMax, _TessMin, t));
             }
             
             bool BrodOcean_FrustumCull(float3 p0, float3 p1, float3 p2)
@@ -326,7 +325,7 @@ Shader "Brod/Ocean"
                 float3 normal, tangent;
                 
                 float  dist = distance(posWS, _WorldSpaceCameraPos);
-                int maxWaves = max(16, (1 - saturate(dist / (_TessFar * 2))) * _MaxWaves);
+                int maxWaves = max(1, (1 - saturate(dist / _TessFar)) * _MaxWaves);
                 half3 sec = BrodOcean_ReadDetailsHeight(posWS.xz, clamp((int)(dist/(_MapSizeWS.x * .5)), 0, 3));
                 float3 offset = Gerstner_GetOffset(posWS.xz, _Time.y, maxWaves, normal, tangent);
                 posWS += offset;
@@ -360,7 +359,8 @@ Shader "Brod/Ocean"
                 half t = 1 - saturate(dist / (_TessFar * 2));
                 int maxWaves = max(16, t * t * _MaxWaves * .5);
                 Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, maxWaves, normal, jacobian);
-                jacobian = BrodOcean_ReadFoam(i.initialWS.xz, clamp((int)(dist/(_MapSizeWS.x * .5)), 0, 3));
+                jacobian = jacobian >= .7;
+                jacobian = max(jacobian, BrodOcean_ReadFoam(i.initialWS.xz, clamp((int)(dist/(_MapSizeWS.x * .5)), 0, 3)));
                 normal += BrodOcean_ReadDetailsNormal(i.positionWS.xz, clamp((int)(dist/(_MapSizeWS.x * .5)), 0, 3));
                 
                 half foamMask   = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture,

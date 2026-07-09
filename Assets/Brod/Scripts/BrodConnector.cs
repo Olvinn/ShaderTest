@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Brod.Scripts
+namespace Brod
 {
     public class BrodConnector : IDisposable
     {

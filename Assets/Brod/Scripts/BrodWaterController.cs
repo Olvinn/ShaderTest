@@ -1,9 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
-namespace Brod.Scripts
+namespace Brod
 {
     [Serializable]
     public struct WaveSource
@@ -16,16 +17,16 @@ namespace Brod.Scripts
         public float decay;        // 0..1 (how quickly fades with distance)
     }
     
-    //[ExecuteInEditMode]
     public class BrodWaterController : MonoBehaviour
     {
         public BrodSettings settings;
         
         public Material[] oceanMaterials;
-        public GameObject tilePrefab;
+        public MeshGenerator tilePrefab;
 
         public Vector4[] ShapeWavesReady;
         private Vector4[] shapeWaves;
+        private float _displacementRadius;
         
         private BrodConnector _brodConnector;
 
@@ -33,6 +34,8 @@ namespace Brod.Scripts
         private ComputeBuffer _sourcesBuffer;
         private Camera _camera;
         private Vector2 _viewerPos;
+        
+        List<MeshGenerator> _tilesPool = new ();
 
         private void Awake()
         {
@@ -41,6 +44,7 @@ namespace Brod.Scripts
                     storm: settings.Storm);
             
             UpdateWaves();
+            _displacementRadius = GetDisplacementRadius(ShapeWavesReady);
             BuildOcean();
             
             _camera = Camera.main;
@@ -70,38 +74,32 @@ namespace Brod.Scripts
             _brodConnector?.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, Time.fixedDeltaTime);
         }
 
-        private void OnValidate()
-        {
-            return;
-            
-            RecreateSourcesBuffer();
-            
-            _brodConnector = new BrodConnector(settings.WaterComputeShader, settings.DetailsMapSizeWS, settings.Cascades);
-            _brodConnector.InitializeRenderTexture(settings.DetailsMapResolution);
-            
-            shapeWaves = WavesGenerator.GetShapeWaves(swellHeight: settings.SwellHeight, windSpeed: settings.WindSpeed, 
-                fetch: settings.Fetch, storm: settings.Storm);
-            
-            if (Application.isPlaying == false)
-            {
-                RecreateSourcesBuffer();
-                BindLocalDetailsToMaterials();
-            }
-            
-            if (_brodConnector == null) return;
-            if (ShapeWavesReady == null) return;
-            
-            _brodConnector.UpdateSquareCenter(new Vector2(_camera.transform.position.x , _camera.transform.position.z));
-            _brodConnector.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, Time.fixedDeltaTime);
-            
-            UpdateWaves();
-            
-            WriteToMaterials(ShapeWavesReady);
-        }
-
         private void OnDestroy()
         {
             _brodConnector?.Dispose();
+            ClearSources();
+            if (_tilesPool == null) return;
+            for (var i = 0; i < _tilesPool.Count; i++)
+                DestroyImmediate(_tilesPool[i].gameObject);
+            _tilesPool.Clear();
+        }
+        
+        private float GetDisplacementRadius(Vector4[] waves)
+        {
+            float maxVert  = 0f;
+            float maxHoriz = 0f;
+
+            foreach(var w in waves)
+            {
+                float amp       = w.y;
+                float steepness = w.w;
+
+                maxVert += amp;
+
+                maxHoriz += steepness * amp;
+            }
+
+            return Mathf.Max(maxVert, maxHoriz);
         }
 
         public int AddSource(WaveSource src)
@@ -127,11 +125,18 @@ namespace Brod.Scripts
 
         private void BuildOcean()
         {
+            if (_tilesPool is { Count: > 0 }) return;
+            
+            _tilesPool = new List<MeshGenerator>();
+            
             for (var i = 0; i < 100; i++)
             for (var j = 0; j < 100; j++)
             {
-                var tile = Instantiate(tilePrefab, transform);
-                tile.transform.position = new Vector3(i * 100 - 5000, 0, j * 100 - 5000);
+                var tile = Instantiate(tilePrefab, transform); 
+                tile.transform.position = new Vector3(i * 200 - 10000, 0, j * 200 - 10000);
+                tile.CreateMesh(detalization: 2, size: 200);
+                _tilesPool.Add(tile);
+                tile.UpdateAABB(_displacementRadius);
             }
         }
 
@@ -139,7 +144,7 @@ namespace Brod.Scripts
         {
             if (ShapeWavesReady == null || ShapeWavesReady.Length != shapeWaves.Length)
                 ShapeWavesReady = new Vector4[shapeWaves.Length];
-            for (int i = 0; i < shapeWaves.Length; i++)
+            for (var i = 0; i < shapeWaves.Length; i++)
                 ShapeWavesReady[i] = ScaleWave(i);
         }
 
@@ -163,6 +168,7 @@ namespace Brod.Scripts
                 mat.SetVector("_MapCenterWS", new Vector4(_viewerPos.x, 0, _viewerPos.y, 0));
                 mat.SetVector("_MapSizeWS", new Vector4(settings.DetailsMapSizeWS.x, 0, settings.DetailsMapSizeWS.y, 0));
                 mat.SetTexture("_LocalWaterDetails", _brodConnector.GetDetailsRT(0));
+                mat.SetFloat("_MaxDisp", _displacementRadius);
             }
 
             BindLocalDetailsToMaterials();
@@ -171,7 +177,7 @@ namespace Brod.Scripts
         private void RecreateSourcesBuffer()
         {
             _sourcesBuffer?.Dispose();
-            int count = Mathf.Max(1, Sources.Length);
+            var count = Mathf.Max(1, Sources.Length);
             _sourcesBuffer = new ComputeBuffer(count, Marshal.SizeOf(typeof(WaveSource)), ComputeBufferType.Structured);
             
             if (_sourcesBuffer == null) return;

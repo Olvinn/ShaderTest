@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Brod.Scripts
+namespace Brod
 {
     public class CameraMovementController : MonoBehaviour
     {

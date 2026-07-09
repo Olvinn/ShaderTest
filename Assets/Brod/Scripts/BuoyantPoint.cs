@@ -1,7 +1,6 @@
-using System;
 using UnityEngine;
 
-namespace Brod.Scripts
+namespace Brod
 {
     [RequireComponent(typeof(Rigidbody))]
     public class BuoyantPoint : MonoBehaviour

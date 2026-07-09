@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Brod.Scripts
+namespace Brod
 {
     [CreateAssetMenu(fileName = "BrodSettings", menuName = "Brod/Brod Settings")]
     public class BrodSettings : ScriptableObject
