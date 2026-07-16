@@ -1,9 +1,19 @@
 #pragma kernel Waves
 #pragma kernel Offset
+#pragma kernel Particles
 
 #include "Gerstner.cginc"
 
-struct WaveSource {
+struct Particle
+{
+    float3 posWS;
+    float lifetime;
+    float maxLifetime;
+    float3 velWS;
+};
+
+struct WaveSource 
+{
     float2 posWS;
     float  radius;
     float  amplitude;
@@ -13,11 +23,11 @@ struct WaveSource {
 };
 
 RWTexture2D<float4> _LocalWavesRW; // RG: displacement (dx, dz), B: extra amp, A: foam mask
-
 RWTexture2D<float4> _LocalWavesR; 
 RWTexture2D<float4> _LocalWavesW; 
 
 StructuredBuffer<WaveSource> _Sources;
+StructuredBuffer<Particle> _Particles;
 
 uint2 _Resolution;
 float _Time, _dt;                 // seconds
@@ -42,6 +52,12 @@ int2 WSToPixel(float2 ws)
     ws -= _MapCenterWS;
     ws = ws / halfSize * .5 + .5;
     return (int2)(ws * _Resolution);
+}
+
+[numthreads(8,8,1)]
+void Particles(uint3 id : SV_DispatchThreadID)
+{
+    //FUCK
 }
 
 [numthreads(8,8,1)]

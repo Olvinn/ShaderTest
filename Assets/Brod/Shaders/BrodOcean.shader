@@ -91,16 +91,22 @@ Shader "Brod/Ocean"
             TEXTURE2D_X(_FoamTexture);              SAMPLER(sampler_FoamTexture);
             TEXTURE2D_X(_FoamNormal);               SAMPLER(sampler_FoamNormal);
             TEXTURE2D_X(_NormalMap);                SAMPLER(sampler_NormalMap);
+            TEXTURE2D_X(_CameraOpaqueTexture);      SAMPLER(sampler_CameraOpaqueTexture);
+            TEXTURE2D_X_FLOAT(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
+            
             TEXTURE2D(_LocalWaterDetailsA);        SAMPLER(sampler_LocalWaterDetailsA);
             TEXTURE2D(_LocalWaterDetailsB);        SAMPLER(sampler_LocalWaterDetailsB);
             TEXTURE2D(_LocalWaterDetailsC);        SAMPLER(sampler_LocalWaterDetailsC);
             TEXTURE2D(_LocalWaterDetailsD);        SAMPLER(sampler_LocalWaterDetailsD);
-            TEXTURE2D_X(_CameraOpaqueTexture);      SAMPLER(sampler_CameraOpaqueTexture);
-            TEXTURE2D_X_FLOAT(_CameraDepthTexture); SAMPLER(sampler_CameraDepthTexture);
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _WaterAbsorption, _WaterScatter, _FoamTexture_ST, _NormalMap_ST;
-                float4 _MapCenterWS, _MapSizeWS;
+            
+                float2 _MapCenterWSA, _MapSizeWSA;
+                float2 _MapCenterWSB, _MapSizeWSB;
+                float2 _MapCenterWSC, _MapSizeWSC;
+                float2 _MapCenterWSD, _MapSizeWSD;
+            
                 half   _FoamAmount, _FoamStrength, _Transparency, _NormalsPower, _FoamNormalsPower;
                 half   _Metallic, _Roughness;
                 int    _MaxWaves, _FogBlend;
@@ -146,50 +152,96 @@ Shader "Brod/Ocean"
                 float3 bitangentWS: TEXCOORD7;
             };
             
-            // ── Helper Functions ──
-            float3 BrodOcean_ReadDetailsHeight(float2 worldXZ, int cascade)
+            float2 BrodOcean_GetCascadeCenter(int cascade)
             {
-                float2 uv = (worldXZ - _MapCenterWS.xz) / (_MapSizeWS.xz * pow(2, cascade)) + 0.5;
+                switch (cascade)
+                {
+                    default:
+                    case 0: return _MapCenterWSA;
+                    case 1: return _MapCenterWSB;
+                    case 2: return _MapCenterWSC;
+                    case 3: return _MapCenterWSD;
+                }
+            }
+            
+            float2 BrodOcean_GetCascadeSize(int cascade)
+            {
+                switch (cascade)
+                {
+                    default:
+                    case 0: return _MapSizeWSA;
+                    case 1: return _MapSizeWSB;
+                    case 2: return _MapSizeWSC;
+                    case 3: return _MapSizeWSD;
+                }
+            }
+            
+            // ── Helper Functions ──
+            int BrodOcean_CalculateDetailsCascade(float2 worldXZ)
+            {
+                if ((worldXZ.x < _MapCenterWSD.x + _MapSizeWSD.x * .5) &&
+                    (worldXZ.x > _MapCenterWSD.x - _MapSizeWSD.x * .5) &&
+                    (worldXZ.y < _MapCenterWSD.y + _MapSizeWSD.y * .5) &&
+                    (worldXZ.y > _MapCenterWSD.y - _MapSizeWSD.y * .5))
+                    return 3;
+                if ((worldXZ.x < _MapCenterWSC.x + _MapSizeWSC.x * .5) &&
+                    (worldXZ.x > _MapCenterWSC.x - _MapSizeWSC.x * .5) &&
+                    (worldXZ.y < _MapCenterWSC.y + _MapSizeWSC.y * .5) &&
+                    (worldXZ.y > _MapCenterWSC.y - _MapSizeWSC.y * .5))
+                    return 2;
+                if ((worldXZ.x < _MapCenterWSB.x + _MapSizeWSB.x * .5) &&
+                    (worldXZ.x > _MapCenterWSB.x - _MapSizeWSB.x * .5) &&
+                    (worldXZ.y < _MapCenterWSB.y + _MapSizeWSB.y * .5) &&
+                    (worldXZ.y > _MapCenterWSB.y - _MapSizeWSB.y * .5))
+                    return 1;
+                return 0;
+            }
+            
+            float3 BrodOcean_ReadDetailsHeight(float2 worldXZ)
+            {
+                int cascade = BrodOcean_CalculateDetailsCascade(worldXZ);
+                float2 uv = (worldXZ - BrodOcean_GetCascadeCenter(cascade)) / BrodOcean_GetCascadeSize(cascade) + 0.5;
                 float4 packed = 0; 
-                if (cascade == 0)
-                    packed = SAMPLE_TEXTURE2D_LOD(_LocalWaterDetailsA, sampler_LocalWaterDetailsA, uv, 0);
-                else if (cascade == 1)
-                    packed = SAMPLE_TEXTURE2D_LOD(_LocalWaterDetailsB, sampler_LocalWaterDetailsB, uv, 0);
+                if (cascade == 3)
+                    packed = SAMPLE_TEXTURE2D_LOD(_LocalWaterDetailsD, sampler_LocalWaterDetailsD, uv, 0);
                 else if (cascade == 2)
                     packed = SAMPLE_TEXTURE2D_LOD(_LocalWaterDetailsC, sampler_LocalWaterDetailsC, uv, 0);
-                else if (cascade == 3)
-                    packed = SAMPLE_TEXTURE2D_LOD(_LocalWaterDetailsD, sampler_LocalWaterDetailsD, uv, 0);
+                else if (cascade == 1)
+                    packed = SAMPLE_TEXTURE2D_LOD(_LocalWaterDetailsB, sampler_LocalWaterDetailsB, uv, 0);
+                else if (cascade == 0)
+                    packed = SAMPLE_TEXTURE2D_LOD(_LocalWaterDetailsA, sampler_LocalWaterDetailsA, uv, 0);
                 return packed.b;
             }
 
-            float3 BrodOcean_ReadDetailsNormal(float2 worldXZ, int cascade)
+            float3 BrodOcean_ReadDetailsNormal(float2 worldXZ)
             {
-                float2 uv = (worldXZ - _MapCenterWS.xz) / (_MapSizeWS.xz * pow(2, cascade)) + 0.5;
+                int cascade = BrodOcean_CalculateDetailsCascade(worldXZ);
+                float2 uv = (worldXZ - BrodOcean_GetCascadeCenter(cascade)) / BrodOcean_GetCascadeSize(cascade) + 0.5;
                 float4 packed = 0; 
-                if (cascade == 0)
-                    packed = SAMPLE_TEXTURE2D(_LocalWaterDetailsA, sampler_LocalWaterDetailsA, uv);
-                else if (cascade == 1)
-                    packed = SAMPLE_TEXTURE2D(_LocalWaterDetailsB, sampler_LocalWaterDetailsB, uv);
+                if (cascade == 3)
+                    packed = SAMPLE_TEXTURE2D(_LocalWaterDetailsD, sampler_LocalWaterDetailsD, uv);
                 else if (cascade == 2)
                     packed = SAMPLE_TEXTURE2D(_LocalWaterDetailsC, sampler_LocalWaterDetailsC, uv);
-                else if (cascade == 3)
-                    packed = SAMPLE_TEXTURE2D(_LocalWaterDetailsD, sampler_LocalWaterDetailsD, uv);
+                else if (cascade == 1)
+                    packed = SAMPLE_TEXTURE2D(_LocalWaterDetailsB, sampler_LocalWaterDetailsB, uv);
+                else if (cascade == 0)
+                    packed = SAMPLE_TEXTURE2D(_LocalWaterDetailsA, sampler_LocalWaterDetailsA, uv);
                 return normalize(float3(-packed.r, 1, -packed.g));
             }
 
-            float BrodOcean_ReadFoam(float2 worldXZ, int cascade)
+            float BrodOcean_ReadFoam(float2 worldXZ)
             {
-                float2 uv = (worldXZ - _MapCenterWS.xz) / (_MapSizeWS.xz * pow(2, cascade)) + 0.5;
-                float4 packed = 0; 
+                int cascade = BrodOcean_CalculateDetailsCascade(worldXZ);
+                float2 uv = (worldXZ - BrodOcean_GetCascadeCenter(cascade)) / BrodOcean_GetCascadeSize(cascade) + 0.5;
                 if (cascade == 0)
-                    packed = SAMPLE_TEXTURE2D(_LocalWaterDetailsA, sampler_LocalWaterDetailsA, uv);
-                else if (cascade == 1)
-                    packed = SAMPLE_TEXTURE2D(_LocalWaterDetailsB, sampler_LocalWaterDetailsB, uv);
-                else if (cascade == 2)
-                    packed = SAMPLE_TEXTURE2D(_LocalWaterDetailsC, sampler_LocalWaterDetailsC, uv);
-                else if (cascade == 3)
-                    packed = SAMPLE_TEXTURE2D(_LocalWaterDetailsD, sampler_LocalWaterDetailsD, uv);
-                return packed.a;
+                    return SAMPLE_TEXTURE2D(_LocalWaterDetailsA, sampler_LocalWaterDetailsA, uv).a;
+                if (cascade == 1)
+                    return SAMPLE_TEXTURE2D(_LocalWaterDetailsB, sampler_LocalWaterDetailsB, uv).a;
+                if (cascade == 2)
+                    return SAMPLE_TEXTURE2D(_LocalWaterDetailsC, sampler_LocalWaterDetailsC, uv).a;
+                if (cascade == 3)
+                    return SAMPLE_TEXTURE2D(_LocalWaterDetailsD, sampler_LocalWaterDetailsD, uv).a;
+                return 0;
             }
 
             float BrodOcean_HenyeyGreenstein(float cosTheta, float g)
@@ -326,9 +378,9 @@ Shader "Brod/Ocean"
                 
                 float  dist = distance(posWS, _WorldSpaceCameraPos);
                 int maxWaves = max(1, (1 - saturate(dist / _TessFar)) * _MaxWaves);
-                half3 sec = BrodOcean_ReadDetailsHeight(posWS.xz, clamp((int)(dist/(_MapSizeWS.x * .5)), 0, 3));
                 float3 offset = Gerstner_GetOffset(posWS.xz, _Time.y, maxWaves, normal, tangent);
                 posWS += offset;
+                half3 sec = BrodOcean_ReadDetailsHeight(posWS.xz);
                 posWS.y += sec;
 
                 float4 clipPos    = TransformWorldToHClip(posWS);
@@ -357,11 +409,11 @@ Shader "Brod/Ocean"
                 float3 normal = mul(normalTS, TBN); 
                 float  dist = distance(i.initialWS, _WorldSpaceCameraPos);
                 half t = 1 - saturate(dist / (_TessFar * 2));
-                int maxWaves = max(16, t * t * _MaxWaves * .5);
+                int maxWaves = max(8, t * _MaxWaves * .5);
                 Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, maxWaves, normal, jacobian);
-                jacobian = jacobian >= .7;
-                jacobian = max(jacobian, BrodOcean_ReadFoam(i.initialWS.xz, clamp((int)(dist/(_MapSizeWS.x * .5)), 0, 3)));
-                normal += BrodOcean_ReadDetailsNormal(i.positionWS.xz, clamp((int)(dist/(_MapSizeWS.x * .5)), 0, 3));
+                jacobian = saturate((jacobian - .9) * 10);
+                jacobian = max(jacobian, BrodOcean_ReadFoam(i.initialWS.xz));
+                normal += BrodOcean_ReadDetailsNormal(i.positionWS.xz);
                 
                 half foamMask   = SAMPLE_DEPTH_TEXTURE(_FoamTexture, sampler_FoamTexture,
                                     i.initialWS.xz * _FoamTexture_ST.xy

@@ -35,7 +35,8 @@ namespace Brod
         private Camera _camera;
         private Vector2 _viewerPos;
         
-        List<MeshGenerator> _tilesPool = new ();
+        private List<MeshGenerator> _tilesPool = new ();
+        private int _updateCounter;
 
         private void Awake()
         {
@@ -64,14 +65,21 @@ namespace Brod
 
         private void FixedUpdate()
         {
-            if (Vector3.Distance(_viewerPos, new Vector2(_camera.transform.position.x , _camera.transform.position.z)) > 10)
+            if (Vector3.Distance(_viewerPos, new Vector2(_camera.transform.position.x , _camera.transform.position.z)) > 1)
             {
                 _viewerPos = new Vector2(_camera.transform.position.x , _camera.transform.position.z);
                 _brodConnector?.UpdateSquareCenter(_viewerPos);
                 WriteToMaterials(ShapeWavesReady);
             }
-            
-            _brodConnector?.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, Time.fixedDeltaTime);
+
+            _updateCounter++;
+            _brodConnector?.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, 3);
+            if (_updateCounter % 2 == 0)
+                _brodConnector?.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, 2);
+            else if (_updateCounter % 3 == 0)
+                _brodConnector?.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, 1);
+            else if (_updateCounter % 5 == 0)
+                _brodConnector?.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, 0);
         }
 
         private void OnDestroy()
@@ -165,9 +173,7 @@ namespace Brod
             foreach (var mat in oceanMaterials)
             {
                 mat.SetBuffer("_ShapeWaves", shapeWaveBuffer);
-                mat.SetVector("_MapCenterWS", new Vector4(_viewerPos.x, 0, _viewerPos.y, 0));
-                mat.SetVector("_MapSizeWS", new Vector4(settings.DetailsMapSizeWS.x, 0, settings.DetailsMapSizeWS.y, 0));
-                mat.SetTexture("_LocalWaterDetails", _brodConnector.GetDetailsRT(0));
+                mat.SetTexture("_LocalWaterDetails", _brodConnector.GetCascade(0).current);
                 mat.SetFloat("_MaxDisp", _displacementRadius);
             }
 
@@ -197,10 +203,21 @@ namespace Brod
             
             foreach (var m in oceanMaterials)
             {
-                m.SetTexture("_LocalWaterDetailsA", _brodConnector.GetDetailsRT(0));
-                m.SetTexture("_LocalWaterDetailsB", _brodConnector.GetDetailsRT(1));
-                m.SetTexture("_LocalWaterDetailsC", _brodConnector.GetDetailsRT(2));
-                m.SetTexture("_LocalWaterDetailsD", _brodConnector.GetDetailsRT(3));
+                m.SetTexture("_LocalWaterDetailsA", _brodConnector.GetCascade(0).current);
+                m.SetVector("_MapCenterWSA", _brodConnector.GetCascade(0).mapCenterWS);
+                m.SetVector("_MapSizeWSA", _brodConnector.GetCascade(0).mapSizeWS);
+                
+                m.SetTexture("_LocalWaterDetailsB", _brodConnector.GetCascade(1).current);
+                m.SetVector("_MapCenterWSB", _brodConnector.GetCascade(1).mapCenterWS);
+                m.SetVector("_MapSizeWSB", _brodConnector.GetCascade(1).mapSizeWS);
+                
+                m.SetTexture("_LocalWaterDetailsC", _brodConnector.GetCascade(2).current);
+                m.SetVector("_MapCenterWSC", _brodConnector.GetCascade(2).mapCenterWS);
+                m.SetVector("_MapSizeWSC", _brodConnector.GetCascade(2).mapSizeWS);
+                
+                m.SetTexture("_LocalWaterDetailsD", _brodConnector.GetCascade(3).current);
+                m.SetVector("_MapCenterWSD", _brodConnector.GetCascade(3).mapCenterWS);
+                m.SetVector("_MapSizeWSD", _brodConnector.GetCascade(3).mapSizeWS);
             }
         }
     }
