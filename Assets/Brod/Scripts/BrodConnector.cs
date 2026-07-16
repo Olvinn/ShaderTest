@@ -69,8 +69,6 @@ namespace Brod
             
             int gx = Mathf.CeilToInt(cascade.detailsMapOne.width / (float)_tgx);
             int gy = Mathf.CeilToInt(cascade.detailsMapOne.height / (float)_tgy);
-
-            _waveBuffer.SetData(waves);
                 
             _waterDetailsCompute.SetVector("_MapCenterWS", cascade.mapCenterWS);
             _waterDetailsCompute.SetVector("_MapSizeWS", cascade.mapSizeWS);
@@ -125,6 +123,18 @@ namespace Brod
             return _cascades[cascade];
         }
 
+        public void UpdateWavesBuffer(Vector4[] waves)
+        {
+            if (_waveBuffer.count != waves.Length)
+            {
+                _waveBuffer.Release();
+                _waveBuffer = new ComputeBuffer(
+                    waves.Length,
+                    sizeof(float) * 4);
+            }
+            _waveBuffer.SetData(waves);
+        }
+
         private void ApplyOffset(Vector2 offset, int cascade)
         {
             if (_waterDetailsCompute == null || _cascades[cascade].detailsMapOne == null) return;
@@ -152,6 +162,7 @@ namespace Brod
                 _cascades[i].detailsMapOne?.Release();
                 _cascades[i].detailsMapTwo?.Release();
             }
+            _waveBuffer.Release();
         }
     }
 }

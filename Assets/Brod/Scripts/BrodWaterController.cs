@@ -59,8 +59,9 @@ namespace Brod
             
             _brodConnector = new BrodConnector(settings.WaterComputeShader, settings.DetailsMapSizeWS, settings.Cascades, ShapeWavesReady.Length);
             _brodConnector.InitializeRenderTexture(settings.DetailsMapResolution);
+            _brodConnector.UpdateWavesBuffer(ShapeWavesReady);
             
-            WriteToMaterials(ShapeWavesReady);
+            WriteToMaterials();
         }
 
         private void FixedUpdate()
@@ -69,7 +70,7 @@ namespace Brod
             {
                 _viewerPos = new Vector2(_camera.transform.position.x , _camera.transform.position.z);
                 _brodConnector?.UpdateSquareCenter(_viewerPos);
-                WriteToMaterials(ShapeWavesReady);
+                WriteToMaterials();
             }
 
             _updateCounter++;
@@ -161,18 +162,10 @@ namespace Brod
             return new Vector4(shapeWaves[i].x, shapeWaves[i].y, shapeWaves[i].z, shapeWaves[i].w); 
         }
 
-        private void WriteToMaterials(Vector4[] waves)
+        private void WriteToMaterials()
         {
-            ComputeBuffer shapeWaveBuffer =
-                new ComputeBuffer(
-                    ShapeWavesReady.Length,
-                    sizeof(float) * 4);
-
-            shapeWaveBuffer.SetData(waves);
-            
             foreach (var mat in oceanMaterials)
             {
-                mat.SetBuffer("_ShapeWaves", shapeWaveBuffer);
                 mat.SetTexture("_LocalWaterDetails", _brodConnector.GetCascade(0).current);
                 mat.SetFloat("_MaxDisp", _displacementRadius);
             }
