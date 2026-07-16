@@ -57,7 +57,7 @@ namespace Brod
             
             RecreateSourcesBuffer();
             
-            _brodConnector = new BrodConnector(settings.WaterComputeShader, settings.DetailsMapSizeWS, settings.Cascades);
+            _brodConnector = new BrodConnector(settings.WaterComputeShader, settings.DetailsMapSizeWS, settings.Cascades, ShapeWavesReady.Length);
             _brodConnector.InitializeRenderTexture(settings.DetailsMapResolution);
             
             WriteToMaterials(ShapeWavesReady);

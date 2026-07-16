@@ -20,8 +20,9 @@ namespace Brod
         private Cascade[] _cascades;
         private int _cascadesCount;
         private ComputeShader _waterDetailsCompute;
+        private ComputeBuffer _waveBuffer;
 
-        public BrodConnector(ComputeShader waterDetailsCompute, Vector2 squareWS, int cascades)
+        public BrodConnector(ComputeShader waterDetailsCompute, Vector2 squareWS, int cascades, int wavesCount)
         {
             _waterDetailsCompute = waterDetailsCompute;
             _cascadesCount = cascades;
@@ -34,6 +35,10 @@ namespace Brod
                     mapSizeWS = squareWS / ((i + 1) * (i + 1))
                 };
             }
+
+            _waveBuffer = new ComputeBuffer(
+                    wavesCount,
+                    sizeof(float) * 4);
             
             _wavesKernel = _waterDetailsCompute.FindKernel("Waves");
             _offsetKernel = _waterDetailsCompute.FindKernel("Offset");
@@ -65,12 +70,7 @@ namespace Brod
             int gx = Mathf.CeilToInt(cascade.detailsMapOne.width / (float)_tgx);
             int gy = Mathf.CeilToInt(cascade.detailsMapOne.height / (float)_tgy);
 
-            ComputeBuffer waveBuffer =
-                new ComputeBuffer(
-                    waves.Length,
-                    sizeof(float) * 4);
-
-            waveBuffer.SetData(waves);
+            _waveBuffer.SetData(waves);
                 
             _waterDetailsCompute.SetVector("_MapCenterWS", cascade.mapCenterWS);
             _waterDetailsCompute.SetVector("_MapSizeWS", cascade.mapSizeWS);
@@ -82,7 +82,7 @@ namespace Brod
             _waterDetailsCompute.SetInts("_Resolution", cascade.detailsMapOne.width, cascade.detailsMapOne.height);
             _waterDetailsCompute.SetBuffer(_wavesKernel, "_Sources", secondaryWaveSourcesBuffer);
             _waterDetailsCompute.SetTexture(_wavesKernel, "_LocalWavesRW", cascade.current);
-            _waterDetailsCompute.SetBuffer(_wavesKernel, "_ShapeWaves", waveBuffer);
+            _waterDetailsCompute.SetBuffer(_wavesKernel, "_ShapeWaves", _waveBuffer);
             _waterDetailsCompute.Dispatch(_wavesKernel, gx, gy, 1);
             
             _cascades[cascadeInd].lastUpdateTime = time;
