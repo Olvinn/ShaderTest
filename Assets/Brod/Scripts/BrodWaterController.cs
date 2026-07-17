@@ -32,6 +32,7 @@ namespace Brod
 
         private WaveSource[] Sources = Array.Empty<WaveSource>();
         private ComputeBuffer _sourcesBuffer;
+        private ComputeBuffer _waveBuffer;
         private Camera _camera;
         private Vector2 _viewerPos;
         
@@ -60,6 +61,7 @@ namespace Brod
             _brodConnector = new BrodConnector(settings.WaterComputeShader, settings.DetailsMapSizeWS, settings.Cascades, ShapeWavesReady.Length);
             _brodConnector.InitializeRenderTexture(settings.DetailsMapResolution);
             _brodConnector.UpdateWavesBuffer(ShapeWavesReady);
+            UpdateWavesBuffer(ShapeWavesReady);
             
             WriteToMaterials();
         }
@@ -91,6 +93,15 @@ namespace Brod
             for (var i = 0; i < _tilesPool.Count; i++)
                 DestroyImmediate(_tilesPool[i].gameObject);
             _tilesPool.Clear();
+        }
+        
+        public void UpdateWavesBuffer(Vector4[] waves)
+        {
+            _waveBuffer?.Release();
+            _waveBuffer = new ComputeBuffer(
+                waves.Length,
+                sizeof(float) * 4);
+            _waveBuffer.SetData(waves);
         }
         
         private float GetDisplacementRadius(Vector4[] waves)
@@ -168,6 +179,7 @@ namespace Brod
             {
                 mat.SetTexture("_LocalWaterDetails", _brodConnector.GetCascade(0).current);
                 mat.SetFloat("_MaxDisp", _displacementRadius);
+                mat.SetBuffer("_ShapeWaves", _waveBuffer);
             }
 
             BindLocalDetailsToMaterials();

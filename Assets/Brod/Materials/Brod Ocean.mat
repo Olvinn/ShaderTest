@@ -110,7 +110,7 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _MaxDisp: 29.901857
+    - _MaxDisp: 9.701815
     - _MaxWaveAmplitude: 20
     - _MaxWaves: 128
     - _Metallic: 0
