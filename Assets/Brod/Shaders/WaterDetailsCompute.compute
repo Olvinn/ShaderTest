@@ -77,7 +77,7 @@ void Waves(uint3 id : SV_DispatchThreadID)
     int2 pix = int2(id.xy); 
     float2 P = PixelToWS(pix);
     
-    
+    //if (Brod_FrustumCull(float3(P.x, 0.0, P.z), 2)) return;
 
     float4 prev = _LocalWavesRW[pix];
     float4 curr = prev;
@@ -88,7 +88,7 @@ void Waves(uint3 id : SV_DispatchThreadID)
     float jacobian = 0;
     float3 normal = 0; 
     
-    Gerstner_GetNormalJacobian(P, _Time, 128, normal, jacobian);
+    BrodGerstner_GetNormalJacobian(P, _Time, 128, normal, jacobian);
     float foam = clamp(0, 1, jacobian >= 1);
     curr.a = max(curr.a, foam);
 

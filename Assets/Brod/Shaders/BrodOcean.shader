@@ -378,7 +378,7 @@ Shader "Brod/Ocean"
                 
                 float  dist = distance(posWS, _WorldSpaceCameraPos);
                 int maxWaves = max(1, (1 - saturate(dist / _TessFar)) * _MaxWaves);
-                float3 offset = Gerstner_GetOffset(posWS.xz, _Time.y, maxWaves, normal, tangent);
+                float3 offset = BrodGerstner_GetOffset(posWS.xz, _Time.y, maxWaves, normal, tangent);
                 posWS += offset;
                 half3 sec = BrodOcean_ReadDetailsHeight(posWS.xz);
                 posWS.y += sec;
@@ -399,9 +399,9 @@ Shader "Brod/Ocean"
             {
                 float3x3 TBN   = float3x3(i.tangentWS, i.bitangentWS, i.normalWS);
                 float4 packed1 = SAMPLE_TEXTURE2D(_NormalMap,
-                                                  sampler_NormalMap, i.initialWS.xz * _NormalMap_ST.xy);
+                                                  sampler_NormalMap, i.initialWS.xz * _NormalMap_ST.xy + _Time.y * .25);
                 float4 packed2 = SAMPLE_TEXTURE2D(_NormalMap,
-                                                  sampler_NormalMap, i.initialWS.xz * _NormalMap_ST.xy * 1.3f - _Time.y * .01);
+                                                  sampler_NormalMap, i.initialWS.xz * _NormalMap_ST.xy * 1.3f - _Time.y * .5);
                 float3 normalTS = lerp(UnpackNormal(packed1), UnpackNormal(packed2), .5);
                 normalTS.xy *= _NormalsPower;
                 normalTS = normalize(normalTS);
@@ -410,7 +410,7 @@ Shader "Brod/Ocean"
                 float  dist = distance(i.initialWS, _WorldSpaceCameraPos);
                 half t = 1 - saturate(dist / (_TessFar * 2));
                 int maxWaves = max(8, t * _MaxWaves * .5);
-                Gerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, maxWaves, normal, jacobian);
+                BrodGerstner_GetNormalJacobian(i.initialWS.xz, _Time.y, maxWaves, normal, jacobian);
                 jacobian = saturate((jacobian - .9) * 10);
                 jacobian = max(jacobian, BrodOcean_ReadFoam(i.initialWS.xz));
                 normal += BrodOcean_ReadDetailsNormal(i.positionWS.xz);
@@ -441,12 +441,12 @@ Shader "Brod/Ocean"
                 #endif
                 Light mainLight = GetMainLight(shadowCoord);
 
-                float fresnel = H_FresnelSchlickWater(viewDir, normal);
+                float fresnel = Brod_FresnelSchlickWater(viewDir, normal);
 
-                float3 envReflection = CubemapAmbient(reflDir, 0);
+                float3 envReflection = Brod_CubemapAmbient(reflDir, 0);
                 #ifdef SSR
                     bool   ssrHit;
-                    half3  ssrReflection = H_RaymarchSS_Reflection(
+                    half3  ssrReflection = Brod_RaymarchSSReflection(
                         i.positionWS, normal,
                         _SSRSteps, _SSRStepSize, _SSRThickness, _StepPropagation,
                         _CameraOpaqueTexture, sampler_CameraOpaqueTexture,
@@ -474,13 +474,13 @@ Shader "Brod/Ocean"
                 
                 half3 underWS = ComputeWorldSpacePosition(refrUV, refrDepth, UNITY_MATRIX_I_VP);
                 half3 unerwaterCol = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, refrUV).rgb;
-                unerwaterCol = lerp(unerwaterCol, CubemapAmbient(refrDir, 0), isSky);
+                unerwaterCol = lerp(unerwaterCol, Brod_CubemapAmbient(refrDir, 0), isSky);
 
                 half3 sigmaT      = (1 - _WaterAbsorption.rgb) +  (1 - _WaterScatter.rgb);
                 half3 depthTint   = exp(-sigmaT * length(underWS - i.positionWS) / _Transparency);
                 unerwaterCol = unerwaterCol * (isSky ? 0 : depthTint);
                                 
-                half3 specular = H_PBRSpecular(normal, -viewDir, mainLight.direction,
+                half3 specular = Brod_PBRSpecular(normal, -viewDir, mainLight.direction,
                                                 sss, _Metallic, _Roughness)
                                * mainLight.color
                                * mainLight.shadowAttenuation
@@ -498,7 +498,7 @@ Shader "Brod/Ocean"
                 
                 //finalColor = MixFog(finalColor, i.fog);
                 if (_FogBlend)
-                    return half4(lerp(finalColor, CubemapAmbient(viewDir, 0), saturate(i.fog)), 1);
+                    return half4(lerp(finalColor, Brod_CubemapAmbient(viewDir, 0), saturate(i.fog)), 1);
                 else
                     return half4(finalColor, 1);
             }
@@ -540,7 +540,7 @@ Shader "Brod/Ocean"
                 float3 worldPos = mul(unity_ObjectToWorld, float4(IN.vertex.xyz, 1)).xyz;
                 float3 normalWS, tangentWS;
 
-                float3 offset = Gerstner_GetOffset(worldPos.xz, _Time.y, _MaxWaves, normalWS, tangentWS);
+                float3 offset = BrodGerstner_GetOffset(worldPos.xz, _Time.y, _MaxWaves, normalWS, tangentWS);
                 worldPos += offset;
 
                 #ifdef _CASTING_PUNCTUAL_LIGHT_SHADOW

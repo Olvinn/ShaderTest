@@ -3,15 +3,14 @@
 
 #define SSR_MAX_STEPS 64
 
-
-float H_FresnelSchlickWater(float3 viewDir, float3 normal)
+float Brod_FresnelSchlickWater(float3 viewDir, float3 normal)
 {
     const float R0 = 0.02;
     float cosTheta = saturate(abs(dot(-viewDir, normal)));
     return R0 + (1.0 - R0) * pow(1.0 - cosTheta, 5.0);
 }
 
-float DistributionGGX(float3 N, float3 H, float roughness)
+float Brod_DistributionGGX(float3 N, float3 H, float roughness)
 {
     float a      = roughness * roughness;
     float a2     = a * a;
@@ -22,23 +21,23 @@ float DistributionGGX(float3 N, float3 H, float roughness)
     return a2 / (PI * denom * denom);
 }
 
-float GeometrySchlickGGX(float NdotV, float roughness)
+float Brod_GeometrySchlickGGX(float NdotV, float roughness)
 {
     float r = (roughness + 1.0);
     float k = (r * r) / 8.0;
     return NdotV / (NdotV * (1.0 - k) + k);
 }
 
-float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
+float Brod_GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 {
     float NdotV = max(dot(N, V), 0.0);
     float NdotL = max(dot(N, L), 0.0);
-    float ggx1 = GeometrySchlickGGX(NdotV, roughness);
-    float ggx2 = GeometrySchlickGGX(NdotL, roughness);
+    float ggx1 = Brod_GeometrySchlickGGX(NdotV, roughness);
+    float ggx2 = Brod_GeometrySchlickGGX(NdotL, roughness);
     return ggx1 * ggx2;
 }
 
-float H_PBRSpecular(
+float Brod_PBRSpecular(
     float3 normal,          
     float3 viewDir,         
     float3 lightDir,         
@@ -50,9 +49,9 @@ float H_PBRSpecular(
     float3 H = normalize(viewDir + lightDir);
     float3 F0 = lerp(float3(0.04, 0.04, 0.04), albedo, metallic);
 
-    float D =  DistributionGGX(normal, H, roughness);
-    float3 F = H_FresnelSchlickWater(saturate(dot(normal, viewDir)), F0);
-    float G = GeometrySmith(normal, viewDir, lightDir, roughness);
+    float D =  Brod_DistributionGGX(normal, H, roughness);
+    float3 F = Brod_FresnelSchlickWater(saturate(dot(normal, viewDir)), F0);
+    float G = Brod_GeometrySmith(normal, viewDir, lightDir, roughness);
 
     float NdotL =  max(dot(normal, lightDir), 0.0);
 
@@ -61,7 +60,7 @@ float H_PBRSpecular(
     return specular;
 }
 
-inline float2 SSR_ProjectVSPosToUV(float3 vsPos)
+inline float2 Brod_SSRProjectVSPosToUV(float3 vsPos)
 {
     float4 clip = mul(UNITY_MATRIX_P, float4(vsPos, 1.0));
     float2 uv   = clip.xy / max(clip.w, 1e-6);
@@ -72,12 +71,12 @@ inline float2 SSR_ProjectVSPosToUV(float3 vsPos)
     return uv;
 }
 
-inline float SSR_SampleRawDepth(Texture2D depthTex, SamplerState samp, float2 uv)
+inline float Brod_SSRSampleRawDepth(Texture2D depthTex, SamplerState samp, float2 uv)
 {
     return SAMPLE_DEPTH_TEXTURE(depthTex, samp, uv);
 }
 
-float3 H_RaymarchSS_Reflection(
+float3 Brod_RaymarchSSReflection(
     float3 originWS,
     float3 normalWS,
     int    steps,
@@ -103,10 +102,10 @@ float3 H_RaymarchSS_Reflection(
 
     int maxSteps = min(max(1, steps), SSR_MAX_STEPS);
 
-    float2 uv = SSR_ProjectVSPosToUV(currVS);
+    float2 uv = Brod_SSRProjectVSPosToUV(currVS);
     if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) return 0;
 
-    float rawDepth0 = SSR_SampleRawDepth(depth, sampler_depth, uv);
+    float rawDepth0 = Brod_SSRSampleRawDepth(depth, sampler_depth, uv);
     if (rawDepth0 >= 0.9999) return 0;
 
     float sceneLinearZ0 = LinearEyeDepth(rawDepth0, _ZBufferParams);
@@ -122,10 +121,10 @@ float3 H_RaymarchSS_Reflection(
         t     += thisStep;
         currVS = originVS + reflDirVS * t;
 
-        uv = SSR_ProjectVSPosToUV(currVS);
+        uv = Brod_SSRProjectVSPosToUV(currVS);
         if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) break;
 
-        float rawDepth = SSR_SampleRawDepth(depth, sampler_depth, uv);
+        float rawDepth = Brod_SSRSampleRawDepth(depth, sampler_depth, uv);
         if (rawDepth >= 0.9999) return 0; // hit sky
 
         float sceneLinearZ = LinearEyeDepth(rawDepth, _ZBufferParams);
@@ -144,8 +143,8 @@ float3 H_RaymarchSS_Reflection(
                 float tMid = 0.5 * (tLo + tHi);
                 float3 vsMid = originVS + reflDirVS * tMid;
 
-                float2 uvMid = SSR_ProjectVSPosToUV(vsMid);
-                float rawMid = SSR_SampleRawDepth(depth, sampler_depth, uvMid);
+                float2 uvMid = Brod_SSRProjectVSPosToUV(vsMid);
+                float rawMid = Brod_SSRSampleRawDepth(depth, sampler_depth, uvMid);
                 if (rawMid >= 0.9999) { tHi = tMid; continue; }
 
                 float sceneMid = LinearEyeDepth(rawMid, _ZBufferParams);
@@ -157,9 +156,9 @@ float3 H_RaymarchSS_Reflection(
             }
 
             float3 vsHit = originVS + reflDirVS * bestT;
-            float2 uvHit = SSR_ProjectVSPosToUV(vsHit);
+            float2 uvHit = Brod_SSRProjectVSPosToUV(vsHit);
 
-            float rawHit   = SSR_SampleRawDepth(depth, sampler_depth, uvHit);
+            float rawHit   = Brod_SSRSampleRawDepth(depth, sampler_depth, uvHit);
             float sceneHit = LinearEyeDepth(rawHit, _ZBufferParams);
             float currHit  = -vsHit.z;
 
@@ -176,13 +175,13 @@ float3 H_RaymarchSS_Reflection(
     return 0;
 }
             
-inline half3 Screen(half3 a, half3 b, half t)
+inline half3 Brod_Screen(half3 a, half3 b, half t)
 {
     half3 s = 1.0h - (1.0h - a) * (1.0h - b);
     return lerp(a, s, t);
 }
 
-inline half3 Overlay(half3 a, half3 b, half t)
+inline half3 Brod_Overlay(half3 a, half3 b, half t)
 {
     half3 low  = 2.0h * a * b;
     half3 high = 1.0h - 2.0h * (1.0h - a) * (1.0h - b);
@@ -191,7 +190,7 @@ inline half3 Overlay(half3 a, half3 b, half t)
     return lerp(a, o, t);
 }
 
-float3 H_RaymarchSS_Refraction(
+float3 Brod_RaymarchSSRefraction(
     float3 originWS,
     float3 normalWS,
     int    steps,
@@ -217,10 +216,10 @@ float3 H_RaymarchSS_Refraction(
 
     int maxSteps = min(max(1, steps), SSR_MAX_STEPS);
 
-    float2 uv = SSR_ProjectVSPosToUV(currVS);
+    float2 uv = Brod_SSRProjectVSPosToUV(currVS);
     if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) return 0;
 
-    float rawDepth0 = SSR_SampleRawDepth(depthTex, sampler_depth, uv);
+    float rawDepth0 = Brod_SSRSampleRawDepth(depthTex, sampler_depth, uv);
     if (rawDepth0 >= 0.9999) return 0;
 
     float sceneLinearZ0 = LinearEyeDepth(rawDepth0, _ZBufferParams);
@@ -238,10 +237,10 @@ float3 H_RaymarchSS_Refraction(
         t     += thisStep;
         currVS = originVS + refrDirVS * t;
 
-        float2 loc_uv = SSR_ProjectVSPosToUV(currVS);
+        float2 loc_uv = Brod_SSRProjectVSPosToUV(currVS);
         if (loc_uv.x < 0 || loc_uv.x > 1 || loc_uv.y < 0 || loc_uv.y > 1) break;
 
-        float rawDepth = SSR_SampleRawDepth(depthTex, sampler_depth, loc_uv);
+        float rawDepth = Brod_SSRSampleRawDepth(depthTex, sampler_depth, loc_uv);
         if (rawDepth >= 0.9999) return 0;
 
         float sceneLinearZ = LinearEyeDepth(rawDepth, _ZBufferParams);
@@ -260,8 +259,8 @@ float3 H_RaymarchSS_Refraction(
                 float tMid = 0.5 * (tLo + tHi);
                 float3 vsMid = originVS + refrDirVS * tMid;
 
-                float2 uvMid = SSR_ProjectVSPosToUV(vsMid);
-                float rawMid = SSR_SampleRawDepth(depthTex, sampler_depth, uvMid);
+                float2 uvMid = Brod_SSRProjectVSPosToUV(vsMid);
+                float rawMid = Brod_SSRSampleRawDepth(depthTex, sampler_depth, uvMid);
                 if (rawMid >= 0.9999) { tHi = tMid; continue; }
 
                 float sceneMid = LinearEyeDepth(rawMid, _ZBufferParams);
@@ -273,9 +272,9 @@ float3 H_RaymarchSS_Refraction(
             }
 
             float3 vsHit = originVS + refrDirVS * bestT;
-            uvHit = SSR_ProjectVSPosToUV(vsHit);
+            uvHit = Brod_SSRProjectVSPosToUV(vsHit);
 
-            float rawHit   = SSR_SampleRawDepth(depthTex, sampler_depth, uvHit);
+            float rawHit   = Brod_SSRSampleRawDepth(depthTex, sampler_depth, uvHit);
             float sceneDepthHit = LinearEyeDepth(rawHit, _ZBufferParams);
             float currHit       = -vsHit.z;
             float depth = LinearEyeDepth(rawHit, _ZBufferParams);
@@ -304,21 +303,21 @@ float3 H_RaymarchSS_Refraction(
     return 0;
 }
 
-inline float3 CubemapAmbient(float3 viewDir, float smooth)
+inline float3 Brod_CubemapAmbient(float3 viewDir, float smooth)
 {
     half4 encoded = SAMPLE_TEXTURECUBE_LOD(unity_SpecCube0, samplerunity_SpecCube0, viewDir, smooth);
     half3 skyColor = DecodeHDREnvironment(encoded, unity_SpecCube0_HDR);
     return skyColor;
 }
 
-inline float PhongDiffuse(float3 normal)
+inline float Brod_PhongDiffuse(float3 normal)
 {
     Light light = GetMainLight();
     float pow = max(0, dot(float3(0, 1, 0), light.direction));
     return max(0, dot(normalize(light.direction), normal)) * pow;
 }
 
-inline float3 PhongSpecular(float3 viewDir, float3 normal, float power)
+inline float3 Brod_PhongSpecular(float3 viewDir, float3 normal, float power)
 {
     Light light = GetMainLight();
     float3 h = normalize(light.direction + viewDir);

@@ -4,13 +4,13 @@
 
 StructuredBuffer<float4> _ShapeWaves; //x: angle (rad), y: amp, z: len, w: steep
 
-void ger_waveParams(float waveLength, out float k, out float omega)
+void BrodGerstner_WaveParams(float waveLength, out float k, out float omega)
 {
     k     = TWO_PI / waveLength;
     omega = sqrt(G * k);
 }
 
-float3 ger_wave(float2 pos, float2 dir, float k, float amp,
+float3 BrodGerstner_Wave(float2 pos, float2 dir, float k, float amp,
                     float steepness, float speed, float time)
 {
     float phase = k * dot(dir, pos) - speed * time;
@@ -24,7 +24,7 @@ float3 ger_wave(float2 pos, float2 dir, float k, float amp,
     );
 }
 
-void ger_waveNormalJacobian(float2 pos, float2 dir, float k, float amp,
+void BrodGerstner_WaveNormalJacobian(float2 pos, float2 dir, float k, float amp,
                         float steepness, float speed, float time,
                         inout float3 normal, inout float2x2 J)
 {    
@@ -44,7 +44,7 @@ void ger_waveNormalJacobian(float2 pos, float2 dir, float k, float amp,
     J[1][1] += common * dir.y * dir.y; // dZ'/dz
 }
 
-void ger_waveNormalTangent(float2 pos, float2 dir, float k, float amp,
+void BrodGerstner_WaveNormalTangent(float2 pos, float2 dir, float k, float amp,
                         float steepness, float speed, float time,
                         inout float3 normal, inout float3 tangent)
 {    
@@ -61,7 +61,7 @@ void ger_waveNormalTangent(float2 pos, float2 dir, float k, float amp,
     tangent.z += -steepness * amp * k * dir.x * dir.y * sinP;
 }
 
-float3 Gerstner_GetOffset(float2 worldXZ, float time, int count, out float3 normal, out float3 tangent)
+float3 BrodGerstner_GetOffset(float2 worldXZ, float time, int count, out float3 normal, out float3 tangent)
 {
     float3 offset = float3(0, 0, 0);
     normal = float3(0, 1, 0);
@@ -70,20 +70,20 @@ float3 Gerstner_GetOffset(float2 worldXZ, float time, int count, out float3 norm
     for (int i = 0; i < count; i++)
     {
         float k, speed, steepness = _ShapeWaves[i].w;
-        ger_waveParams(_ShapeWaves[i].z, k, speed);
+        BrodGerstner_WaveParams(_ShapeWaves[i].z, k, speed);
         float a = _ShapeWaves[i].x;
         float x = cos(a);
         float y = sin(a);
         float2 dir = normalize(float2(x, y));
-        offset += ger_wave(worldXZ, dir, k, _ShapeWaves[i].y, steepness, speed, time);
-        ger_waveNormalTangent(worldXZ, dir, k, _ShapeWaves[i].y, steepness, speed, time,
+        offset += BrodGerstner_Wave(worldXZ, dir, k, _ShapeWaves[i].y, steepness, speed, time);
+        BrodGerstner_WaveNormalTangent(worldXZ, dir, k, _ShapeWaves[i].y, steepness, speed, time,
                            normal, tangent);
     }
 
     return offset;
 }
 
-void Gerstner_GetNormalJacobian(float2 worldXZ, float time, int count,
+void BrodGerstner_GetNormalJacobian(float2 worldXZ, float time, int count,
                                 inout float3 normal, out float jacobianCoeff)
 {   
     float2x2 J = float2x2(
@@ -95,12 +95,12 @@ void Gerstner_GetNormalJacobian(float2 worldXZ, float time, int count,
     for (int i = 0; i < count; i++)
     {
         float k, speed, steepness = _ShapeWaves[i].w;
-        ger_waveParams(_ShapeWaves[i].z, k, speed);
+        BrodGerstner_WaveParams(_ShapeWaves[i].z, k, speed);
         float a = _ShapeWaves[i].x;
         float x = cos(a);
         float y = sin(a);
         float2 dir = normalize(float2(x, y));
-        ger_waveNormalJacobian(worldXZ, dir, k, _ShapeWaves[i].y, steepness, speed, time,
+        BrodGerstner_WaveNormalJacobian(worldXZ, dir, k, _ShapeWaves[i].y, steepness, speed, time,
                            normal, J);
     }
     
