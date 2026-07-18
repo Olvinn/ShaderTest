@@ -76,9 +76,8 @@ void Offset(uint3 id : SV_DispatchThreadID)
     float2 oldWS = PixelToWS(id.xy) + _DS;
     int2 oldPix = WSToPixel(oldWS);
     int2 oldBigPix = WSToBigPixel(oldWS);
-    if (_CascadeInd > 0)
-        if ((id.x > _Resolution.x - 1) || (id.y > _Resolution.y - 1) || id.x < 0 || id.y < 0) return;
-    if ((id.x >= _Resolution.x - 1) || (id.y >= _Resolution.y - 1) || id.x <= 0 || id.y <= 0) return;
+    if (_CascadeInd == 0)
+        if ((id.x >= _Resolution.x - 1) || (id.y >= _Resolution.y - 1) || id.x <= 0 || id.y <= 0) return;
     float4 old = 0;
     if ((oldPix.x > _Resolution.x - 1) || (oldPix.y > _Resolution.y - 1) || oldPix.x < 0 || oldPix.y < 0)
         old = _LocalWavesRW[oldBigPix]; 
@@ -96,9 +95,8 @@ void Particles(uint3 id : SV_DispatchThreadID)
 [numthreads(8,8,1)]
 void Waves(uint3 id : SV_DispatchThreadID)
 {
-    if (_CascadeInd > 0)
-        if ((id.x > _Resolution.x - 1) || (id.y > _Resolution.y - 1) || id.x < 0 || id.y < 0) return;
-    if ((id.x >= _Resolution.x - 1) || (id.y >= _Resolution.y - 1) || id.x <= 0 || id.y <= 0) return;
+    if (_CascadeInd == 0)
+        if ((id.x >= _Resolution.x - 1) || (id.y >= _Resolution.y - 1) || id.x <= 0 || id.y <= 0) return;
     int2 pix = int2(id.xy); 
     float2 P = PixelToWS(pix);
     

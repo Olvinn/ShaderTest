@@ -179,20 +179,20 @@ Shader "Brod/Ocean"
             // ── Helper Functions ──
             int BrodOcean_CalculateDetailsCascade(float2 worldXZ)
             {
-                if ((worldXZ.x < _MapCenterWSD.x + _MapSizeWSD.x * .5) &&
-                    (worldXZ.x > _MapCenterWSD.x - _MapSizeWSD.x * .5) &&
-                    (worldXZ.y < _MapCenterWSD.y + _MapSizeWSD.y * .5) &&
-                    (worldXZ.y > _MapCenterWSD.y - _MapSizeWSD.y * .5))
+                if ((worldXZ.x < _MapCenterWSD.x + _MapSizeWSD.x * .49) &&
+                    (worldXZ.x > _MapCenterWSD.x - _MapSizeWSD.x * .49) &&
+                    (worldXZ.y < _MapCenterWSD.y + _MapSizeWSD.y * .49) &&
+                    (worldXZ.y > _MapCenterWSD.y - _MapSizeWSD.y * .49))
                     return 3;
-                if ((worldXZ.x < _MapCenterWSC.x + _MapSizeWSC.x * .5) &&
-                    (worldXZ.x > _MapCenterWSC.x - _MapSizeWSC.x * .5) &&
-                    (worldXZ.y < _MapCenterWSC.y + _MapSizeWSC.y * .5) &&
-                    (worldXZ.y > _MapCenterWSC.y - _MapSizeWSC.y * .5))
+                if ((worldXZ.x < _MapCenterWSC.x + _MapSizeWSC.x * .49) &&
+                    (worldXZ.x > _MapCenterWSC.x - _MapSizeWSC.x * .49) &&
+                    (worldXZ.y < _MapCenterWSC.y + _MapSizeWSC.y * .49) &&
+                    (worldXZ.y > _MapCenterWSC.y - _MapSizeWSC.y * .49))
                     return 2;
-                if ((worldXZ.x < _MapCenterWSB.x + _MapSizeWSB.x * .5) &&
-                    (worldXZ.x > _MapCenterWSB.x - _MapSizeWSB.x * .5) &&
-                    (worldXZ.y < _MapCenterWSB.y + _MapSizeWSB.y * .5) &&
-                    (worldXZ.y > _MapCenterWSB.y - _MapSizeWSB.y * .5))
+                if ((worldXZ.x < _MapCenterWSB.x + _MapSizeWSB.x * .49) &&
+                    (worldXZ.x > _MapCenterWSB.x - _MapSizeWSB.x * .49) &&
+                    (worldXZ.y < _MapCenterWSB.y + _MapSizeWSB.y * .49) &&
+                    (worldXZ.y > _MapCenterWSB.y - _MapSizeWSB.y * .49))
                     return 1;
                 return 0;
             }
@@ -285,7 +285,7 @@ Shader "Brod/Ocean"
                 float3 crestBoost = crestMask * light.color
                                   * sigmaS / max(sigmaT, 0.0001) * 0.4;
 
-                float shadow = 1;//max(light.shadowAttenuation, .5);
+                float shadow = max(light.shadowAttenuation, .05);
 
                 return (volScatter + backScatter + crestBoost)
                      * _SSSStrength
@@ -491,7 +491,7 @@ Shader "Brod/Ocean"
 
                 float  NdotL      = saturate(dot(normal, mainLight.direction));
                 float3 foamDiffuse = (foamMask * mainLight.color + SampleSH(normal))
-                                   * max(0.75, mainLight.shadowAttenuation) * (NdotL * .5 + .5);
+                                   * max(0.15, mainLight.shadowAttenuation) * (NdotL * .5 + .5);
                 float3 finalColor  = lerp(waterColor, foamDiffuse, foamAmount);
 
                 finalColor += specular * (1.0 - foamAmount) + sss;
