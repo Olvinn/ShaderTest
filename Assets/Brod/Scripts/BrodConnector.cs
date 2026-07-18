@@ -75,6 +75,7 @@ namespace Brod
             _waterDetailsCompute.SetFloat("_Time", time);
             _waterDetailsCompute.SetFloat("_dt", time - cascade.lastUpdateTime);
             _waterDetailsCompute.SetInt("_NumSources", Mathf.Max(0, waves.Length));
+            _waterDetailsCompute.SetInt("_Cascadeind",  cascadeInd);
             _waterDetailsCompute.SetFloat("_Damping", 0.985f);
             _waterDetailsCompute.SetFloat("_FoamLifetime", foamLifetime);
             _waterDetailsCompute.SetInts("_Resolution", cascade.detailsMapOne.width, cascade.detailsMapOne.height);
