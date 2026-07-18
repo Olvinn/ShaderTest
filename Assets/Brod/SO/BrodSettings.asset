@@ -16,8 +16,8 @@ MonoBehaviour:
   DetailsMapResolution: 1024
   Cascades: 4
   DetailsMapSizeWS: {x: 2000, y: 2000}
-  FoamLifetime: 7
-  SwellHeight: 0.25
-  WindSpeed: 10
-  Fetch: 25000
-  Storm: 0.15
+  FoamLifetime: 3
+  SwellHeight: 1
+  WindSpeed: 24
+  Fetch: 50000
+  Storm: 0.17

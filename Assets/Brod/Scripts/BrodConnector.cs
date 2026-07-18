@@ -135,24 +135,35 @@ namespace Brod
             _waveBuffer.SetData(waves);
         }
 
-        private void ApplyOffset(Vector2 offset, int cascade)
+        private void ApplyOffset(Vector2 offset, int cascadeInd)
         {
-            if (_waterDetailsCompute == null || _cascades[cascade].detailsMapOne == null) return;
-
-            _cascades[cascade].pingPong = !_cascades[cascade].pingPong;
+            if (_waterDetailsCompute == null || _cascades[cascadeInd].current == null) return;
             
-            int gx = Mathf.CeilToInt(_cascades[cascade].detailsMapOne.width / (float)_tgx);
-            int gy = Mathf.CeilToInt(_cascades[cascade].detailsMapOne.height / (float)_tgy);
+            var cascade =  _cascades[cascadeInd];
+            var prevCascadeInd = cascadeInd - 1;
+            prevCascadeInd = Mathf.Max(prevCascadeInd, 0);
+            var prevCascade = _cascades[prevCascadeInd];
+            
+            int gx = Mathf.CeilToInt(cascade.current.width / (float)_tgx);
+            int gy = Mathf.CeilToInt(cascade.current.height / (float)_tgy);
+            
+            _waterDetailsCompute.SetVector("_BiggerMapCenterWS", prevCascade.mapCenterWS);
+            _waterDetailsCompute.SetVector("_BiggerMapSizeWS", prevCascade.mapSizeWS);
+            _waterDetailsCompute.SetTexture(_offsetKernel, "_LocalWavesRW", prevCascade.current);
 
-            _waterDetailsCompute.SetVector("_MapCenterWS", _cascades[cascade].mapCenterWS);
+            _waterDetailsCompute.SetVector("_MapCenterWS", cascade.mapCenterWS);
+            _waterDetailsCompute.SetVector("_MapSizeWS", cascade.mapSizeWS);
             _waterDetailsCompute.SetVector("_DS", offset);
-            _waterDetailsCompute.SetVector("_MapSizeWS", _cascades[cascade].mapSizeWS);
-            _waterDetailsCompute.SetInts("_Resolution", _cascades[cascade].detailsMapOne.width, _cascades[cascade].detailsMapOne.height);
+            _waterDetailsCompute.SetInt("_Cascadeind",  cascadeInd);
+            _waterDetailsCompute.SetInts("_Resolution", cascade.current.width,cascade.current.height);
             _waterDetailsCompute.SetTexture(_offsetKernel, "_LocalWavesR",
-                _cascades[cascade].pingPong ? _cascades[cascade].detailsMapOne : _cascades[cascade].detailsMapTwo);
+                cascade.current);
             _waterDetailsCompute.SetTexture(_offsetKernel, "_LocalWavesW",
-                _cascades[cascade].pingPong ? _cascades[cascade].detailsMapTwo : _cascades[cascade].detailsMapOne);
+                cascade.pingPong ? _cascades[cascadeInd].detailsMapOne : _cascades[cascadeInd].detailsMapTwo);
             _waterDetailsCompute.Dispatch(_offsetKernel, gx, gy, 1);
+            
+            cascade.pingPong = !cascade.pingPong;
+            _cascades[cascadeInd] = cascade;
         }
 
         public void Dispose()

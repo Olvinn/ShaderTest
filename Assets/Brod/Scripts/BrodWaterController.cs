@@ -34,7 +34,6 @@ namespace Brod
         private ComputeBuffer _sourcesBuffer;
         private ComputeBuffer _waveBuffer;
         private Camera _camera;
-        private Vector2 _viewerPos;
         
         private List<MeshGenerator> _tilesPool = new ();
         private int _updateCounter;
@@ -68,12 +67,8 @@ namespace Brod
 
         private void FixedUpdate()
         {
-            if (Vector3.Distance(_viewerPos, new Vector2(_camera.transform.position.x , _camera.transform.position.z)) > 1)
-            {
-                _viewerPos = new Vector2(_camera.transform.position.x , _camera.transform.position.z);
-                _brodConnector?.UpdateSquareCenter(_viewerPos);
-                WriteToMaterials();
-            }
+            _brodConnector?.UpdateSquareCenter(new Vector2(_camera.transform.position.x , _camera.transform.position.z));
+            BindLocalDetailsToMaterials();
 
             _updateCounter++;
             _brodConnector?.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, 3);
@@ -137,10 +132,11 @@ namespace Brod
             Sources[index] = src;
         }
 
-        public void ClearSources()
+        private void ClearSources()
         {
             Sources = Array.Empty<WaveSource>();
-            RecreateSourcesBuffer();
+            _sourcesBuffer?.Release();
+            _waveBuffer?.Release();
         }
 
         private void BuildOcean()
