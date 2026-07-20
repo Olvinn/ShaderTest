@@ -28,7 +28,7 @@ namespace Brod
         private Vector4[] shapeWaves;
         private float _displacementRadius;
         
-        private BrodConnector _brodConnector;
+        private BrodComputer _brodComputer;
 
         private WaveSource[] Sources = Array.Empty<WaveSource>();
         private ComputeBuffer _sourcesBuffer;
@@ -57,9 +57,9 @@ namespace Brod
             
             RecreateSourcesBuffer();
             
-            _brodConnector = new BrodConnector(settings.WaterComputeShader, settings.DetailsMapSizeWS, settings.Cascades, ShapeWavesReady.Length);
-            _brodConnector.InitializeRenderTexture(settings.DetailsMapResolution);
-            _brodConnector.UpdateWavesBuffer(ShapeWavesReady);
+            _brodComputer = new BrodComputer(settings.WaterComputeShader, settings.DetailsMapSizeWS, settings.Cascades, ShapeWavesReady.Length);
+            _brodComputer.InitializeRenderTexture(settings.DetailsMapResolution);
+            _brodComputer.UpdateWavesBuffer(ShapeWavesReady);
             UpdateWavesBuffer(ShapeWavesReady);
             
             WriteToMaterials();
@@ -67,22 +67,22 @@ namespace Brod
 
         private void FixedUpdate()
         {
-            _brodConnector?.UpdateSquareCenter(new Vector2(_camera.transform.position.x , _camera.transform.position.z));
+            _brodComputer?.UpdateSquareCenter(new Vector2(_camera.transform.position.x , _camera.transform.position.z));
             BindLocalDetailsToMaterials();
 
             _updateCounter++;
-            _brodConnector?.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, 3);
-            if (_updateCounter % 2 == 0)
-                _brodConnector?.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, 2);
-            else if (_updateCounter % 3 == 0)
-                _brodConnector?.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, 1);
-            else if (_updateCounter % 5 == 0)
-                _brodConnector?.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, 0);
+            
+            _brodComputer?.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, 3);
+            for (int i = 1; i < settings.Cascades; i++)
+            {
+                if (_updateCounter % ((i + 1) * 2) == 0) 
+                    _brodComputer?.UpdateFoamTexture(ShapeWavesReady, _sourcesBuffer, settings.FoamLifetime, Time.time, settings.Cascades - i - 1);
+            }
         }
 
         private void OnDestroy()
         {
-            _brodConnector?.Dispose();
+            _brodComputer?.Dispose();
             ClearSources();
             if (_tilesPool == null) return;
             for (var i = 0; i < _tilesPool.Count; i++)
@@ -173,7 +173,7 @@ namespace Brod
         {
             foreach (var mat in oceanMaterials)
             {
-                mat.SetTexture("_LocalWaterDetails", _brodConnector.GetCascade(0).current);
+                mat.SetTexture("_LocalWaterDetails", _brodComputer.GetCascade(0).current);
                 mat.SetFloat("_MaxDisp", _displacementRadius);
                 mat.SetBuffer("_ShapeWaves", _waveBuffer);
             }
@@ -200,25 +200,25 @@ namespace Brod
 
         private void BindLocalDetailsToMaterials()
         {
-            if (_brodConnector == null) return;
+            if (_brodComputer == null) return;
             
             foreach (var m in oceanMaterials)
             {
-                m.SetTexture("_LocalWaterDetailsA", _brodConnector.GetCascade(0).current);
-                m.SetVector("_MapCenterWSA", _brodConnector.GetCascade(0).mapCenterWS);
-                m.SetVector("_MapSizeWSA", _brodConnector.GetCascade(0).mapSizeWS);
+                m.SetTexture("_LocalWaterDetailsA", _brodComputer.GetCascade(0).current);
+                m.SetVector("_MapCenterWSA", _brodComputer.GetCascade(0).mapCenterWS);
+                m.SetVector("_MapSizeWSA", _brodComputer.GetCascade(0).mapSizeWS);
                 
-                m.SetTexture("_LocalWaterDetailsB", _brodConnector.GetCascade(1).current);
-                m.SetVector("_MapCenterWSB", _brodConnector.GetCascade(1).mapCenterWS);
-                m.SetVector("_MapSizeWSB", _brodConnector.GetCascade(1).mapSizeWS);
+                m.SetTexture("_LocalWaterDetailsB", _brodComputer.GetCascade(1).current);
+                m.SetVector("_MapCenterWSB", _brodComputer.GetCascade(1).mapCenterWS);
+                m.SetVector("_MapSizeWSB", _brodComputer.GetCascade(1).mapSizeWS);
                 
-                m.SetTexture("_LocalWaterDetailsC", _brodConnector.GetCascade(2).current);
-                m.SetVector("_MapCenterWSC", _brodConnector.GetCascade(2).mapCenterWS);
-                m.SetVector("_MapSizeWSC", _brodConnector.GetCascade(2).mapSizeWS);
+                m.SetTexture("_LocalWaterDetailsC", _brodComputer.GetCascade(2).current);
+                m.SetVector("_MapCenterWSC", _brodComputer.GetCascade(2).mapCenterWS);
+                m.SetVector("_MapSizeWSC", _brodComputer.GetCascade(2).mapSizeWS);
                 
-                m.SetTexture("_LocalWaterDetailsD", _brodConnector.GetCascade(3).current);
-                m.SetVector("_MapCenterWSD", _brodConnector.GetCascade(3).mapCenterWS);
-                m.SetVector("_MapSizeWSD", _brodConnector.GetCascade(3).mapSizeWS);
+                m.SetTexture("_LocalWaterDetailsD", _brodComputer.GetCascade(3).current);
+                m.SetVector("_MapCenterWSD", _brodComputer.GetCascade(3).mapCenterWS);
+                m.SetVector("_MapSizeWSD", _brodComputer.GetCascade(3).mapSizeWS);
             }
         }
     }

@@ -12,7 +12,7 @@ namespace Brod
         public float lastUpdateTime;
     }
     
-    public class BrodConnector : IDisposable
+    public class BrodComputer : IDisposable
     {
         private int _wavesKernel, _offsetKernel;
         private uint _tgx, _tgy, _tgz;
@@ -22,7 +22,7 @@ namespace Brod
         private ComputeShader _waterDetailsCompute;
         private ComputeBuffer _waveBuffer;
 
-        public BrodConnector(ComputeShader waterDetailsCompute, Vector2 squareWS, int cascades, int wavesCount)
+        public BrodComputer(ComputeShader waterDetailsCompute, Vector2 squareWS, int cascades, int wavesCount)
         {
             _waterDetailsCompute = waterDetailsCompute;
             _cascadesCount = cascades;
@@ -102,7 +102,8 @@ namespace Brod
                     wrapMode = TextureWrapMode.Clamp,
                     filterMode = FilterMode.Bilinear,
                     name = $"LocalWaterDetailsOne_{i}",
-                    autoGenerateMips = true
+                    autoGenerateMips = true,
+                    anisoLevel = 8
                 };
                 _cascades[i].detailsMapOne.Create();
 
@@ -112,7 +113,8 @@ namespace Brod
                     wrapMode = TextureWrapMode.Clamp,
                     filterMode = FilterMode.Bilinear,
                     name = $"LocalWaterDetailsTwo_{i}",
-                    autoGenerateMips = true
+                    autoGenerateMips = true,
+                    anisoLevel = 8
                 };
                 _cascades[i].detailsMapTwo.Create();
             }
@@ -120,7 +122,7 @@ namespace Brod
 
         public Cascade GetCascade(int cascade)
         {
-            cascade = Mathf.Clamp(cascade, 0, _cascadesCount);
+            cascade = Mathf.Clamp(cascade, 0, _cascadesCount - 1);
             return _cascades[cascade];
         }
 

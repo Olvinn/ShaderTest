@@ -54,7 +54,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _FoamTexture:
-        m_Texture: {fileID: 2800000, guid: 7deb2c08cf9f3bc4aad311ae4bfcba64, type: 3}
+        m_Texture: {fileID: 2800000, guid: b58daac2a7f67d94f83649cfc20ff14e, type: 3}
         m_Scale: {x: 0.25, y: 0.25}
         m_Offset: {x: 0, y: 0}
     - _LocalWaterDetails:
@@ -104,13 +104,13 @@ Material:
     - _EdgeLength: 20
     - _FoamAmount: 0
     - _FoamNormalsPower: 0.5
-    - _FoamStrength: 3
+    - _FoamStrength: 1
     - _FogBlend: 0
     - _Fresnel: 0.03
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _MaxDisp: 6.344383
+    - _MaxDisp: 10.042225
     - _MaxWaveAmplitude: 10
     - _MaxWaves: 128
     - _Metallic: 0

@@ -41,8 +41,6 @@ Shader "Brod/Ocean"
         _TessMax  ("Tess Max",           Range(4, 64))  = 32
         _TessNear ("Tess Near Distance", Float)         = 5
         _TessFar  ("Tess Far Distance",  Float)         = 80
-        
-        [Toggle] _FogBlend  ("Blend in Fog", Int) = 0
     }
 
     SubShader
@@ -496,11 +494,8 @@ Shader "Brod/Ocean"
 
                 finalColor += specular * (1.0 - foamAmount) + sss;
                 
-                //finalColor = MixFog(finalColor, i.fog);
-                if (_FogBlend)
-                    return half4(lerp(finalColor, Brod_CubemapAmbient(viewDir, 0), saturate(i.fog)), 1);
-                else
-                    return half4(finalColor, 1);
+                finalColor = MixFog(finalColor, i.fog);
+                return half4(finalColor, 1);
             }
             ENDHLSL
         }
