@@ -40,13 +40,19 @@ namespace Brod
 
         private void Awake()
         {
-            shapeWaves = WavesGenerator.
-                GetShapeWaves(swellHeight: settings.SwellHeight, windSpeed: settings.WindSpeed, fetch: settings.Fetch, 
-                    storm: settings.Storm);
+            shapeWaves = WavesGenerator.GetShapeWaves(new GeneratorSettings()
+                {
+                    swellHeight = settings.SwellHeight,
+                    windSpeed = settings.WindSpeed, 
+                    fetch = settings.Fetch, 
+                    storm = settings.Storm,
+                    lambdaMin = settings.LambdaMin,
+                    lambdaMax = settings.LambdaMax,
+                });
             
             UpdateWaves();
             _displacementRadius = GetDisplacementRadius(ShapeWavesReady);
-            BuildOcean();
+            BuildMeshes();
             
             _camera = Camera.main;
         }
@@ -67,7 +73,8 @@ namespace Brod
 
         private void FixedUpdate()
         {
-            _brodComputer?.UpdateSquareCenter(new Vector2(_camera.transform.position.x , _camera.transform.position.z));
+            var slightlyForward = _camera.transform.position + _camera.transform.forward * 5;
+            _brodComputer?.UpdateSquareCenter(new Vector2(slightlyForward.x , slightlyForward.z));
             BindLocalDetailsToMaterials();
 
             _updateCounter++;
@@ -139,18 +146,21 @@ namespace Brod
             _waveBuffer?.Release();
         }
 
-        private void BuildOcean()
+        private void BuildMeshes()
         {
             if (_tilesPool is { Count: > 0 }) return;
             
             _tilesPool = new List<MeshGenerator>();
+            var size = settings.PlaneSize;
+            var details = settings.PlaneResolution;
+            var offset = size * 10 * .5f;
             
             for (var i = 0; i < 100; i++)
             for (var j = 0; j < 100; j++)
             {
                 var tile = Instantiate(tilePrefab, transform); 
-                tile.transform.position = new Vector3(i * 200 - 10000, 0, j * 200 - 10000);
-                tile.CreateMesh(detalization: 2, size: 200);
+                tile.transform.position = new Vector3(i * size - offset, 0, j * size - offset);
+                tile.CreateMesh(detalization: details, size: size);
                 _tilesPool.Add(tile);
                 tile.UpdateAABB(_displacementRadius);
             }

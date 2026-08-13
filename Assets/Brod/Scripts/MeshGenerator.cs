@@ -20,15 +20,15 @@ namespace Brod
 
         public void CreateMesh(int detalization, float size)
         {
-            detalization = Mathf.Clamp(detalization, 2, 256);
+            _detalization = Mathf.Clamp(detalization, 2, 256);
             
             Mesh mesh = new Mesh();
 
-            var d = detalization;
+            var d = _detalization;
 
             var vertices = new Vector3[d * d];
             var uv = new Vector2[d * d];
-            float growth = size / (detalization - 1); // Optional for exact edge fit
+            float growth = size / (d - 1); // Optional for exact edge fit
             Vector3 offset = new Vector3(-size * 0.5f, 0, -size * 0.5f);
 
             for (int i = 0; i < d; i++)

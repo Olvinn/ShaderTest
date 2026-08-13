@@ -21,6 +21,7 @@ namespace Brod
         private int _cascadesCount;
         private ComputeShader _waterDetailsCompute;
         private ComputeBuffer _waveBuffer;
+        private ComputeBuffer _sourcesBuffer;
 
         public BrodComputer(ComputeShader waterDetailsCompute, Vector2 squareWS, int cascades, int wavesCount)
         {
@@ -137,6 +138,8 @@ namespace Brod
             }
             _waveBuffer.SetData(waves);
         }
+
+        public ComputeBuffer GetWavesBuffer() => _waveBuffer;
 
         private void ApplyOffset(Vector2 offset, int cascadeInd)
         {

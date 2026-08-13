@@ -47,7 +47,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MeshGenerator
   _detalization: 2
-  _size: 200
+  _size: 20
   _meshFilter: {fileID: 4535228612700225986}
 --- !u!33 &4535228612700225986
 MeshFilter:

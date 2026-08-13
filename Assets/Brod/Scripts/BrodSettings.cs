@@ -17,5 +17,10 @@ namespace Brod
         [Header("Wave Parameters")]
         public float SwellHeight = 3;
         public float WindSpeed = 13, Fetch = 250000, Storm = .17f;
+        public float LambdaMin = 1, LambdaMax = 200;
+
+        [Header("Mesh Parameters")] 
+        public int PlaneResolution = 2;
+        public float PlaneSize = 500;
     }
 }
