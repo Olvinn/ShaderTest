@@ -73,7 +73,7 @@ namespace Brod
 
         private void FixedUpdate()
         {
-            var slightlyForward = _camera.transform.position + _camera.transform.forward * 5;
+            var slightlyForward = _camera.transform.position;
             _brodComputer?.UpdateSquareCenter(new Vector2(slightlyForward.x , slightlyForward.z));
             BindLocalDetailsToMaterials();
 
